@@ -13,19 +13,19 @@ import (
 	"golang.org/x/net/html/atom"
 )
 
-type Parser struct {
+type parserData struct {
 	data     list.List
 	regexRus *regexp.Regexp
 }
 
-func newParser() *Parser {
-	p := new(Parser)
+func newParser() *parserData {
+	p := new(parserData)
 	p.regexRus = regexp.MustCompile(`[а-яё][0-9а-яё]*`)
 
 	return p
 }
 
-func NormalizeHrefLink(link string) string {
+func normalizeHrefLink(link string) string {
 	link = strings.TrimSpace(link)
 	link = strings.TrimPrefix(link, "mailto:")
 	return link
@@ -41,17 +41,17 @@ func getAttrVal(node *html.Node, attrName string) string {
 	return ""
 }
 
-func (self *Parser) ParseChildren(node *html.Node) {
+func (parser *parserData) parseChildren(node *html.Node) {
 	for it := node.FirstChild; it != nil; it = it.NextSibling {
-		self.ParseNode(it)
+		parser.parseNode(it)
 	}
 }
 
-func (self *Parser) ParseElements(node *html.Node) {
+func (parser *parserData) parseElements(node *html.Node) {
 	switch node.DataAtom {
 	case atom.A:
 		if attrVal := getAttrVal(node, "href"); attrVal != "" {
-			attrVal = NormalizeHrefLink(attrVal)
+			attrVal = normalizeHrefLink(attrVal)
 			if attrVal != "" {
 				// fmt.Println("Link=", attrVal)
 			}
@@ -63,18 +63,18 @@ func (self *Parser) ParseElements(node *html.Node) {
 	}
 	// fmt.Println("tag=", node.Data)
 
-	self.ParseChildren(node)
+	parser.parseChildren(node)
 }
 
-func (self *Parser) ParseText(text string) {
+func (parser *parserData) parseText(text string) {
 	if len(text) > 2 {
-		worlds := self.regexRus.FindAllString(strings.ToLower(text), -1)
+		worlds := parser.regexRus.FindAllString(strings.ToLower(text), -1)
 		for i := 0; i != len(worlds); i++ {
 			if len(worlds[i]) > 2 {
 				// self.data.PushBack(worlds[i])
 				stemmed, err := snowball.Stem(worlds[i], "russian", true)
 				if err == nil {
-					self.data.PushBack(stemmed)
+					parser.data.PushBack(stemmed)
 				} else {
 					fmt.Println("error:", worlds[i])
 				}
@@ -83,47 +83,47 @@ func (self *Parser) ParseText(text string) {
 	}
 }
 
-func (self *Parser) ParseNode(node *html.Node) {
+func (parser *parserData) parseNode(node *html.Node) {
 	switch node.Type {
 	case html.ErrorNode:
 		fmt.Println("!!!ErrorNode")
 		return
 	case html.TextNode:
-		self.ParseText(node.Data)
+		parser.parseText(node.Data)
 		return
 	case html.DocumentNode:
-		self.ParseChildren(node)
+		parser.parseChildren(node)
 		return
 	case html.ElementNode:
-		self.ParseElements(node)
+		parser.parseElements(node)
 		return
 	case html.CommentNode, html.DoctypeNode: // skip
 		return
 	}
 }
 
-func (self *Parser) ParseReader(reader io.Reader) error {
+func (parser *parserData) parseReader(reader io.Reader) error {
 	node, err := html.Parse(reader)
 	if err != nil {
 		return err
 	}
-	self.ParseNode(node)
+	parser.parseNode(node)
 
 	return nil
 }
 
-func (self *Parser) ParseUrl(url string) error {
+func (parser *parserData) parseURL(url string) error {
 	response, err := http.Get(url)
 	if err != nil {
 		return err
 	}
 	defer response.Body.Close()
-	return self.ParseReader(response.Body)
+	return parser.parseReader(response.Body)
 }
 
 func main() {
 	parser := newParser()
-	err := parser.ParseUrl("http://habrahabr.ru/")
+	err := parser.parseURL("http://habrahabr.ru/")
 	// err := ParseUrl("https://www.linux.org.ru/")
 	// err := ParseUrl("http://example.com/")
 	// s := `<p>жаба</p>`
