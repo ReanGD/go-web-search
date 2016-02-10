@@ -2,6 +2,7 @@ package parser
 
 import (
 	"container/list"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -15,14 +16,25 @@ import (
 
 var regexRus = regexp.MustCompile(`[а-яё][0-9а-яё]*`)
 
-type ParserData struct {
+// ParseResult - parse result
+type ParseResult struct {
 	Data list.List
 }
 
-func NewParser() *ParserData {
-	p := new(ParserData)
+// ParseURL - parse html page by URL
+func ParseURL(url string) (*ParseResult, error) {
+	p := new(ParseResult)
+	err := p.parseURL(url)
 
-	return p
+	return p, err
+}
+
+// ParseStream - parse html page from io.Reader
+func ParseStream(reader io.Reader) (*ParseResult, error) {
+	p := new(ParseResult)
+	err := p.parseStream(reader)
+
+	return p, err
 }
 
 func normalizeHrefLink(link string) string {
@@ -41,13 +53,13 @@ func getAttrVal(node *html.Node, attrName string) string {
 	return ""
 }
 
-func (parser *ParserData) parseChildren(node *html.Node) {
+func (result *ParseResult) parseChildren(node *html.Node) {
 	for it := node.FirstChild; it != nil; it = it.NextSibling {
-		parser.parseNode(it)
+		result.parseNode(it)
 	}
 }
 
-func (parser *ParserData) parseElements(node *html.Node) {
+func (result *ParseResult) parseElements(node *html.Node) {
 	switch node.DataAtom {
 	case atom.A:
 		if attrVal := getAttrVal(node, "href"); attrVal != "" {
@@ -63,10 +75,10 @@ func (parser *ParserData) parseElements(node *html.Node) {
 	}
 	// fmt.Println("tag=", node.Data)
 
-	parser.parseChildren(node)
+	result.parseChildren(node)
 }
 
-func (parser *ParserData) parseText(text string) {
+func (result *ParseResult) parseText(text string) {
 	if len(text) > 2 {
 		worlds := regexRus.FindAllString(strings.ToLower(text), -1)
 		for i := 0; i != len(worlds); i++ {
@@ -74,7 +86,7 @@ func (parser *ParserData) parseText(text string) {
 				// self.data.PushBack(worlds[i])
 				stemmed, err := snowball.Stem(worlds[i], "russian", true)
 				if err == nil {
-					parser.Data.PushBack(stemmed)
+					result.Data.PushBack(stemmed)
 				} else {
 					fmt.Println("error:", worlds[i])
 				}
@@ -83,40 +95,39 @@ func (parser *ParserData) parseText(text string) {
 	}
 }
 
-func (parser *ParserData) parseNode(node *html.Node) {
+func (result *ParseResult) parseNode(node *html.Node) error {
 	switch node.Type {
 	case html.ErrorNode:
-		fmt.Println("!!!ErrorNode")
-		return
+		return errors.New("ErrorNode on html")
 	case html.TextNode:
-		parser.parseText(node.Data)
-		return
+		result.parseText(node.Data)
+		return nil
 	case html.DocumentNode:
-		parser.parseChildren(node)
-		return
+		result.parseChildren(node)
+		return nil
 	case html.ElementNode:
-		parser.parseElements(node)
-		return
+		result.parseElements(node)
+		return nil
 	case html.CommentNode, html.DoctypeNode: // skip
-		return
+		return nil
+	default:
+		return errors.New("Unknown node type on html")
 	}
 }
 
-func (parser *ParserData) parseReader(reader io.Reader) error {
+func (result *ParseResult) parseStream(reader io.Reader) error {
 	node, err := html.Parse(reader)
 	if err != nil {
 		return err
 	}
-	parser.parseNode(node)
-
-	return nil
+	return result.parseNode(node)
 }
 
-func (parser *ParserData) ParseURL(url string) error {
+func (result *ParseResult) parseURL(url string) error {
 	response, err := http.Get(url)
 	if err != nil {
 		return err
 	}
 	defer response.Body.Close()
-	return parser.parseReader(response.Body)
+	return result.parseStream(response.Body)
 }

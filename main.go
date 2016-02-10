@@ -7,12 +7,11 @@ import (
 )
 
 func main() {
-	p := parser.NewParser()
-	err := p.ParseURL("http://habrahabr.ru/")
-	// err := ParseUrl("https://www.linux.org.ru/")
-	// err := ParseUrl("http://example.com/")
+	p, err := parser.ParseURL("http://habrahabr.ru/")
+	// p, err := parser.ParseURL("https://www.linux.org.ru/")
+	// p, err := parser.ParseURL("http://example.com/")
 	// s := `<p>жаба</p>`
-	// err := parser.ParseReader(strings.NewReader(s))
+	// p, err := parser.ParseStream(strings.NewReader(s))
 	if err != nil {
 		fmt.Printf("%s", err)
 		return
