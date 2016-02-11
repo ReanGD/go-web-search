@@ -3,13 +3,11 @@ package parser
 import (
 	"container/list"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"regexp"
 	"strings"
 
-	"github.com/kljensen/snowball"
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
 )
@@ -18,23 +16,24 @@ var regexRus = regexp.MustCompile(`[а-яё][0-9а-яё]*`)
 
 // ParseResult - parse result
 type ParseResult struct {
-	Data list.List
+	Words list.List
+	Links list.List
 }
 
 // ParseURL - parse html page by URL
 func ParseURL(url string) (*ParseResult, error) {
-	p := new(ParseResult)
-	err := p.parseURL(url)
+	result := new(ParseResult)
+	err := result.parseURL(url)
 
-	return p, err
+	return result, err
 }
 
 // ParseStream - parse html page from io.Reader
 func ParseStream(reader io.Reader) (*ParseResult, error) {
-	p := new(ParseResult)
-	err := p.parseStream(reader)
+	result := new(ParseResult)
+	err := result.parseStream(reader)
 
-	return p, err
+	return result, err
 }
 
 func normalizeHrefLink(link string) string {
@@ -62,18 +61,18 @@ func (result *ParseResult) parseChildren(node *html.Node) {
 func (result *ParseResult) parseElements(node *html.Node) {
 	switch node.DataAtom {
 	case atom.A:
-		if attrVal := getAttrVal(node, "href"); attrVal != "" {
-			attrVal = normalizeHrefLink(attrVal)
-			if attrVal != "" {
-				// fmt.Println("Link=", attrVal)
+		if link := getAttrVal(node, "href"); link != "" {
+			link = normalizeHrefLink(link)
+			if link != "" {
+				result.Links.PushBack(link)
 			}
 		}
 		break
+	// skip
 	case atom.Style, atom.Link, atom.Script, atom.Noscript, atom.Meta:
 		return
 	default:
 	}
-	// fmt.Println("tag=", node.Data)
 
 	result.parseChildren(node)
 }
@@ -83,13 +82,7 @@ func (result *ParseResult) parseText(text string) {
 		worlds := regexRus.FindAllString(strings.ToLower(text), -1)
 		for i := 0; i != len(worlds); i++ {
 			if len(worlds[i]) > 2 {
-				// self.data.PushBack(worlds[i])
-				stemmed, err := snowball.Stem(worlds[i], "russian", true)
-				if err == nil {
-					result.Data.PushBack(stemmed)
-				} else {
-					fmt.Println("error:", worlds[i])
-				}
+				result.Words.PushBack(worlds[i])
 			}
 		}
 	}
