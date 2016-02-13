@@ -7,28 +7,40 @@ import (
 )
 
 func main() {
-	p, err := parser.ParseURL("http://habrahabr.ru/")
 	// p, err := parser.ParseURL("https://www.linux.org.ru/")
 	// p, err := parser.ParseURL("http://example.com/")
 	// s := `<p>жаба</p>`
 	// p, err := parser.ParseStream(strings.NewReader(s))
+
+	// url := "http://habrahabr.ru/"
+	url := "http://habrahabr.ru/"
+	p, err := parser.ParseURL(url)
 	if err != nil {
 		fmt.Printf("%s", err)
 		return
 	}
 
-	// for e := p.Words.Front(); e != nil; e = e.Next() {
-	// 	world := e.Value.(string)
-	// 	stemmed, err := snowball.Stem(world, "russian", true)
-	// 	if err == nil {
-	// 		fmt.Println(stemmed)
-	// 	} else {
-	// 		fmt.Println("error:", world)
-	// 	}
-	// }
+	words, err := parser.ParseText(p.StringList)
+	if err != nil {
+		fmt.Printf("%s", err)
+		return
+	}
 
-	for e := p.Links.Front(); e != nil; e = e.Next() {
-		link := e.Value.(string)
+	links, err := parser.ParseLinks(url, p.LinkList)
+	if err != nil {
+		fmt.Printf("%s", err)
+		return
+	}
+
+	for it := words.Front(); it != nil; it = it.Next() {
+		word := it.Value.(string)
+		if word == "" {
+			fmt.Println(word)
+		}
+	}
+
+	for it := links.Front(); it != nil; it = it.Next() {
+		link := it.Value.(string)
 		fmt.Println(link)
 	}
 }

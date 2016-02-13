@@ -5,19 +5,15 @@ import (
 	"errors"
 	"io"
 	"net/http"
-	"regexp"
-	"strings"
 
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
 )
 
-var regexRus = regexp.MustCompile(`[а-яё][0-9а-яё]*`)
-
 // ParseResult - parse result
 type ParseResult struct {
-	Words list.List
-	Links list.List
+	StringList list.List
+	LinkList   list.List
 }
 
 // ParseURL - parse html page by URL
@@ -34,12 +30,6 @@ func ParseStream(reader io.Reader) (*ParseResult, error) {
 	err := result.parseStream(reader)
 
 	return result, err
-}
-
-func normalizeHrefLink(link string) string {
-	link = strings.TrimSpace(link)
-	link = strings.TrimPrefix(link, "mailto:")
-	return link
 }
 
 func getAttrVal(node *html.Node, attrName string) string {
@@ -62,13 +52,10 @@ func (result *ParseResult) parseElements(node *html.Node) {
 	switch node.DataAtom {
 	case atom.A:
 		if link := getAttrVal(node, "href"); link != "" {
-			link = normalizeHrefLink(link)
-			if link != "" {
-				result.Links.PushBack(link)
-			}
+			result.LinkList.PushBack(link)
 		}
 		break
-	// skip
+		// skip
 	case atom.Style, atom.Link, atom.Script, atom.Noscript, atom.Meta:
 		return
 	default:
@@ -77,23 +64,12 @@ func (result *ParseResult) parseElements(node *html.Node) {
 	result.parseChildren(node)
 }
 
-func (result *ParseResult) parseText(text string) {
-	if len(text) > 2 {
-		worlds := regexRus.FindAllString(strings.ToLower(text), -1)
-		for i := 0; i != len(worlds); i++ {
-			if len(worlds[i]) > 2 {
-				result.Words.PushBack(worlds[i])
-			}
-		}
-	}
-}
-
 func (result *ParseResult) parseNode(node *html.Node) error {
 	switch node.Type {
 	case html.ErrorNode:
 		return errors.New("ErrorNode on html")
 	case html.TextNode:
-		result.parseText(node.Data)
+		result.StringList.PushBack(node.Data)
 		return nil
 	case html.DocumentNode:
 		result.parseChildren(node)
