@@ -32,15 +32,15 @@ func main() {
 		return
 	}
 
-	for it := words.Front(); it != nil; it = it.Next() {
-		word := it.Value.(string)
+	for word := range words {
 		if word == "" {
 			fmt.Println(word)
 		}
 	}
 
-	for it := links.Front(); it != nil; it = it.Next() {
-		link := it.Value.(string)
-		fmt.Println(link)
+	for link := range links {
+		if link != "" {
+			fmt.Println(link)
+		}
 	}
 }

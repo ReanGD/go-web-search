@@ -11,8 +11,8 @@ import (
 var regexRus = regexp.MustCompile(`[а-яё][0-9а-яё]*`)
 
 // ParseText - convert list of strings to list of words
-func ParseText(stringList list.List) (list.List, error) {
-	var result list.List
+func ParseText(stringList list.List) (map[string]bool, error) {
+	result := make(map[string]bool)
 
 	for it := stringList.Front(); it != nil; it = it.Next() {
 		text := it.Value.(string)
@@ -24,7 +24,7 @@ func ParseText(stringList list.List) (list.List, error) {
 					if err != nil {
 						return result, err
 					}
-					result.PushBack(stemmed)
+					result[stemmed] = true
 				}
 			}
 		}
