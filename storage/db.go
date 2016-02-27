@@ -3,12 +3,15 @@ package storage
 import (
 	"bytes"
 	"encoding/binary"
+	"fmt"
 	"time"
 
 	"github.com/boltdb/bolt"
 )
 
-const dbName string = "data.db"
+const dbName = "data.db"
+const bcWords = "Words"
+const bcLinks = "Links"
 
 var db *bolt.DB
 
@@ -21,11 +24,11 @@ func Open() error {
 	}
 
 	err = db.Update(func(tx *bolt.Tx) error {
-		_, err := tx.CreateBucketIfNotExists([]byte("Word"))
+		_, err := tx.CreateBucketIfNotExists([]byte(bcWords))
 		if err != nil {
 			return err
 		}
-		_, err = tx.CreateBucketIfNotExists([]byte("Link"))
+		_, err = tx.CreateBucketIfNotExists([]byte(bcLinks))
 		if err != nil {
 			return err
 		}
@@ -60,7 +63,7 @@ func (word *wordData) Bytes() ([]byte, error) {
 // AddWords - add the found words
 func AddWords(words map[string]uint32) error {
 	err := db.Update(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte("Word"))
+		b := tx.Bucket([]byte(bcWords))
 		var dbWord *wordData
 		var err error
 		for word, count := range words {
@@ -90,6 +93,23 @@ func AddWords(words map[string]uint32) error {
 	return err
 }
 
+// ShowWordStatistics - show words statistics
+func ShowWordStatistics() error {
+	err := db.View(func(tx *bolt.Tx) error {
+		c := tx.Bucket([]byte(bcWords)).Cursor()
+		for word, metaByte := c.First(); word != nil; word, metaByte = c.Next() {
+			meta, err := wordDataFromBytes(metaByte)
+			if err != nil {
+				return err
+			}
+			fmt.Printf("%s: %d\n", word, meta.Count)
+		}
+		return nil
+	})
+
+	return err
+}
+
 type linkData struct {
 	ID    uint64
 	Count uint32
@@ -110,7 +130,7 @@ func (link *linkData) Bytes() ([]byte, error) {
 // AddLinks - add the found links
 func AddLinks(links map[string]uint32) error {
 	err := db.Update(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte("Link"))
+		b := tx.Bucket([]byte(bcLinks))
 		var dbLink *linkData
 		var err error
 		for link, count := range links {
@@ -140,15 +160,19 @@ func AddLinks(links map[string]uint32) error {
 	return err
 }
 
-// func readDb() error {
-// 	err := db.View(func(tx *bolt.Tx) error {
-// 		b := tx.Bucket([]byte("Words"))
-// 		c := b.Cursor()
-// 		for k, v := c.First(); k != nil; k, v = c.Next() {
-// 			fmt.Printf("key=%s, value=%s\n", k, v)
-// 		}
-// 		return nil
-// 	})
+// ShowLinksStatistics - show words statistics
+func ShowLinksStatistics() error {
+	err := db.View(func(tx *bolt.Tx) error {
+		c := tx.Bucket([]byte(bcLinks)).Cursor()
+		for link, metaByte := c.First(); link != nil; link, metaByte = c.Next() {
+			meta, err := linkDataFromBytes(metaByte)
+			if err != nil {
+				return err
+			}
+			fmt.Printf("%s: %d\n", link, meta.Count)
+		}
+		return nil
+	})
 
-// 	return err
-// }
+	return err
+}
