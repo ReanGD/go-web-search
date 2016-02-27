@@ -7,8 +7,8 @@ import (
 )
 
 // ParseLinks - normalize list of links
-func ParseLinks(baseURL string, linkList list.List) (map[string]bool, error) {
-	result := make(map[string]bool)
+func ParseLinks(baseURL string, linkList list.List) (map[string]uint32, error) {
+	result := make(map[string]uint32)
 
 	base, err := url.Parse(baseURL)
 	if err != nil {
@@ -23,7 +23,12 @@ func ParseLinks(baseURL string, linkList list.List) (map[string]bool, error) {
 		link := base.ResolveReference(relative)
 		if link.Scheme == "http" || link.Scheme == "https" {
 			link.Fragment = ""
-			result[link.String()] = true
+			linkStr := link.String()
+			if val, ok := result[linkStr]; ok {
+				result[linkStr] = val + 1
+			} else {
+				result[linkStr] = 1
+			}
 		}
 	}
 
