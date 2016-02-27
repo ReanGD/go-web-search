@@ -4,15 +4,10 @@ import (
 	"fmt"
 
 	"github.com/ReanGD/go-web-search/parser"
+	"github.com/ReanGD/go-web-search/storage"
 )
 
 func main() {
-	// p, err := parser.ParseURL("https://www.linux.org.ru/")
-	// p, err := parser.ParseURL("http://example.com/")
-	// s := `<p>жаба</p>`
-	// p, err := parser.ParseStream(strings.NewReader(s))
-
-	// url := "http://habrahabr.ru/"
 	url := "http://habrahabr.ru/"
 	p, err := parser.ParseURL(url)
 	if err != nil {
@@ -20,7 +15,20 @@ func main() {
 		return
 	}
 
+	err = storage.Open()
+	if err != nil {
+		fmt.Printf("%s", err)
+		return
+	}
+	defer storage.Close()
+
 	words, err := parser.ParseText(p.StringList)
+	if err != nil {
+		fmt.Printf("%s", err)
+		return
+	}
+
+	err = storage.AddWords(words)
 	if err != nil {
 		fmt.Printf("%s", err)
 		return
@@ -32,15 +40,9 @@ func main() {
 		return
 	}
 
-	for word := range words {
-		if word == "" {
-			fmt.Println(word)
-		}
-	}
-
-	for link := range links {
-		if link != "" {
-			fmt.Println(link)
-		}
+	err = storage.AddLinks(links)
+	if err != nil {
+		fmt.Printf("%s", err)
+		return
 	}
 }
