@@ -3,7 +3,6 @@ package crawler
 import (
 	"bytes"
 	"encoding/binary"
-	"errors"
 	"fmt"
 	"time"
 
@@ -141,7 +140,7 @@ func FindNotLoadedLink() (string, error) {
 				return nil
 			}
 		}
-		return errors.New("Not found free link")
+		return nil
 	})
 
 	return result, err

@@ -3,6 +3,7 @@ package crawler
 import (
 	"bytes"
 	"crypto/md5"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -34,23 +35,26 @@ func processURL(url string, hostFilter string) error {
 }
 
 // Process - download and process cnt page
-func Process(url string, hostFilter string, cnt int) error {
+func Process(baseURL string, hostFilter string, cnt int) error {
 	err := OpenDb()
 	if err != nil {
 		return err
 	}
 	defer CloseDb()
 
-	fmt.Println(url)
-	err = processURL(url, hostFilter)
-	if err != nil {
-		return err
-	}
-
+	isParseBaseURL := false
 	for i := 0; i != cnt; i++ {
 		link, err := FindNotLoadedLink()
 		if err != nil {
 			return err
+		}
+
+		if link == "" {
+			if isParseBaseURL {
+				return errors.New("Not found link for parse")
+			}
+			isParseBaseURL = true
+			link = baseURL
 		}
 
 		fmt.Println(link)
