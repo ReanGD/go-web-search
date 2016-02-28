@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"log"
+	"os"
 
 	"github.com/ReanGD/go-web-search/crawler"
 )
@@ -53,7 +55,7 @@ import (
 // }
 
 func run() error {
-	err := crawler.Process("http://habrahabr.ru/", "habrahabr.ru", 10)
+	err := crawler.Process("http://habrahabr.ru/", "habrahabr.ru", 100)
 	if err != nil {
 		return err
 	}
@@ -62,7 +64,17 @@ func run() error {
 }
 
 func main() {
-	err := run()
+	f, err := os.OpenFile("app.log", os.O_APPEND|os.O_CREATE|os.O_RDWR, 0666)
+	if err != nil {
+		fmt.Printf("%s", err)
+		return
+	}
+
+	defer f.Close()
+
+	log.SetOutput(f)
+
+	err = run()
 	if err != nil {
 		fmt.Printf("%s", err)
 	}

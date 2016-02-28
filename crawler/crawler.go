@@ -42,7 +42,7 @@ func Process(baseURL string, hostFilter string, cnt int) error {
 	}
 	defer CloseDb()
 
-	isParseBaseURL := false
+	isParsedBaseURL := false
 	for i := 0; i != cnt; i++ {
 		link, err := FindNotLoadedLink()
 		if err != nil {
@@ -50,10 +50,10 @@ func Process(baseURL string, hostFilter string, cnt int) error {
 		}
 
 		if link == "" {
-			if isParseBaseURL {
+			if isParsedBaseURL {
 				return errors.New("Not found link for parse")
 			}
-			isParseBaseURL = true
+			isParsedBaseURL = true
 			link = baseURL
 		}
 

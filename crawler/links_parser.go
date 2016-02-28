@@ -1,6 +1,7 @@
 package crawler
 
 import (
+	"log"
 	"net/url"
 	"strings"
 )
@@ -11,13 +12,15 @@ func ProcessLinks(baseURL string, links *PageLinks, hostFilter string) (map[stri
 
 	base, err := url.Parse(baseURL)
 	if err != nil {
+		log.Printf("ERROR: Parse URL message: %s", err)
 		return result, err
 	}
 
 	for it := links.LinkList.Front(); it != nil; it = it.Next() {
 		relative, err := url.Parse(strings.TrimSpace(it.Value.(string)))
 		if err != nil {
-			return result, err
+			log.Printf("ERROR: Parse URL on page %s, message: %s", baseURL, err)
+			continue
 		}
 		link := base.ResolveReference(relative)
 		if (link.Scheme == "http" || link.Scheme == "https") && link.Host == hostFilter {
