@@ -2,6 +2,8 @@ package crawler
 
 import (
 	"bytes"
+	"compress/zlib"
+	"crypto/md5"
 	"encoding/binary"
 	"fmt"
 	"time"
@@ -80,8 +82,20 @@ func insertOrUpdateLinkData(bucket *bolt.Bucket, key []byte, fun linkDataUpdate)
 }
 
 // SavePage - save raw content of the page and it links
-func SavePage(baseLink string, content []byte, hash [16]byte, links map[string]uint32) error {
-	err := db.Update(func(tx *bolt.Tx) error {
+func SavePage(baseLink string, content []byte, links map[string]uint32) error {
+	var zContent bytes.Buffer
+	var hash [16]byte
+
+	w := zlib.NewWriter(&zContent)
+	_, err := w.Write(content)
+	w.Close()
+	if err != nil {
+		return err
+	}
+
+	hash = md5.Sum(content)
+
+	err = db.Update(func(tx *bolt.Tx) error {
 		var err error
 		bLinks := tx.Bucket([]byte(bcLinks))
 		bContents := tx.Bucket([]byte(bcContents))
@@ -113,7 +127,7 @@ func SavePage(baseLink string, content []byte, hash [16]byte, links map[string]u
 			return err
 		}
 
-		return bContents.Put([]byte(baseLink), content)
+		return bContents.Put([]byte(baseLink), zContent.Bytes())
 	})
 
 	return err

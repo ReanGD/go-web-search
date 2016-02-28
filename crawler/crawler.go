@@ -2,7 +2,6 @@ package crawler
 
 import (
 	"bytes"
-	"crypto/md5"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -31,7 +30,7 @@ func processURL(url string, hostFilter string) error {
 		return err
 	}
 
-	return SavePage(url, body, md5.Sum(body), links)
+	return SavePage(url, body, links)
 }
 
 // Process - download and process cnt page
