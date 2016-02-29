@@ -55,7 +55,8 @@ import (
 // }
 
 func run() error {
-	err := crawler.Run("http://habrahabr.ru/", "habrahabr.ru", 5000)
+	err := crawler.Run("http://habrahabr.ru/", "habrahabr.ru", 1000)
+	// err := crawler.ShowDbStatistics()
 	if err != nil {
 		return err
 	}

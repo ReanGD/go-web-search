@@ -93,46 +93,42 @@ type pageInfoForSave struct {
 	Links    map[string]uint32
 }
 
-func savePageImpl(data *pageInfoForSave, cntURLs int) (int, error) {
-	err := db.Update(func(tx *bolt.Tx) error {
-		var err error
-		bLinks := tx.Bucket([]byte(bcLinks))
-		bContents := tx.Bucket([]byte(bcContents))
+func savePageImpl(data *pageInfoForSave, bLinks *bolt.Bucket, bContents *bolt.Bucket, cntURLs int) (int, error) {
+	var err error
 
-		for link, count := range data.Links {
-			err = insertOrUpdateLinkData(
-				bLinks,
-				[]byte(link),
-				func(obj *linkData) error {
-					obj.Count += count
-
-					if obj.State == 0 && cntURLs > 0 && data.BaseLink != link {
-						chURLForParse <- link
-						cntURLs--
-					}
-
-					return nil
-				})
-			if err != nil {
-				return err
-			}
-		}
-
+	for link, count := range data.Links {
 		err = insertOrUpdateLinkData(
 			bLinks,
-			[]byte(data.BaseLink),
+			[]byte(link),
 			func(obj *linkData) error {
-				obj.State = 1
-				obj.Hash = data.Hash
+				obj.Count += count
+
+				if obj.State == 0 && cntURLs > 0 && data.BaseLink != link {
+					chURLForParse <- link
+					cntURLs--
+				}
+
 				return nil
 			})
-
 		if err != nil {
-			return err
+			return cntURLs, err
 		}
+	}
 
-		return bContents.Put([]byte(data.BaseLink), data.Content)
-	})
+	err = insertOrUpdateLinkData(
+		bLinks,
+		[]byte(data.BaseLink),
+		func(obj *linkData) error {
+			obj.State = 1
+			obj.Hash = data.Hash
+			return nil
+		})
+
+	if err != nil {
+		return cntURLs, err
+	}
+
+	err = bContents.Put([]byte(data.BaseLink), data.Content)
 
 	return cntURLs, err
 }
@@ -156,16 +152,30 @@ func startDbWorkerImpl(cntURLs int) {
 	defer CloseDb()
 	defer close(chURLForParse)
 
-	var err error
-	for {
-		data, more := <-chPageForSave
-		if !more {
-			break
-		}
+	finish := false
+	for !finish {
+		err := db.Update(func(tx *bolt.Tx) error {
+			var err error
+			bLinks := tx.Bucket([]byte(bcLinks))
+			bContents := tx.Bucket([]byte(bcContents))
 
-		cntURLs, err = savePageImpl(data, cntURLs)
+			for i := 0; i != 100; i++ {
+				data, more := <-chPageForSave
+				if !more {
+					finish = true
+					return nil
+				}
+				cntURLs, err = savePageImpl(data, bLinks, bContents, cntURLs)
+				if err != nil {
+					log.Printf("ERROR: Save parsed URL (%s) to db, message: %s", data.BaseLink, err)
+					return err
+				}
+			}
+
+			return nil
+		})
 		if err != nil {
-			log.Printf("ERROR: Save parsed URL (%s) to db, message: %s", data.BaseLink, err)
+			log.Printf("ERROR: Save transaction to db, message: %s", err)
 		}
 	}
 }
@@ -203,22 +213,9 @@ func notLoadedDbURLsToChannel(defaultURL string, cntURLs int) (int, error) {
 	return cntURLs, err
 }
 
-func printStat() error {
-	return db.View(func(tx *bolt.Tx) error {
-		fmt.Printf("bcContents len = %d\n", tx.Bucket([]byte(bcContents)).Stats().KeyN)
-		return nil
-	})
-}
-
 func startDbWorker(defaultURL string, cntURLs int) error {
 	err := OpenDb()
 	if err != nil {
-		return err
-	}
-
-	err = printStat()
-	if err != nil {
-		CloseDb()
 		return err
 	}
 
@@ -246,19 +243,35 @@ func finisDbWorker() {
 	wgDbWorker.Wait()
 }
 
-// ShowLinksStatistics - show words statistics
-// func ShowLinksStatistics() error {
-// 	err := db.View(func(tx *bolt.Tx) error {
-// 		c := tx.Bucket([]byte(bcLinks)).Cursor()
-// 		for link, metaByte := c.First(); link != nil; link, metaByte = c.Next() {
-// 			meta, err := linkDataFromBytes(metaByte)
-// 			if err != nil {
-// 				return err
-// 			}
-// 			fmt.Printf("%s: %d (%d)\n", link, meta.Count, meta.State)
-// 		}
-// 		return nil
-// 	})
+// ShowDbStatistics -
+func ShowDbStatistics() error {
+	err := OpenDb()
+	if err != nil {
+		return err
+	}
 
-// 	return err
-// }
+	defer CloseDb()
+	return db.View(func(tx *bolt.Tx) error {
+		bContents := tx.Bucket([]byte(bcContents))
+		fmt.Printf("Contents len = %d\n", bContents.Stats().KeyN)
+
+		bLinks := tx.Bucket([]byte(bcLinks))
+		fmt.Printf("Links len = %d\n", bLinks.Stats().KeyN)
+
+		return nil
+	})
+
+	// err := db.View(func(tx *bolt.Tx) error {
+	// 	c := tx.Bucket([]byte(bcLinks)).Cursor()
+	// 	for link, metaByte := c.First(); link != nil; link, metaByte = c.Next() {
+	// 		meta, err := linkDataFromBytes(metaByte)
+	// 		if err != nil {
+	// 			return err
+	// 		}
+	// 		fmt.Printf("%s: %d (%d)\n", link, meta.Count, meta.State)
+	// 	}
+	// 	return nil
+	// })
+
+	// return err
+}
