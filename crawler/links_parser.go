@@ -6,8 +6,7 @@ import (
 	"strings"
 )
 
-// ProcessLinks - normalize list of links
-func ProcessLinks(baseURL string, links *PageLinks, hostFilter string) (map[string]uint32, error) {
+func processLinks(baseURL string, links *PageLinks, hostFilter string) (map[string]uint32, error) {
 	result := make(map[string]uint32)
 
 	base, err := url.Parse(baseURL)

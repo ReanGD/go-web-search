@@ -6,6 +6,8 @@ import (
 	"crypto/md5"
 	"encoding/binary"
 	"fmt"
+	"log"
+	"sync"
 	"time"
 
 	"github.com/boltdb/bolt"
@@ -16,6 +18,9 @@ const bcContents = "Contents"
 const bcLinks = "Links"
 
 var db *bolt.DB
+var chURLForParse chan string
+var chPageForSave chan *pageInfoForSave
+var wgDbWorker sync.WaitGroup
 
 // OpenDb - open or create database
 func OpenDb() error {
@@ -81,31 +86,30 @@ func insertOrUpdateLinkData(bucket *bolt.Bucket, key []byte, fun linkDataUpdate)
 	return bucket.Put(key, buf.Bytes())
 }
 
-// SavePage - save raw content of the page and it links
-func SavePage(baseLink string, content []byte, links map[string]uint32) error {
-	var zContent bytes.Buffer
-	var hash [16]byte
+type pageInfoForSave struct {
+	BaseLink string
+	Content  []byte
+	Hash     [16]byte
+	Links    map[string]uint32
+}
 
-	w := zlib.NewWriter(&zContent)
-	_, err := w.Write(content)
-	w.Close()
-	if err != nil {
-		return err
-	}
-
-	hash = md5.Sum(content)
-
-	err = db.Update(func(tx *bolt.Tx) error {
+func savePageImpl(data *pageInfoForSave, cntURLs int) (int, error) {
+	err := db.Update(func(tx *bolt.Tx) error {
 		var err error
 		bLinks := tx.Bucket([]byte(bcLinks))
 		bContents := tx.Bucket([]byte(bcContents))
 
-		for link, count := range links {
+		for link, count := range data.Links {
 			err = insertOrUpdateLinkData(
 				bLinks,
 				[]byte(link),
-				func(data *linkData) error {
-					data.Count += count
+				func(obj *linkData) error {
+					obj.Count += count
+
+					if obj.State == 0 && cntURLs > 0 && data.BaseLink != link {
+						chURLForParse <- link
+						cntURLs--
+					}
 
 					return nil
 				})
@@ -116,10 +120,10 @@ func SavePage(baseLink string, content []byte, links map[string]uint32) error {
 
 		err = insertOrUpdateLinkData(
 			bLinks,
-			[]byte(baseLink),
-			func(data *linkData) error {
-				data.State = 1
-				data.Hash = hash
+			[]byte(data.BaseLink),
+			func(obj *linkData) error {
+				obj.State = 1
+				obj.Hash = data.Hash
 				return nil
 			})
 
@@ -127,10 +131,43 @@ func SavePage(baseLink string, content []byte, links map[string]uint32) error {
 			return err
 		}
 
-		return bContents.Put([]byte(baseLink), zContent.Bytes())
+		return bContents.Put([]byte(data.BaseLink), data.Content)
 	})
 
+	return cntURLs, err
+}
+
+func savePage(baseLink string, content []byte, links map[string]uint32) error {
+	var zContent bytes.Buffer
+	w := zlib.NewWriter(&zContent)
+	_, err := w.Write(content)
+	w.Close()
+
+	if err == nil {
+		hash := md5.Sum(content)
+		chPageForSave <- &pageInfoForSave{BaseLink: baseLink, Content: zContent.Bytes(), Hash: hash, Links: links}
+	}
+
 	return err
+}
+
+func startDbWorkerImpl(cntURLs int) {
+	defer wgDbWorker.Done()
+	defer CloseDb()
+	defer close(chURLForParse)
+
+	var err error
+	for {
+		data, more := <-chPageForSave
+		if !more {
+			break
+		}
+
+		cntURLs, err = savePageImpl(data, cntURLs)
+		if err != nil {
+			log.Printf("ERROR: Save parsed URL (%s) to db, message: %s", data.BaseLink, err)
+		}
+	}
 }
 
 func linkDataFromBytes(buf []byte) (*linkData, error) {
@@ -139,40 +176,89 @@ func linkDataFromBytes(buf []byte) (*linkData, error) {
 	return result, err
 }
 
-// FindNotLoadedLink - find not loaded link
-func FindNotLoadedLink() (string, error) {
-	var result string
+func notLoadedDbURLsToChannel(defaultURL string, cntURLs int) (int, error) {
 	err := db.View(func(tx *bolt.Tx) error {
-		c := tx.Bucket([]byte(bcLinks)).Cursor()
-		for link, metaByte := c.First(); link != nil; link, metaByte = c.Next() {
+		b := tx.Bucket([]byte(bcLinks))
+		c := b.Cursor()
+		isFound := false
+		for link, metaByte := c.First(); link != nil && cntURLs != 0; link, metaByte = c.Next() {
 			meta, err := linkDataFromBytes(metaByte)
 			if err != nil {
 				return err
 			}
 			if meta.State == 0 {
-				result = string(link[:])
-				return nil
+				chURLForParse <- string(link[:])
+				cntURLs--
+				isFound = true
 			}
+		}
+
+		if !isFound {
+			chURLForParse <- string(defaultURL)
+			cntURLs--
 		}
 		return nil
 	})
 
-	return result, err
+	return cntURLs, err
+}
+
+func printStat() error {
+	return db.View(func(tx *bolt.Tx) error {
+		fmt.Printf("bcContents len = %d\n", tx.Bucket([]byte(bcContents)).Stats().KeyN)
+		return nil
+	})
+}
+
+func startDbWorker(defaultURL string, cntURLs int) error {
+	err := OpenDb()
+	if err != nil {
+		return err
+	}
+
+	err = printStat()
+	if err != nil {
+		CloseDb()
+		return err
+	}
+
+	chURLForParse = make(chan string, cntURLs)
+	cntURLs, err = notLoadedDbURLsToChannel(defaultURL, cntURLs)
+	if err != nil {
+		close(chURLForParse)
+		CloseDb()
+		return err
+	}
+
+	chPageForSave = make(chan *pageInfoForSave, 50)
+	wgDbWorker.Add(1)
+	go startDbWorkerImpl(cntURLs)
+
+	return nil
+}
+
+func getNextURLForParse() string {
+	return <-chURLForParse
+}
+
+func finisDbWorker() {
+	close(chPageForSave)
+	wgDbWorker.Wait()
 }
 
 // ShowLinksStatistics - show words statistics
-func ShowLinksStatistics() error {
-	err := db.View(func(tx *bolt.Tx) error {
-		c := tx.Bucket([]byte(bcLinks)).Cursor()
-		for link, metaByte := c.First(); link != nil; link, metaByte = c.Next() {
-			meta, err := linkDataFromBytes(metaByte)
-			if err != nil {
-				return err
-			}
-			fmt.Printf("%s: %d (%d)\n", link, meta.Count, meta.State)
-		}
-		return nil
-	})
+// func ShowLinksStatistics() error {
+// 	err := db.View(func(tx *bolt.Tx) error {
+// 		c := tx.Bucket([]byte(bcLinks)).Cursor()
+// 		for link, metaByte := c.First(); link != nil; link, metaByte = c.Next() {
+// 			meta, err := linkDataFromBytes(metaByte)
+// 			if err != nil {
+// 				return err
+// 			}
+// 			fmt.Printf("%s: %d (%d)\n", link, meta.Count, meta.State)
+// 		}
+// 		return nil
+// 	})
 
-	return err
-}
+// 	return err
+// }

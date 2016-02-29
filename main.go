@@ -55,7 +55,7 @@ import (
 // }
 
 func run() error {
-	err := crawler.Process("http://habrahabr.ru/", "habrahabr.ru", 100)
+	err := crawler.Run("http://habrahabr.ru/", "habrahabr.ru", 5000)
 	if err != nil {
 		return err
 	}
@@ -73,6 +73,8 @@ func main() {
 	defer f.Close()
 
 	log.SetOutput(f)
+
+	// runtime.GOMAXPROCS(runtime.NumCPU())
 
 	err = run()
 	if err != nil {

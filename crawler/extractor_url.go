@@ -63,8 +63,7 @@ func (result *PageLinks) parseNode(node *html.Node) error {
 	}
 }
 
-// ParseURLsInPage - parse html page from io.Reader
-func ParseURLsInPage(reader io.Reader) (*PageLinks, error) {
+func parseURLsInPage(reader io.Reader) (*PageLinks, error) {
 	node, err := html.Parse(reader)
 	if err != nil {
 		return nil, err
