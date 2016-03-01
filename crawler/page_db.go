@@ -101,12 +101,11 @@ func savePageImpl(data *pageInfoForSave, bLinks *bolt.Bucket, bContents *bolt.Bu
 			bLinks,
 			[]byte(link),
 			func(obj *linkData) error {
-				obj.Count += count
-
-				if obj.State == 0 && cntURLs > 0 && data.BaseLink != link {
+				if obj.Count == 0 && obj.State == 0 && cntURLs > 0 && data.BaseLink != link {
 					chURLForParse <- link
 					cntURLs--
 				}
+				obj.Count += count
 
 				return nil
 			})
