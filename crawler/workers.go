@@ -24,34 +24,37 @@ func processURL(url string, hostFilter string) error {
 		return err
 	}
 
-	rawLinks, err := parseURLsInPage(bytes.NewReader(body))
+	rawURLs, err := parseURLsInPage(bytes.NewReader(body))
 	if err != nil {
 		return err
 	}
 
-	links, err := processLinks(url, rawLinks, hostFilter)
+	urls, err := processURLs(url, rawURLs, hostFilter)
 	if err != nil {
 		return err
 	}
 
-	return savePage(url, body, links)
+	return savePage(url, body, urls)
 }
 
 func pageWorker(wgParent *sync.WaitGroup, hostFilter string) {
 	defer wgParent.Done()
 
-	for {
+	for i := 0; ; i++ {
 		url, more := <-chPageWorkerTasks
 		if !more {
 			break
 		}
 
-		fmt.Println(url)
+		if i%20 == 19 {
+			fmt.Print(".")
+		}
 		err := processURL(url, hostFilter)
 		if err != nil {
 			log.Printf("ERROR: Process URL: %s message: %s", url, err)
 		}
 	}
+	fmt.Print("!")
 }
 
 func startPageWorkersImpl(workersCnt int, hostFilter string) {

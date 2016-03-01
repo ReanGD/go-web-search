@@ -6,7 +6,7 @@ import (
 )
 
 func showTotalTime(start time.Time) {
-	fmt.Printf("Time = %v\n", time.Now().Sub(start))
+	fmt.Printf("\nTime = %v\n", time.Now().Sub(start))
 }
 
 // Run - start download and process pageCnt pages
@@ -15,7 +15,7 @@ func Run(defaultURL string, hostFilter string, pageCnt int) error {
 		return nil
 	}
 
-	chWorkersSize := 50
+	chWorkersSize := 200
 	if chWorkersSize > pageCnt {
 		chWorkersSize = pageCnt
 	}

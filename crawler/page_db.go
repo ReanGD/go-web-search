@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"compress/zlib"
 	"crypto/md5"
-	"encoding/binary"
+	"errors"
 	"fmt"
 	"log"
 	"sync"
@@ -12,10 +12,6 @@ import (
 
 	"github.com/boltdb/bolt"
 )
-
-const dbName = "pages.db"
-const bcContents = "Contents"
-const bcLinks = "Links"
 
 var db *bolt.DB
 var chURLForParse chan string
@@ -25,22 +21,43 @@ var wgDbWorker sync.WaitGroup
 // OpenDb - open or create database
 func OpenDb() error {
 	var err error
-	db, err = bolt.Open(dbName, 0600, &bolt.Options{Timeout: 1 * time.Second})
+	db, err = bolt.Open(DbName, 0600, &bolt.Options{Timeout: 1 * time.Second})
 	if err != nil {
 		return err
 	}
 
 	err = db.Update(func(tx *bolt.Tx) error {
-		_, err := tx.CreateBucketIfNotExists([]byte(bcContents))
+		var err error
+		_, err = tx.CreateBucketIfNotExists([]byte(DbBucketContents))
 		if err != nil {
 			return err
 		}
-		_, err = tx.CreateBucketIfNotExists([]byte(bcLinks))
+		_, err = tx.CreateBucketIfNotExists([]byte(DbBucketURLs))
 		if err != nil {
 			return err
 		}
+		bMeta, err := tx.CreateBucketIfNotExists([]byte(DbBucketMeta))
+		if err != nil {
+			return err
+		}
+
+		metaVal := DbMeta{LastID: 0}
+		bytes, err := metaVal.MarshalMsg(nil)
+		if err != nil {
+			return err
+		}
+
+		err = bMeta.Put([]byte(DbKeyMeta), bytes)
+		if err != nil {
+			return err
+		}
+
 		return nil
 	})
+
+	if err != nil {
+		db.Close()
+	}
 
 	return err
 }
@@ -50,76 +67,59 @@ func CloseDb() {
 	db.Close()
 }
 
-type linkData struct {
-	ID    uint64
-	Count uint32
-	Hash  [16]byte
-	State uint8
-}
+type updateDbURL func(data *DbURL) error
 
-type linkDataUpdate func(data *linkData) error
-
-func insertOrUpdateLinkData(bucket *bolt.Bucket, key []byte, fun linkDataUpdate) error {
-	var data *linkData
-	byteLink := bucket.Get(key)
-	if byteLink == nil {
-		id, _ := bucket.NextSequence()
-		data = &linkData{ID: id, Count: 0, State: 0}
-	} else {
-		data = new(linkData)
-		err := binary.Read(bytes.NewReader(byteLink), binary.BigEndian, data)
+func insertOrUpdateDbURL(bucket *bolt.Bucket, key []byte, fun updateDbURL) error {
+	var data DbURL
+	var err error
+	bytes := bucket.Get(key)
+	if bytes != nil {
+		_, err = data.UnmarshalMsg(bytes)
 		if err != nil {
 			return err
 		}
 	}
 
-	err := fun(data)
+	err = fun(&data)
 	if err != nil {
 		return err
 	}
 
-	buf := new(bytes.Buffer)
-	err = binary.Write(buf, binary.BigEndian, *data)
+	bytes, err = data.MarshalMsg(nil)
 	if err != nil {
 		return err
 	}
-	return bucket.Put(key, buf.Bytes())
+	return bucket.Put(key, bytes)
 }
 
 type pageInfoForSave struct {
-	BaseLink string
-	Content  []byte
-	Hash     [16]byte
-	Links    map[string]uint32
+	URL        string
+	Content    []byte
+	Hash       [16]byte
+	URLsOnPage map[string]bool
 }
 
-func savePageImpl(data *pageInfoForSave, bLinks *bolt.Bucket, bContents *bolt.Bucket, cntURLs int) (int, error) {
-	var err error
+func savePageImpl(
+	bContents *bolt.Bucket,
+	bURLs *bolt.Bucket,
+	data *pageInfoForSave,
+	id uint64,
+	cntURLs int) (int, error) {
 
-	for link, count := range data.Links {
-		err = insertOrUpdateLinkData(
-			bLinks,
-			[]byte(link),
-			func(obj *linkData) error {
-				if obj.Count == 0 && obj.State == 0 && cntURLs > 0 && data.BaseLink != link {
-					chURLForParse <- link
-					cntURLs--
-				}
-				obj.Count += count
-
-				return nil
-			})
-		if err != nil {
-			return cntURLs, err
-		}
+	dataContent := DbContent{ID: id, Content: data.Content, Hash: data.Hash}
+	bytes, err := dataContent.MarshalMsg(nil)
+	if err != nil {
+		return cntURLs, err
+	}
+	err = bContents.Put([]byte(data.URL), bytes)
+	if err != nil {
+		return cntURLs, err
 	}
 
-	err = insertOrUpdateLinkData(
-		bLinks,
-		[]byte(data.BaseLink),
-		func(obj *linkData) error {
-			obj.State = 1
-			obj.Hash = data.Hash
+	err = insertOrUpdateDbURL(bURLs, []byte(data.URL),
+		func(obj *DbURL) error {
+			obj.ID = id
+			obj.Count = 0
 			return nil
 		})
 
@@ -127,12 +127,26 @@ func savePageImpl(data *pageInfoForSave, bLinks *bolt.Bucket, bContents *bolt.Bu
 		return cntURLs, err
 	}
 
-	err = bContents.Put([]byte(data.BaseLink), data.Content)
+	for url := range data.URLsOnPage {
+		err = insertOrUpdateDbURL(bURLs, []byte(url),
+			func(obj *DbURL) error {
+				if obj.ID == 0 && cntURLs > 0 {
+					chURLForParse <- url
+					cntURLs--
+				}
+				obj.Count++
+				return nil
+			})
+
+		if err != nil {
+			return cntURLs, err
+		}
+	}
 
 	return cntURLs, err
 }
 
-func savePage(baseLink string, content []byte, links map[string]uint32) error {
+func savePage(url string, content []byte, urlsOnPage map[string]bool) error {
 	var zContent bytes.Buffer
 	w := zlib.NewWriter(&zContent)
 	_, err := w.Write(content)
@@ -140,7 +154,7 @@ func savePage(baseLink string, content []byte, links map[string]uint32) error {
 
 	if err == nil {
 		hash := md5.Sum(content)
-		chPageForSave <- &pageInfoForSave{BaseLink: baseLink, Content: zContent.Bytes(), Hash: hash, Links: links}
+		chPageForSave <- &pageInfoForSave{URL: url, Content: zContent.Bytes(), Hash: hash, URLsOnPage: urlsOnPage}
 	}
 
 	return err
@@ -154,9 +168,23 @@ func startDbWorkerImpl(cntURLs int) {
 	finish := false
 	for !finish {
 		err := db.Update(func(tx *bolt.Tx) error {
-			var err error
-			bLinks := tx.Bucket([]byte(bcLinks))
-			bContents := tx.Bucket([]byte(bcContents))
+			bContents := tx.Bucket([]byte(DbBucketContents))
+			bURLs := tx.Bucket([]byte(DbBucketURLs))
+			bMeta := tx.Bucket([]byte(DbBucketMeta))
+
+			var metaVal DbMeta
+			metaBytes := bMeta.Get([]byte(DbKeyMeta))
+			if metaBytes == nil {
+				return errors.New("Can not load meta data for db page")
+			}
+
+			_, err := metaVal.UnmarshalMsg(metaBytes)
+			if err != nil {
+				log.Printf("ERROR: Parse meta data value, message: %s", err)
+				return err
+			}
+
+			lastID := metaVal.LastID
 
 			for i := 0; i != 100; i++ {
 				data, more := <-chPageForSave
@@ -164,39 +192,52 @@ func startDbWorkerImpl(cntURLs int) {
 					finish = true
 					return nil
 				}
-				cntURLs, err = savePageImpl(data, bLinks, bContents, cntURLs)
+
+				cntURLs, err = savePageImpl(bContents, bURLs, data, lastID+1, cntURLs)
 				if err != nil {
-					log.Printf("ERROR: Save parsed URL (%s) to db, message: %s", data.BaseLink, err)
+					log.Printf("ERROR: Save parsed URL (%s) to db, message: %s", data.URL, err)
 					return err
 				}
+
+				lastID++
+			}
+
+			metaVal.LastID = lastID
+			metaBytes, err = metaVal.MarshalMsg(nil)
+			if err != nil {
+				log.Printf("ERROR: Serrialize meta data value, message: %s", err)
+				return err
+			}
+
+			err = bMeta.Put([]byte(DbKeyMeta), metaBytes)
+			if err != nil {
+				log.Printf("ERROR: Save meta data value to db, message: %s", err)
+				return err
 			}
 
 			return nil
 		})
+
 		if err != nil {
 			log.Printf("ERROR: Save transaction to db, message: %s", err)
 		}
 	}
 }
 
-func linkDataFromBytes(buf []byte) (*linkData, error) {
-	result := new(linkData)
-	err := binary.Read(bytes.NewReader(buf), binary.BigEndian, result)
-	return result, err
-}
-
 func notLoadedDbURLsToChannel(defaultURL string, cntURLs int) (int, error) {
 	err := db.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte(bcLinks))
-		c := b.Cursor()
+		c := tx.Bucket([]byte(DbBucketURLs)).Cursor()
 		isFound := false
-		for link, metaByte := c.First(); link != nil && cntURLs != 0; link, metaByte = c.Next() {
-			meta, err := linkDataFromBytes(metaByte)
+
+		var urlVal DbURL
+		for url, urlBytes := c.First(); url != nil && cntURLs != 0; url, urlBytes = c.Next() {
+			_, err := urlVal.UnmarshalMsg(urlBytes)
 			if err != nil {
 				return err
 			}
-			if meta.State == 0 {
-				chURLForParse <- string(link[:])
+
+			if urlVal.ID == 0 {
+				chURLForParse <- string(url[:])
 				cntURLs--
 				isFound = true
 			}
@@ -251,26 +292,12 @@ func ShowDbStatistics() error {
 
 	defer CloseDb()
 	return db.View(func(tx *bolt.Tx) error {
-		bContents := tx.Bucket([]byte(bcContents))
+		bContents := tx.Bucket([]byte(DbBucketContents))
 		fmt.Printf("Contents len = %d\n", bContents.Stats().KeyN)
 
-		bLinks := tx.Bucket([]byte(bcLinks))
-		fmt.Printf("Links len = %d\n", bLinks.Stats().KeyN)
+		bURLs := tx.Bucket([]byte(DbBucketURLs))
+		fmt.Printf("bURLs len = %d\n", bURLs.Stats().KeyN)
 
 		return nil
 	})
-
-	// err := db.View(func(tx *bolt.Tx) error {
-	// 	c := tx.Bucket([]byte(bcLinks)).Cursor()
-	// 	for link, metaByte := c.First(); link != nil; link, metaByte = c.Next() {
-	// 		meta, err := linkDataFromBytes(metaByte)
-	// 		if err != nil {
-	// 			return err
-	// 		}
-	// 		fmt.Printf("%s: %d (%d)\n", link, meta.Count, meta.State)
-	// 	}
-	// 	return nil
-	// })
-
-	// return err
 }

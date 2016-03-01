@@ -9,8 +9,7 @@ import (
 	"golang.org/x/net/html/atom"
 )
 
-// PageLinks - parse result with list of links
-type PageLinks struct {
+type pageURLs struct {
 	LinkList list.List
 }
 
@@ -24,13 +23,13 @@ func getAttrVal(node *html.Node, attrName string) string {
 	return ""
 }
 
-func (result *PageLinks) parseChildren(node *html.Node) {
+func (result *pageURLs) parseChildren(node *html.Node) {
 	for it := node.FirstChild; it != nil; it = it.NextSibling {
 		result.parseNode(it)
 	}
 }
 
-func (result *PageLinks) parseElements(node *html.Node) {
+func (result *pageURLs) parseElements(node *html.Node) {
 	switch node.DataAtom {
 	case atom.A:
 		if link := getAttrVal(node, "href"); link != "" {
@@ -46,7 +45,7 @@ func (result *PageLinks) parseElements(node *html.Node) {
 	result.parseChildren(node)
 }
 
-func (result *PageLinks) parseNode(node *html.Node) error {
+func (result *pageURLs) parseNode(node *html.Node) error {
 	switch node.Type {
 	case html.ErrorNode:
 		return errors.New("ErrorNode on html")
@@ -63,13 +62,13 @@ func (result *PageLinks) parseNode(node *html.Node) error {
 	}
 }
 
-func parseURLsInPage(reader io.Reader) (*PageLinks, error) {
+func parseURLsInPage(reader io.Reader) (*pageURLs, error) {
 	node, err := html.Parse(reader)
 	if err != nil {
 		return nil, err
 	}
 
-	result := new(PageLinks)
+	result := new(pageURLs)
 	err = result.parseNode(node)
 
 	return result, err
