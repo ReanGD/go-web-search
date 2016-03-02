@@ -18,6 +18,15 @@ func processURL(url string, hostFilter string) error {
 		return err
 	}
 
+	if response.StatusCode == 404 {
+		savePage404(url)
+		return nil
+	}
+
+	if response.StatusCode != 200 {
+		log.Printf("WARNING: URL: %s returns StatusCode = %d", url, response.StatusCode)
+	}
+
 	body, err := ioutil.ReadAll(response.Body)
 	response.Body.Close()
 	if err != nil {

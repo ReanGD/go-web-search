@@ -264,6 +264,11 @@ func (z *DbURL) DecodeMsg(dc *msgp.Reader) (err error) {
 			if err != nil {
 				return
 			}
+		case "etype":
+			z.ErrorType, err = dc.ReadUint8()
+			if err != nil {
+				return
+			}
 		default:
 			err = dc.Skip()
 			if err != nil {
@@ -276,9 +281,9 @@ func (z *DbURL) DecodeMsg(dc *msgp.Reader) (err error) {
 
 // EncodeMsg implements msgp.Encodable
 func (z DbURL) EncodeMsg(en *msgp.Writer) (err error) {
-	// map header, size 2
+	// map header, size 3
 	// write "id"
-	err = en.Append(0x82, 0xa2, 0x69, 0x64)
+	err = en.Append(0x83, 0xa2, 0x69, 0x64)
 	if err != nil {
 		return err
 	}
@@ -295,19 +300,31 @@ func (z DbURL) EncodeMsg(en *msgp.Writer) (err error) {
 	if err != nil {
 		return
 	}
+	// write "etype"
+	err = en.Append(0xa5, 0x65, 0x74, 0x79, 0x70, 0x65)
+	if err != nil {
+		return err
+	}
+	err = en.WriteUint8(z.ErrorType)
+	if err != nil {
+		return
+	}
 	return
 }
 
 // MarshalMsg implements msgp.Marshaler
 func (z DbURL) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 2
+	// map header, size 3
 	// string "id"
-	o = append(o, 0x82, 0xa2, 0x69, 0x64)
+	o = append(o, 0x83, 0xa2, 0x69, 0x64)
 	o = msgp.AppendUint64(o, z.ID)
 	// string "count"
 	o = append(o, 0xa5, 0x63, 0x6f, 0x75, 0x6e, 0x74)
 	o = msgp.AppendUint32(o, z.Count)
+	// string "etype"
+	o = append(o, 0xa5, 0x65, 0x74, 0x79, 0x70, 0x65)
+	o = msgp.AppendUint8(o, z.ErrorType)
 	return
 }
 
@@ -337,6 +354,11 @@ func (z *DbURL) UnmarshalMsg(bts []byte) (o []byte, err error) {
 			if err != nil {
 				return
 			}
+		case "etype":
+			z.ErrorType, bts, err = msgp.ReadUint8Bytes(bts)
+			if err != nil {
+				return
+			}
 		default:
 			bts, err = msgp.Skip(bts)
 			if err != nil {
@@ -349,6 +371,99 @@ func (z *DbURL) UnmarshalMsg(bts []byte) (o []byte, err error) {
 }
 
 func (z DbURL) Msgsize() (s int) {
-	s = 1 + 3 + msgp.Uint64Size + 6 + msgp.Uint32Size
+	s = 1 + 3 + msgp.Uint64Size + 6 + msgp.Uint32Size + 6 + msgp.Uint8Size
+	return
+}
+
+// DecodeMsg implements msgp.Decodable
+func (z *DbWrongURL) DecodeMsg(dc *msgp.Reader) (err error) {
+	var field []byte
+	_ = field
+	var isz uint32
+	isz, err = dc.ReadMapHeader()
+	if err != nil {
+		return
+	}
+	for isz > 0 {
+		isz--
+		field, err = dc.ReadMapKeyPtr()
+		if err != nil {
+			return
+		}
+		switch msgp.UnsafeString(field) {
+		case "etype":
+			z.ErrorType, err = dc.ReadUint8()
+			if err != nil {
+				return
+			}
+		default:
+			err = dc.Skip()
+			if err != nil {
+				return
+			}
+		}
+	}
+	return
+}
+
+// EncodeMsg implements msgp.Encodable
+func (z DbWrongURL) EncodeMsg(en *msgp.Writer) (err error) {
+	// map header, size 1
+	// write "etype"
+	err = en.Append(0x81, 0xa5, 0x65, 0x74, 0x79, 0x70, 0x65)
+	if err != nil {
+		return err
+	}
+	err = en.WriteUint8(z.ErrorType)
+	if err != nil {
+		return
+	}
+	return
+}
+
+// MarshalMsg implements msgp.Marshaler
+func (z DbWrongURL) MarshalMsg(b []byte) (o []byte, err error) {
+	o = msgp.Require(b, z.Msgsize())
+	// map header, size 1
+	// string "etype"
+	o = append(o, 0x81, 0xa5, 0x65, 0x74, 0x79, 0x70, 0x65)
+	o = msgp.AppendUint8(o, z.ErrorType)
+	return
+}
+
+// UnmarshalMsg implements msgp.Unmarshaler
+func (z *DbWrongURL) UnmarshalMsg(bts []byte) (o []byte, err error) {
+	var field []byte
+	_ = field
+	var isz uint32
+	isz, bts, err = msgp.ReadMapHeaderBytes(bts)
+	if err != nil {
+		return
+	}
+	for isz > 0 {
+		isz--
+		field, bts, err = msgp.ReadMapKeyZC(bts)
+		if err != nil {
+			return
+		}
+		switch msgp.UnsafeString(field) {
+		case "etype":
+			z.ErrorType, bts, err = msgp.ReadUint8Bytes(bts)
+			if err != nil {
+				return
+			}
+		default:
+			bts, err = msgp.Skip(bts)
+			if err != nil {
+				return
+			}
+		}
+	}
+	o = bts
+	return
+}
+
+func (z DbWrongURL) Msgsize() (s int) {
+	s = 1 + 6 + msgp.Uint8Size
 	return
 }

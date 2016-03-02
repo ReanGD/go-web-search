@@ -6,7 +6,9 @@ import (
 	"crypto/md5"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"log"
+	"math"
 	"sync"
 	"time"
 
@@ -29,6 +31,10 @@ func OpenDb() error {
 	err = db.Update(func(tx *bolt.Tx) error {
 		var err error
 		_, err = tx.CreateBucketIfNotExists([]byte(DbBucketContents))
+		if err != nil {
+			return err
+		}
+		_, err = tx.CreateBucketIfNotExists([]byte(DbBucketWrongURLs))
 		if err != nil {
 			return err
 		}
@@ -74,6 +80,7 @@ func insertOrUpdateDbURL(bucket *bolt.Bucket, key []byte, fun updateDbURL) error
 	var err error
 	bytes := bucket.Get(key)
 	if bytes != nil {
+		data.ErrorType = PageTypeSuccess
 		_, err = data.UnmarshalMsg(bytes)
 		if err != nil {
 			return err
@@ -93,7 +100,9 @@ func insertOrUpdateDbURL(bucket *bolt.Bucket, key []byte, fun updateDbURL) error
 }
 
 type pageInfoForSave struct {
-	URL        string
+	URL string
+	// see PageTypeSuccess, PageType404, etc.
+	ErrorType  uint8
 	Content    []byte
 	Hash       [16]byte
 	URLsOnPage map[string]bool
@@ -101,10 +110,31 @@ type pageInfoForSave struct {
 
 func savePageImpl(
 	bContents *bolt.Bucket,
+	bWrongURLs *bolt.Bucket,
 	bURLs *bolt.Bucket,
 	data *pageInfoForSave,
 	id uint64,
 	cntURLs int) (int, error) {
+
+	if data.ErrorType != PageTypeSuccess {
+		dataWrongURL := DbWrongURL{ErrorType: data.ErrorType}
+		bytes, err := dataWrongURL.MarshalMsg(nil)
+		if err != nil {
+			return cntURLs, err
+		}
+		err = bWrongURLs.Put([]byte(data.URL), bytes)
+		if err != nil {
+			return cntURLs, err
+		}
+
+		err = insertOrUpdateDbURL(bURLs, []byte(data.URL),
+			func(obj *DbURL) error {
+				obj.ErrorType = data.ErrorType
+				return nil
+			})
+
+		return cntURLs, err
+	}
 
 	dataContent := DbContent{ID: id, Content: data.Content, Hash: data.Hash}
 	bytes, err := dataContent.MarshalMsg(nil)
@@ -130,7 +160,7 @@ func savePageImpl(
 	for url := range data.URLsOnPage {
 		err = insertOrUpdateDbURL(bURLs, []byte(url),
 			func(obj *DbURL) error {
-				if obj.ID == 0 && cntURLs > 0 {
+				if obj.ID == 0 && obj.ErrorType == PageTypeSuccess && cntURLs > 0 {
 					chURLForParse <- url
 					cntURLs--
 				}
@@ -146,6 +176,10 @@ func savePageImpl(
 	return cntURLs, err
 }
 
+func savePage404(url string) {
+	chPageForSave <- &pageInfoForSave{URL: url, ErrorType: PageType404}
+}
+
 func savePage(url string, content []byte, urlsOnPage map[string]bool) error {
 	var zContent bytes.Buffer
 	w := zlib.NewWriter(&zContent)
@@ -154,7 +188,7 @@ func savePage(url string, content []byte, urlsOnPage map[string]bool) error {
 
 	if err == nil {
 		hash := md5.Sum(content)
-		chPageForSave <- &pageInfoForSave{URL: url, Content: zContent.Bytes(), Hash: hash, URLsOnPage: urlsOnPage}
+		chPageForSave <- &pageInfoForSave{URL: url, ErrorType: PageTypeSuccess, Content: zContent.Bytes(), Hash: hash, URLsOnPage: urlsOnPage}
 	}
 
 	return err
@@ -169,6 +203,7 @@ func startDbWorkerImpl(cntURLs int) {
 	for !finish {
 		err := db.Update(func(tx *bolt.Tx) error {
 			bContents := tx.Bucket([]byte(DbBucketContents))
+			bWrongURLs := tx.Bucket([]byte(DbBucketWrongURLs))
 			bURLs := tx.Bucket([]byte(DbBucketURLs))
 			bMeta := tx.Bucket([]byte(DbBucketMeta))
 
@@ -193,7 +228,7 @@ func startDbWorkerImpl(cntURLs int) {
 					return nil
 				}
 
-				cntURLs, err = savePageImpl(bContents, bURLs, data, lastID+1, cntURLs)
+				cntURLs, err = savePageImpl(bContents, bWrongURLs, bURLs, data, lastID+1, cntURLs)
 				if err != nil {
 					log.Printf("ERROR: Save parsed URL (%s) to db, message: %s", data.URL, err)
 					return err
@@ -283,7 +318,7 @@ func finisDbWorker() {
 	wgDbWorker.Wait()
 }
 
-// ShowDbStatistics -
+// ShowDbStatistics - show db statistics
 func ShowDbStatistics() error {
 	err := OpenDb()
 	if err != nil {
@@ -298,6 +333,80 @@ func ShowDbStatistics() error {
 		bURLs := tx.Bucket([]byte(DbBucketURLs))
 		fmt.Printf("bURLs len = %d\n", bURLs.Stats().KeyN)
 
+		bWrongURLs := tx.Bucket([]byte(DbBucketWrongURLs))
+		fmt.Printf("WrongURLs len = %d\n", bWrongURLs.Stats().KeyN)
 		return nil
 	})
+}
+
+// CheckDb - check db
+func CheckDb() error {
+	err := OpenDb()
+	if err != nil {
+		return err
+	}
+
+	defer CloseDb()
+
+	isSuccess := true
+	minLen := math.MaxUint32
+	maxLen := 0
+	hashMap := make(map[[16]byte]string)
+	err = db.View(func(tx *bolt.Tx) error {
+		c := tx.Bucket([]byte(DbBucketContents)).Cursor()
+
+		var content DbContent
+		for url, contentBytes := c.First(); url != nil; url, contentBytes = c.Next() {
+			_, err := content.UnmarshalMsg(contentBytes)
+			if err != nil {
+				fmt.Printf("Error unmarshal value in db for url %s, message: %s\n", url, err)
+				isSuccess = false
+				continue
+			}
+
+			r, err := zlib.NewReader(bytes.NewReader(content.Content))
+			if err != nil {
+				fmt.Printf("Error unzip content for url %s, message: %s\n", url, err)
+				isSuccess = false
+				continue
+			}
+			contentOrig, err := ioutil.ReadAll(r)
+			r.Close()
+			if err != nil {
+				fmt.Printf("Error read unzip content for url %s, message: %s\n", url, err)
+				isSuccess = false
+				continue
+			}
+
+			lenContent := len(contentOrig)
+			if lenContent < minLen {
+				minLen = lenContent
+			}
+			if lenContent > maxLen {
+				maxLen = lenContent
+			}
+
+			hash := md5.Sum(contentOrig)
+			if hash != content.Hash {
+				fmt.Printf("Error content hash does not match for url %s\n", url)
+				isSuccess = false
+				continue
+			}
+
+			if val, ok := hashMap[hash]; ok {
+				fmt.Printf("Duplicated pages content:\n%s\n%s\n\n", url, val)
+			} else {
+				hashMap[hash] = string(url[:])
+			}
+		}
+
+		return nil
+	})
+
+	if isSuccess {
+		fmt.Printf("Min len = %d\n", minLen)
+		fmt.Printf("Max len = %d\n", maxLen)
+		fmt.Println("Checking ended successfully")
+	}
+	return err
 }
