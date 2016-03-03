@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-func processURLs(baseURL string, urls *pageURLs, hostFilter string) (map[string]bool, error) {
+func processURLs(baseURL string, urls *pageURLs, baseHosts map[string]bool) (map[string]bool, error) {
 	result := make(map[string]bool)
 
 	base, err := url.Parse(baseURL)
@@ -24,7 +24,8 @@ func processURLs(baseURL string, urls *pageURLs, hostFilter string) (map[string]
 		url := base.ResolveReference(relative)
 		url.Fragment = ""
 		urlStr := url.String()
-		if (url.Scheme == "http" || url.Scheme == "https") && url.Host == hostFilter && urlStr != baseURL {
+		isBaseHost, _ := baseHosts[url.Host]
+		if (url.Scheme == "http" || url.Scheme == "https") && isBaseHost && urlStr != baseURL {
 			result[urlStr] = true
 		}
 	}

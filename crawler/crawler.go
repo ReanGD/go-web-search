@@ -9,8 +9,8 @@ func showTotalTime(start time.Time) {
 	fmt.Printf("\nTime = %v\n", time.Now().Sub(start))
 }
 
-// Run - start download and process pageCnt pages
-func Run(defaultURL string, hostFilter string, pageCnt int) error {
+// Run - start download pageCnt pages
+func Run(defaultHosts []string, pageCnt int) error {
 	if pageCnt <= 0 {
 		return nil
 	}

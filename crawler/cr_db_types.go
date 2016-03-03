@@ -3,16 +3,16 @@ package crawler
 // DbName - name of database pages.db
 const DbName = "pages.db"
 
-// DbBucketContents - name contents bucket in database pages.db
+// DbBucketContents - bucket in database pages.db with page contents
 const DbBucketContents = "Contents"
 
-// DbBucketWrongURLs - name bucket with info abount wrong pages in database pages.db
+// DbBucketWrongURLs - bucket in database pages.db with wrong URLs
 const DbBucketWrongURLs = "WrongURLs"
 
-// DbBucketURLs - name links bucket in database pages.db
+// DbBucketURLs - bucket in database pages.db with URLs meta info
 const DbBucketURLs = "URLs"
 
-// DbBucketMeta - name meta bucket in database pages.db
+// DbBucketMeta - bucket in database pages.db with db settings
 const DbBucketMeta = "Meta"
 
 // DbKeyMeta - name first meta bucket key in database pages.db

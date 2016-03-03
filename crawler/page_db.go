@@ -176,8 +176,10 @@ func savePageImpl(
 	return cntURLs, err
 }
 
-func savePage404(url string) {
+func savePage404(url string) error {
 	chPageForSave <- &pageInfoForSave{URL: url, ErrorType: PageType404}
+
+	return nil
 }
 
 func savePage(url string, content []byte, urlsOnPage map[string]bool) error {
