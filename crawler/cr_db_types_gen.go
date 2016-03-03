@@ -8,80 +8,6 @@ import (
 	"github.com/tinylib/msgp/msgp"
 )
 
-// DecodeMsg implements msgp.Decodable
-func (z *DbContent) DecodeMsg(dc *msgp.Reader) (err error) {
-	var field []byte
-	_ = field
-	var isz uint32
-	isz, err = dc.ReadMapHeader()
-	if err != nil {
-		return
-	}
-	for isz > 0 {
-		isz--
-		field, err = dc.ReadMapKeyPtr()
-		if err != nil {
-			return
-		}
-		switch msgp.UnsafeString(field) {
-		case "id":
-			z.ID, err = dc.ReadUint64()
-			if err != nil {
-				return
-			}
-		case "content":
-			z.Content, err = dc.ReadBytes(z.Content)
-			if err != nil {
-				return
-			}
-		case "hash":
-			err = dc.ReadExactBytes(z.Hash[:])
-			if err != nil {
-				return
-			}
-		default:
-			err = dc.Skip()
-			if err != nil {
-				return
-			}
-		}
-	}
-	return
-}
-
-// EncodeMsg implements msgp.Encodable
-func (z *DbContent) EncodeMsg(en *msgp.Writer) (err error) {
-	// map header, size 3
-	// write "id"
-	err = en.Append(0x83, 0xa2, 0x69, 0x64)
-	if err != nil {
-		return err
-	}
-	err = en.WriteUint64(z.ID)
-	if err != nil {
-		return
-	}
-	// write "content"
-	err = en.Append(0xa7, 0x63, 0x6f, 0x6e, 0x74, 0x65, 0x6e, 0x74)
-	if err != nil {
-		return err
-	}
-	err = en.WriteBytes(z.Content)
-	if err != nil {
-		return
-	}
-	// write "hash"
-	err = en.Append(0xa4, 0x68, 0x61, 0x73, 0x68)
-	if err != nil {
-		return err
-	}
-	err = en.WriteBytes(z.Hash[:])
-	if err != nil {
-		return
-	}
-	return
-}
-
 // MarshalMsg implements msgp.Marshaler
 func (z *DbContent) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
@@ -145,52 +71,6 @@ func (z *DbContent) Msgsize() (s int) {
 	return
 }
 
-// DecodeMsg implements msgp.Decodable
-func (z *DbMeta) DecodeMsg(dc *msgp.Reader) (err error) {
-	var field []byte
-	_ = field
-	var isz uint32
-	isz, err = dc.ReadMapHeader()
-	if err != nil {
-		return
-	}
-	for isz > 0 {
-		isz--
-		field, err = dc.ReadMapKeyPtr()
-		if err != nil {
-			return
-		}
-		switch msgp.UnsafeString(field) {
-		case "lastId":
-			z.LastID, err = dc.ReadUint64()
-			if err != nil {
-				return
-			}
-		default:
-			err = dc.Skip()
-			if err != nil {
-				return
-			}
-		}
-	}
-	return
-}
-
-// EncodeMsg implements msgp.Encodable
-func (z DbMeta) EncodeMsg(en *msgp.Writer) (err error) {
-	// map header, size 1
-	// write "lastId"
-	err = en.Append(0x81, 0xa6, 0x6c, 0x61, 0x73, 0x74, 0x49, 0x64)
-	if err != nil {
-		return err
-	}
-	err = en.WriteUint64(z.LastID)
-	if err != nil {
-		return
-	}
-	return
-}
-
 // MarshalMsg implements msgp.Marshaler
 func (z DbMeta) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
@@ -235,80 +115,6 @@ func (z *DbMeta) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 func (z DbMeta) Msgsize() (s int) {
 	s = 1 + 7 + msgp.Uint64Size
-	return
-}
-
-// DecodeMsg implements msgp.Decodable
-func (z *DbURL) DecodeMsg(dc *msgp.Reader) (err error) {
-	var field []byte
-	_ = field
-	var isz uint32
-	isz, err = dc.ReadMapHeader()
-	if err != nil {
-		return
-	}
-	for isz > 0 {
-		isz--
-		field, err = dc.ReadMapKeyPtr()
-		if err != nil {
-			return
-		}
-		switch msgp.UnsafeString(field) {
-		case "id":
-			z.ID, err = dc.ReadUint64()
-			if err != nil {
-				return
-			}
-		case "count":
-			z.Count, err = dc.ReadUint32()
-			if err != nil {
-				return
-			}
-		case "etype":
-			z.ErrorType, err = dc.ReadUint8()
-			if err != nil {
-				return
-			}
-		default:
-			err = dc.Skip()
-			if err != nil {
-				return
-			}
-		}
-	}
-	return
-}
-
-// EncodeMsg implements msgp.Encodable
-func (z DbURL) EncodeMsg(en *msgp.Writer) (err error) {
-	// map header, size 3
-	// write "id"
-	err = en.Append(0x83, 0xa2, 0x69, 0x64)
-	if err != nil {
-		return err
-	}
-	err = en.WriteUint64(z.ID)
-	if err != nil {
-		return
-	}
-	// write "count"
-	err = en.Append(0xa5, 0x63, 0x6f, 0x75, 0x6e, 0x74)
-	if err != nil {
-		return err
-	}
-	err = en.WriteUint32(z.Count)
-	if err != nil {
-		return
-	}
-	// write "etype"
-	err = en.Append(0xa5, 0x65, 0x74, 0x79, 0x70, 0x65)
-	if err != nil {
-		return err
-	}
-	err = en.WriteUint8(z.ErrorType)
-	if err != nil {
-		return
-	}
 	return
 }
 
@@ -372,52 +178,6 @@ func (z *DbURL) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 func (z DbURL) Msgsize() (s int) {
 	s = 1 + 3 + msgp.Uint64Size + 6 + msgp.Uint32Size + 6 + msgp.Uint8Size
-	return
-}
-
-// DecodeMsg implements msgp.Decodable
-func (z *DbWrongURL) DecodeMsg(dc *msgp.Reader) (err error) {
-	var field []byte
-	_ = field
-	var isz uint32
-	isz, err = dc.ReadMapHeader()
-	if err != nil {
-		return
-	}
-	for isz > 0 {
-		isz--
-		field, err = dc.ReadMapKeyPtr()
-		if err != nil {
-			return
-		}
-		switch msgp.UnsafeString(field) {
-		case "etype":
-			z.ErrorType, err = dc.ReadUint8()
-			if err != nil {
-				return
-			}
-		default:
-			err = dc.Skip()
-			if err != nil {
-				return
-			}
-		}
-	}
-	return
-}
-
-// EncodeMsg implements msgp.Encodable
-func (z DbWrongURL) EncodeMsg(en *msgp.Writer) (err error) {
-	// map header, size 1
-	// write "etype"
-	err = en.Append(0x81, 0xa5, 0x65, 0x74, 0x79, 0x70, 0x65)
-	if err != nil {
-		return err
-	}
-	err = en.WriteUint8(z.ErrorType)
-	if err != nil {
-		return
-	}
 	return
 }
 

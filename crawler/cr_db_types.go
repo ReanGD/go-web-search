@@ -25,7 +25,10 @@ const (
 	PageType404 = iota
 )
 
-//go:generate msgp
+//go:generate msgp -tests=false
+//msgp:encode ignore DbContent DbWrongURL DbURL DbMeta
+//msgp:decode ignore DbContent DbWrongURL DbURL DbMeta
+//msgp:test ignore DbContent DbWrongURL DbURL DbMeta
 
 // DbContent - page content in page_db
 type DbContent struct {
