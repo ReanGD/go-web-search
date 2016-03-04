@@ -10,17 +10,6 @@ import (
 	"time"
 )
 
-type workerInfo struct {
-	ChTasks  chan<- string
-	TotalURL int
-}
-
-type workersManager struct {
-	WgWorkers sync.WaitGroup
-	BaseHosts map[string]bool
-	Workers   map[string]workerInfo
-}
-
 type workerParse struct {
 	BaseHosts map[string]bool
 	WgParent  *sync.WaitGroup
@@ -78,37 +67,43 @@ func (worker *workerParse) run() {
 	}
 }
 
-func (manager *workersManager) runWorker(host string, cnt int) {
-	chTasks := make(chan string, cnt)
+func runWorkers(baseHosts []string, cnt int, chDBTasks <-chan taskFromDB) {
+	var wgWorkers sync.WaitGroup
+	defer wgWorkers.Wait()
 
-	worker := &workerParse{
-		BaseHosts: manager.BaseHosts,
-		WgParent:  &manager.WgWorkers,
-		ChTasks:   chTasks}
-
-	manager.Workers[host] = workerInfo{
-		ChTasks:  chTasks,
-		TotalURL: 0}
-
-	manager.WgWorkers.Add(1)
-	go worker.run()
-}
-
-func (manager *workersManager) run(baseHosts []string, cnt int) {
-	defer manager.WgWorkers.Wait()
-
-	manager.BaseHosts = make(map[string]bool)
+	baseHostsMap := make(map[string]bool)
 	for _, host := range baseHosts {
-		manager.BaseHosts[host] = true
+		baseHostsMap[host] = true
 	}
 
-	manager.Workers = make(map[string]workerInfo)
-	cntPerWorker := cnt / len(baseHosts)
-	for _, host := range baseHosts {
-		manager.runWorker(host, cntPerWorker)
+	cntPerHost := cnt / len(baseHosts)
+	if cntPerHost < 1 {
+		cntPerHost = 1
 	}
-}
 
-func startWorkersManager(baseHosts []string, cnt int) {
-	new(workersManager).run(baseHosts, cnt)
+	workers := make(map[string]chan string)
+	for _, host := range baseHosts {
+		chTasks := make(chan string, cntPerHost)
+
+		worker := &workerParse{
+			BaseHosts: baseHostsMap,
+			WgParent:  &wgWorkers,
+			ChTasks:   chTasks}
+
+		workers[host] = chTasks
+		wgWorkers.Add(1)
+		go worker.run()
+	}
+
+	for {
+		task, more := <-chDBTasks
+		if !more {
+			break
+		}
+		workers[task.Host] <- task.URL
+	}
+
+	for _, ch := range workers {
+		close(ch)
+	}
 }
