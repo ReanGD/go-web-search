@@ -19,8 +19,10 @@ const DbBucketMeta = "Meta"
 const DbKeyMeta = "0"
 
 const (
+	//PageTypeNone - not loaded page
+	PageTypeNone uint8 = iota
 	//PageTypeSuccess - page without error
-	PageTypeSuccess uint8 = iota
+	PageTypeSuccess = iota
 	//PageType404 - page 404
 	PageType404 = iota
 )
@@ -28,7 +30,6 @@ const (
 //go:generate msgp -tests=false
 //msgp:encode ignore DbContent DbWrongURL DbURL DbMeta
 //msgp:decode ignore DbContent DbWrongURL DbURL DbMeta
-//msgp:test ignore DbContent DbWrongURL DbURL DbMeta
 
 // DbContent - page content in page_db
 type DbContent struct {
