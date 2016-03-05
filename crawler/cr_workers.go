@@ -2,6 +2,8 @@ package crawler
 
 import (
 	"bytes"
+	"compress/zlib"
+	"crypto/md5"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -11,9 +13,10 @@ import (
 )
 
 type workerParse struct {
-	BaseHosts map[string]bool
-	WgParent  *sync.WaitGroup
-	ChTasks   <-chan string
+	BaseHosts   map[string]bool
+	WgParent    *sync.WaitGroup
+	ChTasks     <-chan string
+	ChTasksToDB chan<- *taskToDB
 }
 
 func (worker *workerParse) processURL(url string) error {
@@ -24,7 +27,8 @@ func (worker *workerParse) processURL(url string) error {
 	defer response.Body.Close()
 
 	if response.StatusCode == 404 {
-		return savePage404(url)
+		worker.ChTasksToDB <- &taskToDB{URL: url, ErrorType: PageType404}
+		return nil
 	}
 
 	if response.StatusCode != 200 {
@@ -46,7 +50,21 @@ func (worker *workerParse) processURL(url string) error {
 		return err
 	}
 
-	return savePage(url, body, urls)
+	var zContent bytes.Buffer
+	w := zlib.NewWriter(&zContent)
+	_, err = w.Write(body)
+	w.Close()
+
+	if err == nil {
+		worker.ChTasksToDB <- &taskToDB{
+			URL:        url,
+			ErrorType:  PageTypeSuccess,
+			Content:    zContent.Bytes(),
+			Hash:       md5.Sum(body),
+			URLsOnPage: urls}
+	}
+
+	return err
 }
 
 func (worker *workerParse) run() {
@@ -67,7 +85,7 @@ func (worker *workerParse) run() {
 	}
 }
 
-func runWorkers(baseHosts []string, cnt int, chDBTasks <-chan taskFromDB) {
+func runWorkers(baseHosts []string, cnt int, chTasksFromDB <-chan taskFromDB, chTasksToDB chan<- *taskToDB) {
 	var wgWorkers sync.WaitGroup
 	defer wgWorkers.Wait()
 
@@ -86,9 +104,10 @@ func runWorkers(baseHosts []string, cnt int, chDBTasks <-chan taskFromDB) {
 		chTasks := make(chan string, cntPerHost)
 
 		worker := &workerParse{
-			BaseHosts: baseHostsMap,
-			WgParent:  &wgWorkers,
-			ChTasks:   chTasks}
+			BaseHosts:   baseHostsMap,
+			WgParent:    &wgWorkers,
+			ChTasks:     chTasks,
+			ChTasksToDB: chTasksToDB}
 
 		workers[host] = chTasks
 		wgWorkers.Add(1)
@@ -96,7 +115,7 @@ func runWorkers(baseHosts []string, cnt int, chDBTasks <-chan taskFromDB) {
 	}
 
 	for {
-		task, more := <-chDBTasks
+		task, more := <-chTasksFromDB
 		if !more {
 			break
 		}
