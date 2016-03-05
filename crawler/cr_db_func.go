@@ -1,7 +1,10 @@
 package crawler
 
 import (
+	"bytes"
+	"compress/zlib"
 	"fmt"
+	"io/ioutil"
 	"net/url"
 )
 
@@ -23,6 +26,10 @@ func (db *DB) readNotLoadedURLs(baseHosts map[string]int, ch chan<- taskFromDB) 
 		var urlVal DbURL
 		for urlKey, urlData := c.First(); urlKey != nil; urlKey, urlData = c.Next() {
 			parsedURL, err := url.Parse(string(urlKey[:]))
+			if err != nil {
+				return err
+			}
+
 			leftCnt, found := leftCnts[parsedURL.Host]
 			if !found || leftCnt <= 0 {
 				continue
@@ -68,13 +75,60 @@ func (db *DB) showStatistics() error {
 	return db.View(func(tx *Tx) error {
 		bContents := tx.Bucket(DbBucketContents)
 		fmt.Printf("\nStatistics:\n")
-		fmt.Printf("Contents len = %d\n", bContents.Stats().KeyN)
-
-		bURLs := tx.Bucket(DbBucketURLs)
-		fmt.Printf("bURLs len = %d\n", bURLs.Stats().KeyN)
+		fmt.Printf("Contents: %d\n", bContents.Stats().KeyN)
 
 		bWrongURLs := tx.Bucket(DbBucketWrongURLs)
-		fmt.Printf("WrongURLs len = %d\n", bWrongURLs.Stats().KeyN)
+		fmt.Printf("WrongURLs: %d\n", bWrongURLs.Stats().KeyN)
+
+		bURLs := tx.Bucket(DbBucketURLs)
+		cURLs := bURLs.Cursor()
+		fmt.Printf("URLs: %d:\n", bURLs.Stats().KeyN)
+
+		hostsStat := make(map[string]int)
+		for urlKey, _ := cURLs.First(); urlKey != nil; urlKey, _ = cURLs.Next() {
+			parsedURL, err := url.Parse(string(urlKey[:]))
+			if err != nil {
+				return err
+			}
+			hostsStat[parsedURL.Host]++
+		}
+		for host, cnt := range hostsStat {
+			fmt.Printf("  %s = %d\n", host, cnt)
+		}
+
 		return nil
 	})
+}
+
+// GetContent - Get content by URL
+func (db *DB) GetContent(u string) ([]byte, error) {
+	var result []byte
+
+	normURL, err := NormalizeRawURL(u)
+	if err != nil {
+		return result, err
+	}
+
+	err = db.View(func(tx *Tx) error {
+		bContents := tx.Bucket(DbBucketContents)
+
+		var content DbContent
+		exists, err := bContents.Get([]byte(normURL), &content)
+		if err != nil {
+			return err
+		}
+		if !exists {
+			return fmt.Errorf("Not found url %s in bucket %s ", normURL, DbBucketContents)
+		}
+
+		r, err := zlib.NewReader(bytes.NewReader(content.Content))
+		if err != nil {
+			return err
+		}
+		result, err = ioutil.ReadAll(r)
+		r.Close()
+		return err
+	})
+
+	return result, err
 }
