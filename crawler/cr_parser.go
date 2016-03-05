@@ -30,16 +30,10 @@ func (result *pageURLs) parseChildren(node *html.Node) {
 }
 
 func (result *pageURLs) parseElements(node *html.Node) {
-	switch node.DataAtom {
-	case atom.A:
+	if node.DataAtom == atom.A {
 		if link := getAttrVal(node, "href"); link != "" {
 			result.LinkList.PushBack(link)
 		}
-		break
-		// skip
-	case atom.Style, atom.Link, atom.Script, atom.Noscript, atom.Meta:
-		return
-	default:
 	}
 
 	result.parseChildren(node)
