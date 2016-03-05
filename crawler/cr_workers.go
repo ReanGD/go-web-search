@@ -10,13 +10,15 @@ import (
 	"net/http"
 	"sync"
 	"time"
+
+	"github.com/temoto/robotstxt.go"
 )
 
 type workerParse struct {
-	BaseHosts   map[string]int
 	WgParent    *sync.WaitGroup
 	ChTasks     <-chan string
 	ChTasksToDB chan<- *taskToDB
+	HandlerURLs *handlerURLs
 }
 
 func (worker *workerParse) processURL(url string) error {
@@ -45,7 +47,7 @@ func (worker *workerParse) processURL(url string) error {
 		return err
 	}
 
-	urls, err := processURLs(url, rawURLs, worker.BaseHosts)
+	urls, err := worker.HandlerURLs.handle(url, rawURLs)
 	if err != nil {
 		return err
 	}
@@ -85,7 +87,11 @@ func (worker *workerParse) run() {
 	}
 }
 
-func runWorkers(baseHosts map[string]int, chTasksFromDB <-chan taskFromDB, chTasksToDB chan<- *taskToDB) {
+func runWorkers(baseHosts map[string]int,
+	robots map[string]*robotstxt.Group,
+	chTasksFromDB <-chan taskFromDB,
+	chTasksToDB chan<- *taskToDB) {
+
 	var wgWorkers sync.WaitGroup
 	defer wgWorkers.Wait()
 
@@ -94,10 +100,10 @@ func runWorkers(baseHosts map[string]int, chTasksFromDB <-chan taskFromDB, chTas
 		chTasks := make(chan string, cnt)
 
 		worker := &workerParse{
-			BaseHosts:   baseHosts,
 			WgParent:    &wgWorkers,
 			ChTasks:     chTasks,
-			ChTasksToDB: chTasksToDB}
+			ChTasksToDB: chTasksToDB,
+			HandlerURLs: &handlerURLs{Robot: robots[host], BaseHosts: baseHosts}}
 
 		workers[host] = chTasks
 		wgWorkers.Add(1)

@@ -31,7 +31,7 @@ func (result *pageURLs) parseChildren(node *html.Node) {
 
 func (result *pageURLs) parseElements(node *html.Node) {
 	switch node.DataAtom {
-	case atom.A:
+	case atom.A, atom.Area:
 		if link := getAttrVal(node, "href"); link != "" {
 			result.LinkList.PushBack(link)
 		}

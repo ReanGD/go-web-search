@@ -37,6 +37,11 @@ func Run(baseHostsArray []string, cnt int) error {
 	defer showTotalTime(time.Now())
 	defer db.Close()
 
+	robots, err := getHostsRobotsTxt(db, baseHosts)
+	if err != nil {
+		return err
+	}
+
 	chFromDB := make(chan taskFromDB, cnt)
 	chToDB := make(chan *taskToDB, 100)
 	err = db.readNotLoadedURLs(baseHosts, chFromDB)
@@ -49,7 +54,7 @@ func Run(baseHostsArray []string, cnt int) error {
 	wgDB.Add(1)
 	go runDbWorker(&wgDB, db, chToDB)
 
-	runWorkers(baseHosts, chFromDB, chToDB)
+	runWorkers(baseHosts, robots, chFromDB, chToDB)
 	close(chToDB)
 	wgDB.Wait()
 	db.showStatistics()

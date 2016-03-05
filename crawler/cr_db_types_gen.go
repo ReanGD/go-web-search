@@ -72,6 +72,61 @@ func (z *DbContent) Msgsize() (s int) {
 }
 
 // MarshalMsg implements msgp.Marshaler
+func (z *DbHost) MarshalMsg(b []byte) (o []byte, err error) {
+	o = msgp.Require(b, z.Msgsize())
+	// map header, size 2
+	// string "robots"
+	o = append(o, 0x82, 0xa6, 0x72, 0x6f, 0x62, 0x6f, 0x74, 0x73)
+	o = msgp.AppendBytes(o, z.RobotsTxt)
+	// string "status"
+	o = append(o, 0xa6, 0x73, 0x74, 0x61, 0x74, 0x75, 0x73)
+	o = msgp.AppendInt(o, z.StatusCode)
+	return
+}
+
+// UnmarshalMsg implements msgp.Unmarshaler
+func (z *DbHost) UnmarshalMsg(bts []byte) (o []byte, err error) {
+	var field []byte
+	_ = field
+	var isz uint32
+	isz, bts, err = msgp.ReadMapHeaderBytes(bts)
+	if err != nil {
+		return
+	}
+	for isz > 0 {
+		isz--
+		field, bts, err = msgp.ReadMapKeyZC(bts)
+		if err != nil {
+			return
+		}
+		switch msgp.UnsafeString(field) {
+		case "robots":
+			z.RobotsTxt, bts, err = msgp.ReadBytesBytes(bts, z.RobotsTxt)
+			if err != nil {
+				return
+			}
+		case "status":
+			z.StatusCode, bts, err = msgp.ReadIntBytes(bts)
+			if err != nil {
+				return
+			}
+		default:
+			bts, err = msgp.Skip(bts)
+			if err != nil {
+				return
+			}
+		}
+	}
+	o = bts
+	return
+}
+
+func (z *DbHost) Msgsize() (s int) {
+	s = 1 + 7 + msgp.BytesPrefixSize + len(z.RobotsTxt) + 7 + msgp.IntSize
+	return
+}
+
+// MarshalMsg implements msgp.Marshaler
 func (z DbMeta) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
 	// map header, size 1

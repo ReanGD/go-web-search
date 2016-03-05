@@ -32,6 +32,11 @@ func (db *DB) Open() error {
 
 	err = db.DB.Update(func(tx *bolt.Tx) error {
 		var err error
+
+		_, err = tx.CreateBucketIfNotExists([]byte(DbBucketHosts))
+		if err != nil {
+			return err
+		}
 		_, err = tx.CreateBucketIfNotExists([]byte(DbBucketContents))
 		if err != nil {
 			return err

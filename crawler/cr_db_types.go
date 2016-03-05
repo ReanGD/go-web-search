@@ -3,6 +3,9 @@ package crawler
 // DbName - name of database pages.db
 const DbName = "pages.db"
 
+// DbBucketHosts - bucket in database pages.db with base host
+const DbBucketHosts = "Hosts"
+
 // DbBucketContents - bucket in database pages.db with page contents
 const DbBucketContents = "Contents"
 
@@ -28,8 +31,14 @@ const (
 )
 
 //go:generate msgp -tests=false
-//msgp:encode ignore DbContent DbWrongURL DbURL DbMeta
-//msgp:decode ignore DbContent DbWrongURL DbURL DbMeta
+//msgp:encode ignore DbHost DbContent DbWrongURL DbURL DbMeta
+//msgp:decode ignore DbHost DbContent DbWrongURL DbURL DbMeta
+
+// DbHost - host information in page_db
+type DbHost struct {
+	RobotsTxt  []byte `msg:"robots"`
+	StatusCode int    `msg:"status"`
+}
 
 // DbContent - page content in page_db
 type DbContent struct {

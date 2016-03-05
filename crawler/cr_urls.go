@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/PuerkitoBio/purell"
+	"github.com/temoto/robotstxt.go"
 )
 
 const safeNormalizationFlags purell.NormalizationFlags = purell.FlagLowercaseScheme |
@@ -17,7 +18,7 @@ const safeNormalizationFlags purell.NormalizationFlags = purell.FlagLowercaseSch
 	purell.FlagRemoveDefaultPort |
 	purell.FlagRemoveEmptyQuerySeparator
 
-const usuallySafeNormalizationFlags purell.NormalizationFlags = purell.FlagAddTrailingSlash |
+const usuallySafeNormalizationFlags purell.NormalizationFlags = purell.FlagRemoveTrailingSlash |
 	purell.FlagRemoveDotSegments
 
 const unsafeNormalizationFlags purell.NormalizationFlags = purell.FlagRemoveFragment |
@@ -61,7 +62,12 @@ func URLFromHost(host string) string {
 	return NormalizeURL(&url.URL{Scheme: "http", Host: NormalizeHost(host)})
 }
 
-func processURLs(baseURL string, urls *list.List, baseHosts map[string]int) (map[string]bool, error) {
+type handlerURLs struct {
+	Robot     *robotstxt.Group
+	BaseHosts map[string]int
+}
+
+func (h *handlerURLs) handle(baseURL string, urls *list.List) (map[string]bool, error) {
 	result := make(map[string]bool)
 
 	base, err := url.Parse(baseURL)
@@ -80,9 +86,15 @@ func processURLs(baseURL string, urls *list.List, baseHosts map[string]int) (map
 		urlStr := NormalizeURL(parsed)
 		parsed, err = url.Parse(urlStr)
 
-		_, isBaseHost := baseHosts[parsed.Host]
-		if (parsed.Scheme == "http" || parsed.Scheme == "https") && isBaseHost && urlStr != baseURL {
-			result[urlStr] = true
+		_, isBaseHost := h.BaseHosts[parsed.Host]
+		isHTTP := (parsed.Scheme == "http" || parsed.Scheme == "https")
+
+		if isHTTP && isBaseHost && urlStr != baseURL {
+			parsed.Scheme = ""
+			parsed.Host = ""
+			if h.Robot.Test(parsed.String()) {
+				result[urlStr] = true
+			}
 		}
 	}
 
