@@ -77,13 +77,11 @@ func processURLs(baseURL string, urls *list.List, baseHosts map[string]int) (map
 			continue
 		}
 		parsed := base.ResolveReference(relative)
-		_, isBaseHost := baseHosts[parsed.Host]
-		if (parsed.Scheme != "http" && parsed.Scheme != "https") || !isBaseHost {
-			continue
-		}
-
 		urlStr := NormalizeURL(parsed)
-		if urlStr != baseURL {
+		parsed, err = url.Parse(urlStr)
+
+		_, isBaseHost := baseHosts[parsed.Host]
+		if (parsed.Scheme == "http" || parsed.Scheme == "https") && isBaseHost && urlStr != baseURL {
 			result[urlStr] = true
 		}
 	}
