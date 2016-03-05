@@ -2,6 +2,7 @@ package crawler
 
 import (
 	"fmt"
+	"sync"
 	"time"
 )
 
@@ -9,40 +10,49 @@ func showTotalTime(start time.Time) {
 	fmt.Printf("\nTime = %v\n", time.Now().Sub(start))
 }
 
-// Run - start download pageCnt pages
-func Run(defaultHosts []string, pageCnt int) error {
-	if pageCnt <= 0 {
+// Run - start download cnt pages
+func Run(baseHostsArray []string, cnt int) error {
+	if cnt <= 0 || len(baseHostsArray) == 0 {
 		return nil
 	}
 
-	chWorkersSize := 200
-	if chWorkersSize > pageCnt {
-		chWorkersSize = pageCnt
+	baseHosts := make(map[string]int)
+	for _, host := range baseHostsArray {
+		baseHosts[NormalizeHost(host)] = 0
+	}
+	cntPerHost := cnt / len(baseHosts)
+	if cntPerHost < 1 {
+		cntPerHost = 1
+	}
+	for key := range baseHosts {
+		baseHosts[key] = cntPerHost
 	}
 
-	workersCnt := pageCnt / 2
-	if workersCnt > 50 {
-		workersCnt = 50
-	} else if workersCnt < 1 {
-		workersCnt = 1
-	}
-
-	err := startDbWorker(defaultURL, pageCnt)
+	db := new(DB)
+	err := db.Open()
 	if err != nil {
 		return err
 	}
+
 	defer showTotalTime(time.Now())
-	defer finisDbWorker()
+	defer db.Close()
 
-	err = startPageWorkers(chWorkersSize, workersCnt, hostFilter)
+	chFromDB := make(chan taskFromDB, cnt)
+	chToDB := make(chan *taskToDB, 100)
+	err = db.readNotLoadedURLs(baseHosts, chFromDB)
+	close(chFromDB)
 	if err != nil {
 		return err
 	}
-	defer finishPageWorkers()
 
-	for i := 0; i < pageCnt; i++ {
-		addTaskToPageWorkers(getNextURLForParse())
-	}
+	var wgDB sync.WaitGroup
+	wgDB.Add(1)
+	go runDbWorker(&wgDB, db, chToDB)
+
+	runWorkers(baseHosts, chFromDB, chToDB)
+	close(chToDB)
+	wgDB.Wait()
+	db.showStatistics()
 
 	return nil
 }

@@ -56,7 +56,7 @@ func (result *pageURLs) parseNode(node *html.Node) error {
 	}
 }
 
-func parseURLsInPage(reader io.Reader) (*pageURLs, error) {
+func parseURLsInPage(reader io.Reader) (*list.List, error) {
 	node, err := html.Parse(reader)
 	if err != nil {
 		return nil, err
@@ -65,5 +65,5 @@ func parseURLsInPage(reader io.Reader) (*pageURLs, error) {
 	result := new(pageURLs)
 	err = result.parseNode(node)
 
-	return result, err
+	return &result.LinkList, err
 }

@@ -13,7 +13,7 @@ import (
 )
 
 type workerParse struct {
-	BaseHosts   map[string]bool
+	BaseHosts   map[string]int
 	WgParent    *sync.WaitGroup
 	ChTasks     <-chan string
 	ChTasksToDB chan<- *taskToDB
@@ -85,26 +85,16 @@ func (worker *workerParse) run() {
 	}
 }
 
-func runWorkers(baseHosts []string, cnt int, chTasksFromDB <-chan taskFromDB, chTasksToDB chan<- *taskToDB) {
+func runWorkers(baseHosts map[string]int, chTasksFromDB <-chan taskFromDB, chTasksToDB chan<- *taskToDB) {
 	var wgWorkers sync.WaitGroup
 	defer wgWorkers.Wait()
 
-	baseHostsMap := make(map[string]bool)
-	for _, host := range baseHosts {
-		baseHostsMap[host] = true
-	}
-
-	cntPerHost := cnt / len(baseHosts)
-	if cntPerHost < 1 {
-		cntPerHost = 1
-	}
-
 	workers := make(map[string]chan string)
-	for _, host := range baseHosts {
-		chTasks := make(chan string, cntPerHost)
+	for host, cnt := range baseHosts {
+		chTasks := make(chan string, cnt)
 
 		worker := &workerParse{
-			BaseHosts:   baseHostsMap,
+			BaseHosts:   baseHosts,
 			WgParent:    &wgWorkers,
 			ChTasks:     chTasks,
 			ChTasksToDB: chTasksToDB}
