@@ -32,21 +32,21 @@ func CheckDb() error {
 		for url, contentBytes := c.First(); url != nil; url, contentBytes = c.Next() {
 			_, err := content.UnmarshalMsg(contentBytes)
 			if err != nil {
-				fmt.Printf("Error unmarshal value in db for url %s, message: %s\n", url, err)
+				fmt.Printf("Error unmarshal value in db for url %s, message: %s\n", urlRaw, err)
 				isSuccess = false
 				continue
 			}
 
 			r, err := zlib.NewReader(bytes.NewReader(content.Content))
 			if err != nil {
-				fmt.Printf("Error unzip content for url %s, message: %s\n", url, err)
+				fmt.Printf("Error unzip content for url %s, message: %s\n", urlRaw, err)
 				isSuccess = false
 				continue
 			}
 			contentOrig, err := ioutil.ReadAll(r)
 			r.Close()
 			if err != nil {
-				fmt.Printf("Error read unzip content for url %s, message: %s\n", url, err)
+				fmt.Printf("Error read unzip content for url %s, message: %s\n", urlRaw, err)
 				isSuccess = false
 				continue
 			}
@@ -54,26 +54,26 @@ func CheckDb() error {
 			lenContent := len(contentOrig)
 			if lenContent < minLen {
 				minLen = lenContent
-				minLenURL = string(url)
+				minLenURL = string(urlRaw)
 			}
 			if lenContent > maxLen {
 				maxLen = lenContent
-				maxLenURL = string(url)
+				maxLenURL = string(urlRaw)
 			}
 
 			hash := md5.Sum(contentOrig)
 			if hash != content.Hash {
-				fmt.Printf("Error content hash does not match for url %s\n", url)
+				fmt.Printf("Error content hash does not match for url %s\n", urlRaw)
 				isSuccess = false
 				continue
 			}
 
 			if val, ok := hashMap[hash]; ok {
-				fmt.Printf("Duplicated pages content:\n%s\n%s\n\n", url, val)
+				fmt.Printf("Duplicated pages content:\n%s\n%s\n\n", urlRaw, val)
 			} else {
-				hashMap[hash] = string(url[:])
+				hashMap[hash] = string(urlRaw)
 			}
-		}
+		})
 
 		return nil
 	})
