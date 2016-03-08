@@ -25,7 +25,7 @@ const (
 // Host - host information
 type Host struct {
 	ID               string    `gorm:"size:255;primary_key;not null"`
-	RobotsStatusCode int32     `gorm:"not null"`
+	RobotsStatusCode int       `gorm:"not null"`
 	Timestamp        time.Time `gorm:"not null"`
 	RobotsData       []byte
 }
