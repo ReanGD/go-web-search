@@ -33,7 +33,6 @@ func (c Compressed) Value() (driver.Value, error) {
 
 // Scan - uncompress field to value
 func (c *Compressed) Scan(value interface{}) error {
-	fmt.Println("Scan")
 	if value == nil {
 		var nilResult []byte
 		c.Data = nilResult
