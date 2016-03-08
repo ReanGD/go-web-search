@@ -42,7 +42,8 @@ func (logger Logger) Print(values ...interface{}) {
 					if t, ok := value.(time.Time); ok {
 						formatedValues = append(formatedValues, fmt.Sprintf("'%v'", t.Format(time.RFC3339)))
 					} else if b, ok := value.([]byte); ok {
-						formatedValues = append(formatedValues, fmt.Sprintf("'%v'", string(b)))
+						formatedValues = append(formatedValues, fmt.Sprintf("'{...}%d'", len(b)))
+						// formatedValues = append(formatedValues, fmt.Sprintf("'%v'", string(b)))
 					} else if r, ok := value.(driver.Valuer); ok {
 						if value, err := r.Value(); err == nil && value != nil {
 							formatedValues = append(formatedValues, fmt.Sprintf("'...'"))
