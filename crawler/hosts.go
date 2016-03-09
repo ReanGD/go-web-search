@@ -44,18 +44,33 @@ func fillHosts(baseHosts map[string]bool, db *gorm.DB) error {
 			if err != nil {
 				return err
 			}
+
+			urlKey := URLFromHost(hostName)
+			var url content.URL
+			err = db.Where("id = ?", urlKey).First(&url).Error
+			if err == gorm.RecordNotFound {
+				url = content.URL{ID: urlKey, Loaded: false}
+				err = db.Create(&url).Error
+				if err != nil {
+					return err
+				}
+			} else {
+				return err
+			}
 		}
 	}
 
 	return nil
 }
 
-func initHosts(baseHosts map[string]bool, db *gorm.DB) error {
+func initHosts(baseHosts map[string]bool, db *gorm.DB) (int, error) {
 	var hosts []content.Host
 	err := db.Find(&hosts).Error
 	if err != nil {
-		return nil
+		return 0, nil
 	}
+
+	totalCnt := len(hosts)
 
 	needFill := false
 	for hostName := range baseHosts {
@@ -68,19 +83,23 @@ func initHosts(baseHosts map[string]bool, db *gorm.DB) error {
 		}
 		if isNew {
 			needFill = true
+			totalCnt++
 		}
 		baseHosts[hostName] = isNew
 	}
 
 	if needFill {
 		tr := db.Begin()
-		err = fillHosts(baseHosts, tr)
-		if err != nil {
-			tr.Rollback()
-		} else {
-			tr.Commit()
+		err = tr.Error
+		if err == nil {
+			err = fillHosts(baseHosts, tr)
+			if err != nil {
+				tr.Rollback()
+			} else {
+				err = tr.Commit().Error
+			}
 		}
 	}
 
-	return err
+	return totalCnt, err
 }
