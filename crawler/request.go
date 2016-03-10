@@ -4,9 +4,11 @@ import (
 	"crypto/md5"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"mime"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/ReanGD/go-web-search/content"
@@ -15,12 +17,47 @@ import (
 
 type request struct {
 	RobotTxt *robotstxt.Group
+	Hosts    map[string]*content.Host
 }
 
-// Get - get urlStr and save page to content.Meta
-// urlStr - valid URL
-func (r *request) Get(parentID uint64, urlStr string) (*content.Meta, error) {
-	result := content.Meta{URL: urlStr, Parent: parentID, Timestamp: time.Now()}
+func (r *request) parsePage(body []byte, baseURL string) (map[string]*content.URL, error) {
+	result := make(map[string]*content.URL)
+
+	parser := new(pageURLs)
+	rawURLs, err := parser.Parse(body)
+	if err != nil {
+		return result, err
+	}
+
+	base, err := url.Parse(baseURL)
+	if err != nil {
+		return result, err
+	}
+
+	for itRawURL := rawURLs.Front(); itRawURL != nil; itRawURL = itRawURL.Next() {
+		relative, err := url.Parse(strings.TrimSpace(itRawURL.Value.(string)))
+		if err != nil {
+			log.Printf("ERROR: Parse URL on page %s, message: %s", baseURL, err)
+			continue
+		}
+		parsed := base.ResolveReference(relative)
+		urlStr := NormalizeURL(parsed)
+		parsed, err = url.Parse(urlStr)
+
+		host, isBaseHost := r.Hosts[parsed.Host]
+		_, exists := result[urlStr]
+		isHTTP := (parsed.Scheme == "http" || parsed.Scheme == "https")
+
+		if isHTTP && isBaseHost && !exists && urlStr != baseURL {
+			result[urlStr] = &content.URL{ID: urlStr, HostID: host.ID, Loaded: false}
+		}
+	}
+
+	return result, nil
+}
+
+func (r *request) get(urlStr string) (*content.Meta, error) {
+	result := content.Meta{URL: urlStr, Timestamp: time.Now()}
 
 	parsed, err := url.Parse(urlStr)
 	if err != nil {
@@ -79,4 +116,24 @@ func (r *request) Get(parentID uint64, urlStr string) (*content.Meta, error) {
 	result.Content = content.Content{Hash: string(hash[:]), Data: content.Compressed{Data: body}}
 
 	return &result, nil
+}
+
+// Send - load and parse the urlStr
+// urlStr - valid URL
+func (r *request) Send(urlStr string) (*content.Meta, map[string]*content.URL) {
+	var urls map[string]*content.URL
+	meta, err := r.get(urlStr)
+	if err != nil {
+		log.Printf("ERROR: Get URL %s, message: %s", urlStr, err)
+	}
+
+	if meta.State == content.StateSuccess {
+		urls, err = r.parsePage(meta.Content.Data.Data, urlStr)
+		if err != nil {
+			meta.State = content.StateParseError
+			log.Printf("ERROR: Parse URL %s, message: %s", urlStr, err)
+		}
+	}
+
+	return meta, urls
 }
