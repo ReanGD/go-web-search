@@ -1,13 +1,10 @@
 package crawler
 
 import (
-	"container/list"
-	"log"
 	"net/url"
 	"strings"
 
 	"github.com/PuerkitoBio/purell"
-	"github.com/temoto/robotstxt.go"
 )
 
 const safeNormalizationFlags purell.NormalizationFlags = purell.FlagLowercaseScheme |
@@ -60,43 +57,4 @@ func NormalizeHost(host string) string {
 // URLFromHost - create normalized URL from hostname
 func URLFromHost(host string) string {
 	return NormalizeURL(&url.URL{Scheme: "http", Host: NormalizeHost(host)})
-}
-
-type handlerURLs struct {
-	Robot     *robotstxt.Group
-	BaseHosts map[string]int
-}
-
-func (h *handlerURLs) handle(baseURL string, urls *list.List) (map[string]bool, error) {
-	result := make(map[string]bool)
-
-	base, err := url.Parse(baseURL)
-	if err != nil {
-		log.Printf("ERROR: Parse URL message: %s", err)
-		return result, err
-	}
-
-	for it := urls.Front(); it != nil; it = it.Next() {
-		relative, err := url.Parse(strings.TrimSpace(it.Value.(string)))
-		if err != nil {
-			log.Printf("ERROR: Parse URL on page %s, message: %s", baseURL, err)
-			continue
-		}
-		parsed := base.ResolveReference(relative)
-		urlStr := NormalizeURL(parsed)
-		parsed, err = url.Parse(urlStr)
-
-		_, isBaseHost := h.BaseHosts[parsed.Host]
-		isHTTP := (parsed.Scheme == "http" || parsed.Scheme == "https")
-
-		if isHTTP && isBaseHost && urlStr != baseURL {
-			parsed.Scheme = ""
-			parsed.Host = ""
-			if h.Robot.Test(parsed.String()) {
-				result[urlStr] = true
-			}
-		}
-	}
-
-	return result, nil
 }

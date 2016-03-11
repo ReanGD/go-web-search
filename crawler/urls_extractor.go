@@ -1,9 +1,9 @@
 package crawler
 
 import (
+	"bytes"
 	"container/list"
 	"errors"
-	"io"
 
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
@@ -13,7 +13,7 @@ type pageURLs struct {
 	LinkList list.List
 }
 
-func getAttrVal(node *html.Node, attrName string) string {
+func (result *pageURLs) getAttrVal(node *html.Node, attrName string) string {
 	for _, attr := range node.Attr {
 		if attr.Key == attrName {
 			return attr.Val
@@ -32,12 +32,12 @@ func (result *pageURLs) parseChildren(node *html.Node) {
 func (result *pageURLs) parseElements(node *html.Node) {
 	switch node.DataAtom {
 	case atom.A, atom.Area:
-		if link := getAttrVal(node, "href"); link != "" {
+		if link := result.getAttrVal(node, "href"); link != "" {
 			result.LinkList.PushBack(link)
 		}
 		break
 	case atom.Frame:
-		if link := getAttrVal(node, "src"); link != "" {
+		if link := result.getAttrVal(node, "src"); link != "" {
 			result.LinkList.PushBack(link)
 		}
 	}
@@ -62,13 +62,12 @@ func (result *pageURLs) parseNode(node *html.Node) error {
 	}
 }
 
-func parseURLsInPage(reader io.Reader) (*list.List, error) {
-	node, err := html.Parse(reader)
+func (result *pageURLs) Parse(body []byte) (*list.List, error) {
+	node, err := html.Parse(bytes.NewReader(body))
 	if err != nil {
 		return nil, err
 	}
 
-	result := new(pageURLs)
 	err = result.parseNode(node)
 
 	return &result.LinkList, err
