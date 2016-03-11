@@ -12,12 +12,10 @@ import (
 	"time"
 
 	"github.com/ReanGD/go-web-search/content"
-	"github.com/temoto/robotstxt-go"
 )
 
 type request struct {
-	RobotTxt *robotstxt.Group
-	Hosts    map[string]*content.Host
+	Robot *robotTxt
 }
 
 func (r *request) parsePage(body []byte, baseURL string) (map[string]*content.URL, error) {
@@ -44,12 +42,8 @@ func (r *request) parsePage(body []byte, baseURL string) (map[string]*content.UR
 		urlStr := NormalizeURL(parsed)
 		parsed, err = url.Parse(urlStr)
 
-		host, isBaseHost := r.Hosts[parsed.Host]
-		_, exists := result[urlStr]
-		isHTTP := (parsed.Scheme == "http" || parsed.Scheme == "https")
-
-		if isHTTP && isBaseHost && !exists && urlStr != baseURL {
-			result[urlStr] = &content.URL{ID: urlStr, HostID: host.ID, Loaded: false}
+		if parsed.Scheme == "http" && r.Host.Name == parsed.Host && urlStr != baseURL {
+			result[urlStr] = &content.URL{ID: urlStr, HostID: r.Host.ID, Loaded: false}
 		}
 	}
 
@@ -59,15 +53,12 @@ func (r *request) parsePage(body []byte, baseURL string) (map[string]*content.UR
 func (r *request) get(urlStr string) (*content.Meta, error) {
 	result := content.Meta{URL: urlStr, Timestamp: time.Now()}
 
-	parsed, err := url.Parse(urlStr)
+	allow, err := r.Robot.Test(urlStr)
 	if err != nil {
 		result.State = content.StateErrorURLFormat
 		return &result, err
 	}
-
-	parsed.Scheme = ""
-	parsed.Host = ""
-	if !r.RobotTxt.Test(parsed.String()) {
+	if !allow {
 		result.State = content.StateDisabledByRobotsTxt
 		return &result, fmt.Errorf("Blocked by robot.txt")
 	}
@@ -120,7 +111,7 @@ func (r *request) get(urlStr string) (*content.Meta, error) {
 
 // Send - load and parse the urlStr
 // urlStr - valid URL
-func (r *request) Send(urlStr string) (*content.Meta, map[string]*content.URL) {
+func (r *request) Process(urlStr string) (*content.Meta, map[string]*content.URL) {
 	var urls map[string]*content.URL
 	meta, err := r.get(urlStr)
 	if err != nil {
