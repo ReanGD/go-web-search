@@ -1,6 +1,7 @@
 package crawler
 
 import (
+	"fmt"
 	"log"
 	"sync"
 	"time"
@@ -18,13 +19,13 @@ type hostWorker struct {
 func (w *hostWorker) saveResult(db *gorm.DB, meta *content.Meta, urls map[string]*content.URL) error {
 	err := db.Create(meta).Error
 	if err != nil {
-		return err
+		return fmt.Errorf("add new meta record for URL %s, message: %s", meta.URL, err)
 	}
 
 	processedURL := content.URL{ID: meta.URL, HostID: w.Request.Robot.Host.ID, Loaded: true}
 	err = db.Save(&processedURL).Error
 	if err != nil {
-		return err
+		return fmt.Errorf("update Loaded state, message: %s", err)
 	}
 
 	for _, newURL := range urls {
@@ -33,10 +34,10 @@ func (w *hostWorker) saveResult(db *gorm.DB, meta *content.Meta, urls map[string
 		if err == gorm.RecordNotFound {
 			err = db.Create(&newURL).Error
 			if err != nil {
-				return err
+				return fmt.Errorf("add new URL record, message: %s", err)
 			}
 		} else if err != nil {
-			return err
+			return fmt.Errorf("find in URL table, message: %s", err)
 		} else {
 			// nothing to update
 		}
@@ -46,75 +47,38 @@ func (w *hostWorker) saveResult(db *gorm.DB, meta *content.Meta, urls map[string
 }
 
 func (w *hostWorker) processURL(urlStr string) {
+	log.Printf("Start process URL %s", urlStr)
 	meta, newURLs := w.Request.Process(urlStr)
 	tr := w.DB.Begin()
 	err := tr.Error
 	if err == nil {
 		err = w.saveResult(tr, meta, newURLs)
 		if err != nil {
-			tr.Rollback()
+			log.Printf("ERROR: Save error, %s", err)
+			err = tr.Rollback().Error
 		} else {
 			err = tr.Commit().Error
 			time.Sleep(1000 * time.Millisecond)
 		}
+		if err != nil {
+			log.Printf("ERROR: transaction, message: %s", err)
+		}
 	}
-
-	log.Printf("ERROR: DB error, message: %s", err)
 }
 
 // Run - start worker
-// hostName - normalized host name
-func (w *hostWorker) Run(hostName string, cnt int) {
+func (w *hostWorker) Run(cnt int) {
 	defer w.WgParent.Done()
-	robotTxt := new(robotTxt)
-
-	var host content.Host
-	err := w.DB.Where("name = ?", hostName).First(&host).Error
-	if err == gorm.RecordNotFound {
-		err = robotTxt.FromHostName(hostName)
-		if err != nil {
-			log.Printf("ERROR: Get load robot.txt for host %s, message: %s", hostName, err)
-			return
-		}
-		err = w.DB.Create(&host).Error
-		if err != nil {
-			log.Printf("ERROR: Save information for host %s to DB , message: %s", hostName, err)
-			return
-		}
-	} else if err != nil {
-		log.Printf("ERROR: Save information for host %s to DB , message: %s", hostName, err)
-		return
-	} else {
-		err = robotTxt.FromHost(&host)
-		if err != nil {
-			log.Printf("ERROR: Parse robot.txt for host %s from DB, message: %s", hostName, err)
-			return
-		}
-	}
-
-	urlKey := URLFromHost(hostName)
-	var urlRow content.URL
-	err = w.DB.Where("id = ?", urlKey).First(&urlRow).Error
-	if err == gorm.RecordNotFound {
-		urlRow = content.URL{ID: urlKey, HostID: host.ID, Loaded: false}
-		err = w.DB.Create(&urlRow).Error
-		if err != nil {
-			log.Printf("ERROR: DB error, message: %s", err)
-			return
-		}
-	} else if err != nil {
-		log.Printf("ERROR: DB error, message: %s", err)
-		return
-	}
 
 	var urls []content.URL
-	err = w.DB.Where("host_id = ? and loaded = ?", host.ID, false).Limit(cnt).Find(&urls).Error
+	tr := w.DB.Begin()
+	err := tr.Where("host_id = ? and loaded = ?", w.Request.Robot.Host.ID, false).Limit(cnt).Find(&urls).Error
+	tr.Commit()
 	if err != nil {
 		log.Printf("ERROR: DB error, message: %s", err)
 		return
 	}
 
-	w.Request = &request{Robot: robotTxt}
 	for _, rowURL := range urls {
 		w.processURL(rowURL.ID)
 	}
