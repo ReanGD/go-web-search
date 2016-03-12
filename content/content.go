@@ -30,7 +30,7 @@ func GetDB() (*gorm.DB, error) {
 
 	db.SingularTable(true)
 	db.SetLogger(defaultLogger)
-	db.LogMode(true)
+	db.LogMode(false)
 
 	err = createTables(&db, Host{}, Content{}, Meta{}, URL{})
 	if err != nil {

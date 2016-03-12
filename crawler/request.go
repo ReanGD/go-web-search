@@ -2,6 +2,7 @@ package crawler
 
 import (
 	"crypto/md5"
+	"database/sql"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -42,8 +43,8 @@ func (r *request) parsePage(body []byte, baseURL string) (map[string]*content.UR
 		urlStr := NormalizeURL(parsed)
 		parsed, err = url.Parse(urlStr)
 
-		if parsed.Scheme == "http" && r.Host.Name == parsed.Host && urlStr != baseURL {
-			result[urlStr] = &content.URL{ID: urlStr, HostID: r.Host.ID, Loaded: false}
+		if parsed.Scheme == "http" && r.Robot.Host.Name == parsed.Host && urlStr != baseURL {
+			result[urlStr] = &content.URL{ID: urlStr, HostID: r.Robot.Host.ID, Loaded: false}
 		}
 	}
 
@@ -51,7 +52,11 @@ func (r *request) parsePage(body []byte, baseURL string) (map[string]*content.UR
 }
 
 func (r *request) get(urlStr string) (*content.Meta, error) {
-	result := content.Meta{URL: urlStr, Timestamp: time.Now()}
+	result := content.Meta{
+		URL:        urlStr,
+		MIME:       sql.NullString{Valid: false},
+		Timestamp:  time.Now(),
+		StatusCode: sql.NullInt64{Valid: false}}
 
 	allow, err := r.Robot.Test(urlStr)
 	if err != nil {
@@ -60,7 +65,8 @@ func (r *request) get(urlStr string) (*content.Meta, error) {
 	}
 	if !allow {
 		result.State = content.StateDisabledByRobotsTxt
-		return &result, fmt.Errorf("Blocked by robot.txt")
+		log.Printf("INFO: URL %s blocked by robot.txt", urlStr)
+		return &result, nil
 	}
 
 	response, err := http.Get(urlStr)
@@ -70,7 +76,7 @@ func (r *request) get(urlStr string) (*content.Meta, error) {
 	}
 	defer response.Body.Close()
 
-	result.StatusCode = response.StatusCode
+	result.StatusCode = sql.NullInt64{Int64: int64(response.StatusCode), Valid: true}
 	if response.StatusCode != 200 {
 		result.State = content.StateErrorStatusCode
 		return &result, fmt.Errorf("StatusCode = %d", response.StatusCode)
@@ -78,22 +84,23 @@ func (r *request) get(urlStr string) (*content.Meta, error) {
 
 	contentType, ok := response.Header["Content-Type"]
 	if !ok {
-		result.MIME = "not found"
+		result.MIME = sql.NullString{String: "not found", Valid: true}
 		result.State = content.StateUnsupportedFormat
 		return &result, fmt.Errorf("Not found Content-Type in headers")
 	}
 
 	mediatype, _, err := mime.ParseMediaType(contentType[0])
 	if err != nil {
-		result.MIME = "parse error"
+		result.MIME = sql.NullString{String: "parse error", Valid: true}
 		result.State = content.StateUnsupportedFormat
 		return &result, err
 	}
 
-	result.MIME = mediatype
+	result.MIME = sql.NullString{String: mediatype, Valid: true}
 	if mediatype != "text/html" {
 		result.State = content.StateUnsupportedFormat
-		return &result, fmt.Errorf("Unsupported mime format = %s", mediatype)
+		log.Printf("INFO: URL %s has unsupported mime format = %s", urlStr, mediatype)
+		return &result, nil
 	}
 
 	body, err := ioutil.ReadAll(response.Body)

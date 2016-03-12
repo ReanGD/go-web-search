@@ -10,8 +10,8 @@ import (
 	"github.com/jinzhu/gorm"
 )
 
-func showTotalTime(start time.Time) {
-	fmt.Printf("\nTime = %v\n", time.Now().Sub(start))
+func showTotalTime(msg string, start time.Time) {
+	fmt.Printf("\n%s%v\n", msg, time.Now().Sub(start))
 }
 
 func initRequests(db *gorm.DB, baseHosts []string) (map[string]*request, error) {
@@ -70,7 +70,8 @@ func initRequests(db *gorm.DB, baseHosts []string) (map[string]*request, error) 
 
 // Run - start download cnt pages
 func Run(baseHosts []string, cnt int) error {
-	defer showTotalTime(time.Now())
+	now := time.Now()
+	defer showTotalTime("Total time=", now)
 	if cnt <= 0 || len(baseHosts) == 0 {
 		return nil
 	}
@@ -92,13 +93,26 @@ func Run(baseHosts []string, cnt int) error {
 		cntPerHost = 1
 	}
 
+	var wgDBWorker sync.WaitGroup
+	defer wgDBWorker.Wait()
+	chDB := make(chan *content.SaveData)
+	workerDB := content.WriteWorker{
+		DB:          db,
+		WgParent:    &wgDBWorker,
+		TaskChannel: chDB}
+	wgDBWorker.Add(1)
+	go workerDB.Start()
+
 	var wgWorkers sync.WaitGroup
 	for _, requestItem := range requests {
-		worker := hostWorker{DB: db, WgParent: &wgWorkers, Request: requestItem}
+		worker := hostWorker{DB: db, WgParent: &wgWorkers, Request: requestItem, TaskChannel: chDB}
 		wgWorkers.Add(1)
 		go worker.Run(cntPerHost)
 	}
+
 	wgWorkers.Wait()
+	defer showTotalTime("Workes time=", now)
+	close(chDB)
 
 	return nil
 }
