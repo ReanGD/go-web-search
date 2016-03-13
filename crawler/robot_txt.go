@@ -11,8 +11,8 @@ import (
 )
 
 type robotTxt struct {
-	Group *robotstxt.Group
-	Host  *content.Host
+	Group    *robotstxt.Group
+	HostName string
 }
 
 // FromHost - init by db element content.Host
@@ -21,7 +21,7 @@ func (r *robotTxt) FromHost(host *content.Host) error {
 	if err != nil {
 		return err
 	}
-	r.Host = host
+	r.HostName = host.Name
 	r.Group = robot.FindGroup("Googlebot")
 
 	return nil
@@ -29,26 +29,26 @@ func (r *robotTxt) FromHost(host *content.Host) error {
 
 // FromHostName - init by hostName
 // hostName - normalized host name
-func (r *robotTxt) FromHostName(hostName string) error {
+func (r *robotTxt) FromHostName(hostName string) (*content.Host, error) {
 	robotsURL := NormalizeURL(&url.URL{Scheme: "http", Host: hostName, Path: "robots.txt"})
 	response, err := http.Get(robotsURL)
-
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer response.Body.Close()
 
 	body, err := ioutil.ReadAll(response.Body)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	host := &content.Host{Name: hostName,
+	host := &content.Host{
+		Name:             hostName,
+		Timestamp:        time.Now(),
 		RobotsStatusCode: response.StatusCode,
-		RobotsData:       body,
-		Timestamp:        time.Now()}
+		RobotsData:       body}
 
-	return r.FromHost(host)
+	return host, r.FromHost(host)
 }
 
 func (r *robotTxt) Test(urlStr string) (bool, error) {

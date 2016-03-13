@@ -53,8 +53,3 @@ func NormalizeHost(host string) string {
 
 	return result
 }
-
-// URLFromHost - create normalized URL from hostname
-func URLFromHost(host string) string {
-	return NormalizeURL(&url.URL{Scheme: "http", Host: NormalizeHost(host)})
-}

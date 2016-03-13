@@ -3,28 +3,24 @@ package crawler
 import (
 	"fmt"
 	"log"
+	"net/url"
 	"sync"
 	"time"
 
 	"github.com/ReanGD/go-web-search/content"
-	"github.com/jinzhu/gorm"
 )
 
 func showTotalTime(msg string, start time.Time) {
 	fmt.Printf("\n%s%v\n", msg, time.Now().Sub(start))
 }
 
-func initRequests(db *gorm.DB, baseHosts []string) (map[string]*request, error) {
+func loadHosts(db *content.DBrw, baseHosts []string) (map[string]*request, error) {
+	var err error
 	requests := make(map[string]*request)
 
-	var hosts []content.Host
-	err := db.Find(&hosts).Error
-	if err != nil {
-		return requests, fmt.Errorf("Get hosts list from db, message: %s", err)
-	}
-	for i, host := range hosts {
+	for _, host := range db.GetHosts() {
 		robotTxt := new(robotTxt)
-		err = robotTxt.FromHost(&hosts[i])
+		err = robotTxt.FromHost(host)
 		if err != nil {
 			return requests, fmt.Errorf("Init robot.txt for host %s from db data, message: %s", host.Name, err)
 		}
@@ -36,32 +32,15 @@ func initRequests(db *gorm.DB, baseHosts []string) (map[string]*request, error) 
 		_, exists := requests[hostName]
 		if !exists {
 			robotTxt := new(robotTxt)
-			err = robotTxt.FromHostName(hostName)
+			host, err := robotTxt.FromHostName(hostName)
 			if err != nil {
 				return requests, fmt.Errorf("Load robot.txt for host %s, message: %s", hostName, err)
 			}
-			err = db.Create(&robotTxt.Host).Error
+			err = db.AddHost(host, NormalizeURL(&url.URL{Scheme: "http", Host: hostName}))
 			if err != nil {
-				return requests, fmt.Errorf("Save information for host %s to DB , message: %s", hostName, err)
+				return requests, err
 			}
 			requests[hostName] = &request{Robot: robotTxt}
-		}
-	}
-
-	for hostName, requestItem := range requests {
-		urlKey := URLFromHost(hostName)
-		var urlItem content.URL
-		err = db.Where("id = ?", urlKey).First(&urlItem).Error
-		if err == gorm.RecordNotFound {
-			urlItem = content.URL{ID: urlKey, HostID: requestItem.Robot.Host.ID, Loaded: false}
-			err = db.Create(&urlItem).Error
-			if err != nil {
-				return requests, fmt.Errorf("Save information for new URL %s to DB , message: %s", urlKey, err)
-			}
-		} else if err != nil {
-			return requests, fmt.Errorf("Get information about URL %s to DB , message: %s", urlKey, err)
-		} else {
-			// nothing to do
 		}
 	}
 
@@ -76,13 +55,14 @@ func Run(baseHosts []string, cnt int) error {
 		return nil
 	}
 
-	db, err := content.GetDB()
+	db, err := content.GetDBrw()
 	if err != nil {
+		log.Printf("ERROR: %s", err)
 		return err
 	}
 	defer db.Close()
 
-	requests, err := initRequests(db, baseHosts)
+	requests, err := loadHosts(db, baseHosts)
 	if err != nil {
 		log.Printf("ERROR: %s", err)
 		return err
@@ -93,26 +73,23 @@ func Run(baseHosts []string, cnt int) error {
 		cntPerHost = 1
 	}
 
-	var wgDBWorker sync.WaitGroup
-	defer wgDBWorker.Wait()
-	chDB := make(chan *content.SaveData)
-	workerDB := content.WriteWorker{
-		DB:          db,
-		WgParent:    &wgDBWorker,
-		TaskChannel: chDB}
-	wgDBWorker.Add(1)
-	go workerDB.Start()
+	var wgDB sync.WaitGroup
+	chTask := make(chan *content.TaskData, cnt)
+	chPage := make(chan *content.PageData, cnt)
+	dbWorker := &content.WriteWorker{
+		DB:       db,
+		ChTask:   chTask,
+		WgParent: &wgDB,
+		ChPage:   chPage}
 
-	var wgWorkers sync.WaitGroup
-	for _, requestItem := range requests {
-		worker := hostWorker{DB: db, WgParent: &wgWorkers, Request: requestItem, TaskChannel: chDB}
-		wgWorkers.Add(1)
-		go worker.Run(cntPerHost)
-	}
+	wgDB.Add(1)
+	go dbWorker.Start(cntPerHost)
 
-	wgWorkers.Wait()
-	defer showTotalTime("Workes time=", now)
-	close(chDB)
+	startWorkers(chTask, chPage, requests, cntPerHost)
+	close(chPage)
+	showTotalTime("Workes time=", now)
+
+	wgDB.Wait()
 
 	return nil
 }

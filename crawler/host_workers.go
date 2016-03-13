@@ -7,37 +7,68 @@ import (
 	"time"
 
 	"github.com/ReanGD/go-web-search/content"
-	"github.com/jinzhu/gorm"
 )
 
 type hostWorker struct {
-	DB          *gorm.DB
-	WgParent    *sync.WaitGroup
-	Request     *request
-	TaskChannel chan<- *content.SaveData
+	WgParent *sync.WaitGroup
+	Request  *request
+	ChTask   chan string
+	ChDB     chan<- *content.PageData
 }
 
 // Run - start worker
-func (w *hostWorker) Run(cnt int) {
+func (w *hostWorker) Run() {
 	defer w.WgParent.Done()
 
-	var urls []content.URL
-	tr := w.DB.Begin()
-	err := tr.Where("host_id = ? and loaded = ?", w.Request.Robot.Host.ID, false).Limit(cnt).Find(&urls).Error
-	tr.Commit()
-	if err != nil {
-		log.Printf("ERROR: DB error, message: %s", err)
-		return
-	}
-
-	hostID := w.Request.Robot.Host.ID
-	for _, rowURL := range urls {
-		meta, newURLs := w.Request.Process(rowURL.ID)
-		data := &content.SaveData{HostID: hostID, MetaItem: meta, URLs: newURLs}
-		w.TaskChannel <- data
+	for {
+		urlStr, more := <-w.ChTask
+		if !more {
+			break
+		}
+		data := w.Request.Process(urlStr)
 		fmt.Printf(".")
-		if meta.State != content.StateErrorURLFormat && meta.State != content.StateDisabledByRobotsTxt {
+		w.ChDB <- data
+		state := data.MetaItem.State
+		if state != content.StateErrorURLFormat && state != content.StateDisabledByRobotsTxt {
 			time.Sleep(1 * time.Second)
 		}
+	}
+}
+
+func startWorkers(chTask <-chan *content.TaskData,
+	chDB chan<- *content.PageData,
+	requests map[string]*request,
+	cntPerHost int) {
+
+	workers := make(map[string]*hostWorker, len(requests))
+
+	var wgWorkers sync.WaitGroup
+	defer wgWorkers.Wait()
+	for hostName, requestItem := range requests {
+		workers[hostName] = &hostWorker{
+			WgParent: &wgWorkers,
+			Request:  requestItem,
+			ChTask:   make(chan string, cntPerHost),
+			ChDB:     chDB}
+
+		wgWorkers.Add(1)
+		go workers[hostName].Run()
+	}
+
+	for {
+		task, more := <-chTask
+		if !more {
+			break
+		}
+		worker, exists := workers[task.Host]
+		if !exists {
+			log.Printf("WARNING: not found host worker %s", task.Host)
+		} else {
+			worker.ChTask <- task.URL
+		}
+	}
+
+	for _, worker := range workers {
+		close(worker.ChTask)
 	}
 }

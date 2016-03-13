@@ -19,8 +19,8 @@ type request struct {
 	Robot *robotTxt
 }
 
-func (r *request) parsePage(body []byte, baseURL string) (map[string]*content.URL, error) {
-	result := make(map[string]*content.URL)
+func (r *request) parsePage(body []byte, baseURL string) (map[string]string, error) {
+	result := make(map[string]string)
 
 	parser := new(pageURLs)
 	rawURLs, err := parser.Parse(body)
@@ -43,8 +43,8 @@ func (r *request) parsePage(body []byte, baseURL string) (map[string]*content.UR
 		urlStr := NormalizeURL(parsed)
 		parsed, err = url.Parse(urlStr)
 
-		if parsed.Scheme == "http" && r.Robot.Host.Name == parsed.Host && urlStr != baseURL {
-			result[urlStr] = &content.URL{ID: urlStr, HostID: r.Robot.Host.ID, Loaded: false}
+		if parsed.Scheme == "http" && urlStr != baseURL {
+			result[urlStr] = parsed.Host
 		}
 	}
 
@@ -118,13 +118,13 @@ func (r *request) get(urlStr string) (*content.Meta, error) {
 
 // Send - load and parse the urlStr
 // urlStr - valid URL
-func (r *request) Process(urlStr string) (*content.Meta, map[string]*content.URL) {
-	var urls map[string]*content.URL
+func (r *request) Process(urlStr string) *content.PageData {
 	meta, err := r.get(urlStr)
 	if err != nil {
 		log.Printf("ERROR: Get URL %s, message: %s", urlStr, err)
 	}
 
+	urls := make(map[string]string)
 	if meta.State == content.StateSuccess {
 		urls, err = r.parsePage(meta.Content.Data.Data, urlStr)
 		if err != nil {
@@ -133,5 +133,8 @@ func (r *request) Process(urlStr string) (*content.Meta, map[string]*content.URL
 		}
 	}
 
-	return meta, urls
+	return &content.PageData{
+		HostName: r.Robot.HostName,
+		MetaItem: meta,
+		URLs:     urls}
 }
