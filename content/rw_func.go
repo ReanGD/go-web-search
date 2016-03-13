@@ -58,7 +58,11 @@ func (db *DBrw) AddHost(host *Host, baseURL string) error {
 		var dbItem URL
 		err = tr.Where("id = ?", baseURL).First(&dbItem).Error
 		if err == gorm.RecordNotFound {
-			newItem := &URL{ID: baseURL, HostID: sql.NullInt64{Int64: host.ID, Valid: true}, Loaded: false}
+			newItem := &URL{
+				ID:     baseURL,
+				Parent: sql.NullInt64{Valid: false},
+				HostID: sql.NullInt64{Int64: host.ID, Valid: true},
+				Loaded: false}
 			err = tr.Create(newItem).Error
 			if err != nil {
 				return fmt.Errorf("add new 'URL' record for URL %s, message: %s", baseURL, err)

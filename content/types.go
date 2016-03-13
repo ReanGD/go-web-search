@@ -56,15 +56,17 @@ type Meta struct {
 	MIME       sql.NullString `gorm:"size:100"`
 	Timestamp  time.Time      `gorm:"not null"`
 	ContentID  sql.NullInt64  `gorm:"type:integer REFERENCES content(id)"`
+	Parent     sql.NullInt64  `gorm:"type:integer REFERENCES meta(id)"`
 	Content    Content
 	StatusCode sql.NullInt64
-	// Parent    uint64    `gorm:"type:integer REFERENCES meta(id);not null"`
 	// Origin     uint64    `gorm:"type:integer REFERENCES meta(id)"`
 }
 
 // URL - struct for save all URLs in db
+// Parent - first parent URL
 type URL struct {
 	ID     string        `gorm:"size:2048;primary_key;not null"`
+	Parent sql.NullInt64 `gorm:"type:integer REFERENCES meta(id)"`
 	HostID sql.NullInt64 `gorm:"type:integer REFERENCES host(id);index"`
 	Loaded bool          `gorm:"not null;index"`
 }

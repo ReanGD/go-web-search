@@ -1,6 +1,7 @@
 package content
 
 import (
+	"database/sql"
 	"fmt"
 	"log"
 	"sync"
@@ -23,16 +24,12 @@ type DBWorker struct {
 }
 
 func (w *DBWorker) savePageData(tr *DBrw, data *PageData) error {
-	err := tr.Create(data.MetaItem).Error
-	if err != nil {
-		return fmt.Errorf("add new 'Meta' record for URL %s, message: %s", data.MetaItem.URL, err)
-	}
-
 	var dbItem URL
 	urlStr := data.MetaItem.URL
 	newItem := &URL{ID: urlStr, HostID: tr.GetHostID(data.HostName), Loaded: true}
-	err = tr.Where("id = ?", urlStr).First(&dbItem).Error
+	err := tr.Where("id = ?", urlStr).First(&dbItem).Error
 	if err == gorm.RecordNotFound {
+		newItem.Parent = sql.NullInt64{Valid: false}
 		err = tr.Create(newItem).Error
 		if err != nil {
 			return fmt.Errorf("add new 'URL' record for URL %s, message: %s", urlStr, err)
@@ -40,6 +37,7 @@ func (w *DBWorker) savePageData(tr *DBrw, data *PageData) error {
 	} else if err != nil {
 		return fmt.Errorf("find in 'URL' table for URL %s, message: %s", urlStr, err)
 	} else if dbItem.Loaded == false {
+		newItem.Parent = dbItem.Parent
 		err = tr.Save(newItem).Error
 		if err != nil {
 			return fmt.Errorf("update 'URL' table with URL %s, message: %s", urlStr, err)
@@ -48,11 +46,18 @@ func (w *DBWorker) savePageData(tr *DBrw, data *PageData) error {
 		// nothing to update
 	}
 
+	data.MetaItem.Parent = newItem.Parent
+	err = tr.Create(data.MetaItem).Error
+	if err != nil {
+		return fmt.Errorf("add new 'Meta' record for URL %s, message: %s", data.MetaItem.URL, err)
+	}
+
+	parent := sql.NullInt64{Int64: data.MetaItem.ID, Valid: true}
 	for urlStr, hostName := range data.URLs {
 		var dbItem URL
 		err = tr.Where("id = ?", urlStr).First(&dbItem).Error
 		if err == gorm.RecordNotFound {
-			newItem := &URL{ID: urlStr, HostID: tr.GetHostID(hostName), Loaded: false}
+			newItem := &URL{ID: urlStr, Parent: parent, HostID: tr.GetHostID(hostName), Loaded: false}
 			err = tr.Create(&newItem).Error
 			if err != nil {
 				return fmt.Errorf("add new 'URL' record for URL %s, message: %s", urlStr, err)
