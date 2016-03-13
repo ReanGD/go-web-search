@@ -31,7 +31,7 @@ const (
 
 // Host - host information
 type Host struct {
-	ID               uint64    `gorm:"primary_key;not null"`
+	ID               int64     `gorm:"primary_key;not null"`
 	Name             string    `gorm:"size:255;unique_index;not null"`
 	Timestamp        time.Time `gorm:"not null"`
 	RobotsStatusCode int       `gorm:"not null"`
@@ -41,7 +41,7 @@ type Host struct {
 // Content - store page content
 // Hash - hash of uncompressed content
 type Content struct {
-	ID   uint64     `gorm:"primary_key;not null"`
+	ID   int64      `gorm:"primary_key;not null"`
 	Hash string     `gorm:"size:16;not null"`
 	Data Compressed `gorm:"not null"`
 }
@@ -50,7 +50,7 @@ type Content struct {
 // Parent - first parent URL
 // Origin - link to origin document (for State == CtStateDublicate)
 type Meta struct {
-	ID         uint64         `gorm:"primary_key;not null"`
+	ID         int64          `gorm:"primary_key;not null"`
 	URL        string         `gorm:"size:2048;not null;unique_index"`
 	State      State          `gorm:"not null"`
 	MIME       sql.NullString `gorm:"size:100"`
@@ -64,7 +64,7 @@ type Meta struct {
 
 // URL - struct for save all URLs in db
 type URL struct {
-	ID     string `gorm:"size:2048;primary_key;not null"`
-	HostID uint64 `gorm:"type:integer REFERENCES host(id);not null;index"`
-	Loaded bool   `gorm:"not null;index"`
+	ID     string        `gorm:"size:2048;primary_key;not null"`
+	HostID sql.NullInt64 `gorm:"type:integer REFERENCES host(id);index"`
+	Loaded bool          `gorm:"not null;index"`
 }
