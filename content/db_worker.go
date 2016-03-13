@@ -47,9 +47,22 @@ func (w *DBWorker) savePageData(tr *DBrw, data *PageData) error {
 	}
 
 	data.MetaItem.Parent = newItem.Parent
+	data.MetaItem.Origin, err = w.DB.GetOrigin(data.MetaItem)
+	if err != nil {
+		return err
+	}
+	if data.MetaItem.Origin.Valid {
+		data.MetaItem.State = StateDublicate
+		data.MetaItem.Content = Content{}
+		data.MetaItem.ContentID = sql.NullInt64{Valid: false}
+	}
 	err = tr.Create(data.MetaItem).Error
 	if err != nil {
 		return fmt.Errorf("add new 'Meta' record for URL %s, message: %s", data.MetaItem.URL, err)
+	}
+	w.DB.AddHash(data.MetaItem)
+	if err != nil {
+		return err
 	}
 
 	parent := sql.NullInt64{Int64: data.MetaItem.ID, Valid: true}

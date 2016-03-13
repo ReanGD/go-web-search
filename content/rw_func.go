@@ -99,3 +99,48 @@ func (db *DBrw) GetNewURLs(hostName string, cnt int) ([]string, error) {
 
 	return result, nil
 }
+
+// GetOrigin - get origin row id in table 'Meta'
+func (db *DBrw) GetOrigin(meta *Meta) (sql.NullInt64, error) {
+	null := sql.NullInt64{Valid: false}
+	if meta.Content.Data.IsNull() {
+		return null, nil
+	}
+
+	ids, exists := db.hashes[meta.Content.Hash]
+	if !exists {
+		return null, nil
+	}
+
+	for _, id := range ids {
+		var content Content
+		err := db.Where("id = ?", id.ContentID).Find(&content).Error
+		if err != nil {
+			return null, fmt.Errorf("find in 'Content' with id %d, message: %s", id.ContentID, err)
+		}
+		if meta.Content.Data.Equals(content.Data) {
+			return sql.NullInt64{Int64: id.MetaID, Valid: true}, nil
+		}
+	}
+	return null, nil
+}
+
+// AddHash - add new hash to hash storage
+func (db *DBrw) AddHash(meta *Meta) error {
+	if meta.Content.Data.IsNull() {
+		return nil
+	}
+	if !meta.ContentID.Valid {
+		return fmt.Errorf("ContentID is null in item 'Meta' for URL %s", meta.URL)
+	}
+	hash := meta.Content.Hash
+	item := hashVal{MetaID: meta.ID, ContentID: meta.ContentID.Int64}
+	_, exists := db.hashes[hash]
+	if exists {
+		db.hashes[hash] = append(db.hashes[hash], item)
+	} else {
+		db.hashes[hash] = []hashVal{item}
+	}
+
+	return nil
+}
