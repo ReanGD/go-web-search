@@ -73,3 +73,25 @@ func (db *DBrw) AddHost(host *Host, baseURL string) error {
 		return nil
 	})
 }
+
+// GetNewURLs - get URLs for downloads for host
+func (db *DBrw) GetNewURLs(hostName string, cnt int) ([]string, error) {
+	var result []string
+	host, exists := db.hosts[hostName]
+	if !exists {
+		return result, fmt.Errorf("host name %s not found in db", hostName)
+	}
+
+	var urls []URL
+	err := db.Where("host_id = ? and loaded = ?", host.ID, false).Limit(cnt).Find(&urls).Error
+	if err != nil {
+		return result, fmt.Errorf("find not loaded pages in 'URL' table for host %s, message: %s", hostName, err)
+	}
+
+	result = make([]string, len(urls))
+	for i := 0; i != len(urls); i++ {
+		result[i] = urls[i].ID
+	}
+
+	return result, nil
+}

@@ -3,7 +3,6 @@ package crawler
 import (
 	"fmt"
 	"log"
-	"net/url"
 	"sync"
 	"time"
 
@@ -12,39 +11,6 @@ import (
 
 func showTotalTime(msg string, start time.Time) {
 	fmt.Printf("\n%s%v\n", msg, time.Now().Sub(start))
-}
-
-func loadHosts(db *content.DBrw, baseHosts []string) (map[string]*request, error) {
-	var err error
-	requests := make(map[string]*request)
-
-	for _, host := range db.GetHosts() {
-		robotTxt := new(robotTxt)
-		err = robotTxt.FromHost(host)
-		if err != nil {
-			return requests, fmt.Errorf("Init robot.txt for host %s from db data, message: %s", host.Name, err)
-		}
-		requests[host.Name] = &request{Robot: robotTxt}
-	}
-
-	for _, hostNameRaw := range baseHosts {
-		hostName := NormalizeHost(hostNameRaw)
-		_, exists := requests[hostName]
-		if !exists {
-			robotTxt := new(robotTxt)
-			host, err := robotTxt.FromHostName(hostName)
-			if err != nil {
-				return requests, fmt.Errorf("Load robot.txt for host %s, message: %s", hostName, err)
-			}
-			err = db.AddHost(host, NormalizeURL(&url.URL{Scheme: "http", Host: hostName}))
-			if err != nil {
-				return requests, err
-			}
-			requests[hostName] = &request{Robot: robotTxt}
-		}
-	}
-
-	return requests, nil
 }
 
 // Run - start download cnt pages
@@ -62,34 +28,23 @@ func Run(baseHosts []string, cnt int) error {
 	}
 	defer db.Close()
 
-	requests, err := loadHosts(db, baseHosts)
+	workers := new(hostWorkers)
+	workers.Init(db, baseHosts, cnt)
 	if err != nil {
 		log.Printf("ERROR: %s", err)
 		return err
 	}
 
-	cntPerHost := cnt / len(requests)
-	if cntPerHost < 1 {
-		cntPerHost = 1
-	}
-
 	var wgDB sync.WaitGroup
-	chTask := make(chan *content.TaskData, cnt)
-	chPage := make(chan *content.PageData, cnt)
-	dbWorker := &content.WriteWorker{
-		DB:       db,
-		ChTask:   chTask,
-		WgParent: &wgDB,
-		ChPage:   chPage}
-
+	defer wgDB.Wait()
+	chDB := make(chan *content.PageData, cnt)
+	dbWorker := content.DBWorker{DB: db, ChDB: chDB}
 	wgDB.Add(1)
-	go dbWorker.Start(cntPerHost)
+	go dbWorker.Start(&wgDB)
 
-	startWorkers(chTask, chPage, requests, cntPerHost)
-	close(chPage)
+	workers.Start(chDB)
+	close(chDB)
 	showTotalTime("Workes time=", now)
-
-	wgDB.Wait()
 
 	return nil
 }

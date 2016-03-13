@@ -2,7 +2,7 @@ package crawler
 
 import (
 	"fmt"
-	"log"
+	"net/url"
 	"sync"
 	"time"
 
@@ -10,65 +10,83 @@ import (
 )
 
 type hostWorker struct {
-	WgParent *sync.WaitGroup
-	Request  *request
-	ChTask   chan string
-	ChDB     chan<- *content.PageData
+	Request *request
+	Tasks   []string
+	ChDB    chan<- *content.PageData
 }
 
 // Run - start worker
-func (w *hostWorker) Run() {
-	defer w.WgParent.Done()
+func (w *hostWorker) Start(wgParent *sync.WaitGroup) {
+	defer wgParent.Done()
 
-	for {
-		urlStr, more := <-w.ChTask
-		if !more {
-			break
-		}
-		data := w.Request.Process(urlStr)
+	cnt := len(w.Tasks)
+	for i := 0; i != cnt; i++ {
+		result := w.Request.Process(w.Tasks[i])
+		w.ChDB <- result
 		fmt.Printf(".")
-		w.ChDB <- data
-		state := data.MetaItem.State
-		if state != content.StateErrorURLFormat && state != content.StateDisabledByRobotsTxt {
+		state := result.MetaItem.State
+		if state != content.StateErrorURLFormat && state != content.StateDisabledByRobotsTxt && i != cnt-1 {
 			time.Sleep(1 * time.Second)
 		}
 	}
 }
 
-func startWorkers(chTask <-chan *content.TaskData,
-	chDB chan<- *content.PageData,
-	requests map[string]*request,
-	cntPerHost int) {
+type hostWorkers struct {
+	workers map[string]*hostWorker
+}
 
-	workers := make(map[string]*hostWorker, len(requests))
+func (w *hostWorkers) Init(db *content.DBrw, baseHosts []string, cnt int) error {
+	var err error
+	w.workers = make(map[string]*hostWorker)
 
-	var wgWorkers sync.WaitGroup
-	defer wgWorkers.Wait()
-	for hostName, requestItem := range requests {
-		workers[hostName] = &hostWorker{
-			WgParent: &wgWorkers,
-			Request:  requestItem,
-			ChTask:   make(chan string, cntPerHost),
-			ChDB:     chDB}
-
-		wgWorkers.Add(1)
-		go workers[hostName].Run()
+	for _, host := range db.GetHosts() {
+		robotTxt := new(robotTxt)
+		err = robotTxt.FromHost(host)
+		if err != nil {
+			return fmt.Errorf("Init robot.txt for host %s from db data, message: %s", host.Name, err)
+		}
+		w.workers[host.Name] = &hostWorker{Request: &request{Robot: robotTxt}}
 	}
 
-	for {
-		task, more := <-chTask
-		if !more {
-			break
-		}
-		worker, exists := workers[task.Host]
+	for _, hostNameRaw := range baseHosts {
+		hostName := NormalizeHost(hostNameRaw)
+		_, exists := w.workers[hostName]
 		if !exists {
-			log.Printf("WARNING: not found host worker %s", task.Host)
-		} else {
-			worker.ChTask <- task.URL
+			robotTxt := new(robotTxt)
+			host, err := robotTxt.FromHostName(hostName)
+			if err != nil {
+				return fmt.Errorf("Load robot.txt for host %s, message: %s", hostName, err)
+			}
+			err = db.AddHost(host, NormalizeURL(&url.URL{Scheme: "http", Host: hostName}))
+			if err != nil {
+				return err
+			}
+			w.workers[host.Name] = &hostWorker{Request: &request{Robot: robotTxt}}
 		}
 	}
 
-	for _, worker := range workers {
-		close(worker.ChTask)
+	cntPerHost := cnt / len(w.workers)
+	if cntPerHost < 1 {
+		cntPerHost = 1
+	}
+
+	for hostName, worker := range w.workers {
+		worker.Tasks, err = db.GetNewURLs(hostName, cntPerHost)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (w *hostWorkers) Start(chDB chan<- *content.PageData) {
+	var wg sync.WaitGroup
+	defer wg.Wait()
+
+	for _, worker := range w.workers {
+		worker.ChDB = chDB
+		wg.Add(1)
+		go worker.Start(&wg)
 	}
 }
