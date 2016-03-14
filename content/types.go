@@ -50,16 +50,17 @@ type Content struct {
 // Parent - first parent URL
 // Origin - link to origin document (for State == CtStateDublicate)
 type Meta struct {
-	ID         int64          `gorm:"primary_key;not null"`
-	URL        string         `gorm:"size:2048;not null;unique_index"`
-	State      State          `gorm:"not null"`
-	MIME       sql.NullString `gorm:"size:100"`
-	Timestamp  time.Time      `gorm:"not null"`
-	ContentID  sql.NullInt64  `gorm:"type:integer REFERENCES content(id)"`
-	Parent     sql.NullInt64  `gorm:"type:integer REFERENCES meta(id)"`
-	Content    Content
-	StatusCode sql.NullInt64
-	// Origin     uint64    `gorm:"type:integer REFERENCES meta(id)"`
+	ID          int64          `gorm:"primary_key;not null"`
+	URL         string         `gorm:"size:2048;not null;unique_index"`
+	State       State          `gorm:"not null"`
+	MIME        sql.NullString `gorm:"size:100"`
+	Timestamp   time.Time      `gorm:"not null"`
+	RedirectCnt sql.NullInt64
+	Parent      sql.NullInt64 `gorm:"type:integer REFERENCES meta(id)"`
+	Origin      sql.NullInt64 `gorm:"type:integer REFERENCES meta(id)"`
+	ContentID   sql.NullInt64 `gorm:"type:integer REFERENCES content(id)"`
+	Content     Content
+	StatusCode  sql.NullInt64
 }
 
 // URL - struct for save all URLs in db

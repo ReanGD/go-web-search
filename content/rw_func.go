@@ -127,7 +127,7 @@ func (db *DBrw) GetOrigin(meta *Meta) (sql.NullInt64, error) {
 
 // AddHash - add new hash to hash storage
 func (db *DBrw) AddHash(meta *Meta) error {
-	if meta.Content.Data.IsNull() {
+	if (meta.State != StateSuccess && meta.State != StateParseError) || meta.Content.Data.IsNull() {
 		return nil
 	}
 	if !meta.ContentID.Valid {

@@ -3,6 +3,7 @@ package crawler
 import (
 	"crypto/md5"
 	"database/sql"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -16,7 +17,9 @@ import (
 )
 
 type request struct {
-	Robot *robotTxt
+	Robot       *robotTxt
+	client      *http.Client
+	redirectCnt int
 }
 
 func (r *request) parsePage(body []byte, baseURL string) (map[string]string, error) {
@@ -52,11 +55,13 @@ func (r *request) parsePage(body []byte, baseURL string) (map[string]string, err
 }
 
 func (r *request) get(urlStr string) (*content.Meta, error) {
+	r.redirectCnt = 0
 	result := content.Meta{
-		URL:        urlStr,
-		MIME:       sql.NullString{Valid: false},
-		Timestamp:  time.Now(),
-		StatusCode: sql.NullInt64{Valid: false}}
+		URL:         urlStr,
+		MIME:        sql.NullString{Valid: false},
+		Timestamp:   time.Now(),
+		RedirectCnt: sql.NullInt64{Valid: false},
+		StatusCode:  sql.NullInt64{Valid: false}}
 
 	allow, err := r.Robot.Test(urlStr)
 	if err != nil {
@@ -69,11 +74,19 @@ func (r *request) get(urlStr string) (*content.Meta, error) {
 		return &result, nil
 	}
 
-	response, err := http.Get(urlStr)
+	request, err := http.NewRequest("GET", urlStr, nil)
+	if err != nil {
+		result.State = content.StateErrorURLFormat
+		return &result, err
+	}
+
+	// response, err := http.Get(urlStr)
+	response, err := r.client.Do(request)
 	if err != nil {
 		result.State = content.StateConnectError
 		return &result, err
 	}
+	result.RedirectCnt = sql.NullInt64{Int64: int64(r.redirectCnt), Valid: true}
 	defer response.Body.Close()
 
 	result.StatusCode = sql.NullInt64{Int64: int64(response.StatusCode), Valid: true}
@@ -137,4 +150,19 @@ func (r *request) Process(urlStr string) *content.PageData {
 		HostName: r.Robot.HostName,
 		MetaItem: meta,
 		URLs:     urls}
+}
+
+// Init - init request structure
+func (r *request) Init() {
+	r.client = new(http.Client)
+	r.client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+		if len(via) >= 10 {
+			return errors.New("stopped after 10 redirects")
+		}
+		if len(via) == 0 {
+			return nil
+		}
+		r.redirectCnt++
+		return nil
+	}
 }

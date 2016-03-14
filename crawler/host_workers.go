@@ -71,6 +71,7 @@ func (w *hostWorkers) Init(db *content.DBrw, baseHosts []string, cnt int) error 
 	}
 
 	for hostName, worker := range w.workers {
+		worker.Request.Init()
 		worker.Tasks, err = db.GetNewURLs(hostName, cntPerHost)
 		if err != nil {
 			return err

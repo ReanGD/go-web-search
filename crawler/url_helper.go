@@ -33,17 +33,6 @@ func NormalizeURL(u *url.URL) string {
 	return purell.NormalizeURL(u, defaultNormalizationFlags)
 }
 
-// NormalizeRawURL - normalize URL
-func NormalizeRawURL(rawURL string) (string, error) {
-	var result string
-	u, err := url.Parse(rawURL)
-	if err != nil {
-		return result, err
-	}
-	result = NormalizeURL(u)
-	return result, nil
-}
-
 // NormalizeHost - normalize host name
 func NormalizeHost(host string) string {
 	var result string
