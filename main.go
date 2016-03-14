@@ -6,62 +6,27 @@ import (
 	"os"
 
 	"github.com/ReanGD/go-web-search/crawler"
+	_ "github.com/mattn/go-sqlite3"
 )
 
-// func run() error {
-// 	url := "http://habrahabr.ru/"
-// 	p, err := parser.ParseURL(url)
-// 	if err != nil {
-// 		return err
-// 	}
+var baseHosts = []string{
+	"habrahabr.ru",
+	"megamozg.ru",
+	"geektimes.ru",
+	"linux.org.ru",
+	"gamedev.ru",
+	"xakep.ru",
+	"rsdn.ru",
+	"3dnews.ru",
+	"ferra.ru",
+	"computerra.ru"}
 
-// 	err = storage.Open()
-// 	if err != nil {
-// 		return err
-// 	}
-// 	defer storage.Close()
-
-// 	words, err := parser.ParseText(p.StringList)
-// 	if err != nil {
-// 		return err
-// 	}
-
-// 	err = storage.AddWords(words)
-// 	if err != nil {
-// 		return err
-// 	}
-
-// 	// err = storage.ShowWordStatistics()
-// 	if err != nil {
-// 		return err
-// 	}
-
-// 	links, err := parser.ParseLinks(url, p.LinkList)
-// 	if err != nil {
-// 		return err
-// 	}
-
-// 	err = storage.AddLinks(links)
-// 	if err != nil {
-// 		return err
-// 	}
-
-// 	err = storage.ShowLinksStatistics()
-// 	if err != nil {
-// 		return err
-// 	}
-
-// 	return nil
-// }
+func test() error {
+	return nil
+}
 
 func run() error {
-	// err := crawler.Run("http://habrahabr.ru/", "habrahabr.ru", 1000)
-	err := crawler.ShowDbStatistics()
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return crawler.Run(baseHosts, 200)
 }
 
 func main() {
@@ -78,6 +43,7 @@ func main() {
 	// runtime.GOMAXPROCS(runtime.NumCPU())
 
 	err = run()
+	// err = test()
 	if err != nil {
 		fmt.Printf("%s", err)
 	}
