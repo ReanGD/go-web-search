@@ -46,8 +46,8 @@ func (r *request) parsePage(body []byte, baseURL string) (map[string]string, err
 		urlStr := NormalizeURL(parsed)
 		parsed, err = url.Parse(urlStr)
 
-		if parsed.Scheme == "http" && urlStr != baseURL {
-			result[urlStr] = parsed.Host
+		if (parsed.Scheme == "http" || parsed.Scheme == "https") && urlStr != baseURL {
+			result[urlStr] = NormalizeHostName(parsed.Host)
 		}
 	}
 

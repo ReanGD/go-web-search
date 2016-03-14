@@ -26,7 +26,7 @@ func test() error {
 }
 
 func run() error {
-	return crawler.Run(baseHosts, 200)
+	return crawler.Run(baseHosts, 1000)
 }
 
 func main() {

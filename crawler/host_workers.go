@@ -2,7 +2,6 @@ package crawler
 
 import (
 	"fmt"
-	"net/url"
 	"sync"
 	"time"
 
@@ -49,7 +48,7 @@ func (w *hostWorkers) Init(db *content.DBrw, baseHosts []string, cnt int) error 
 	}
 
 	for _, hostNameRaw := range baseHosts {
-		hostName := NormalizeHost(hostNameRaw)
+		hostName := NormalizeHostName(hostNameRaw)
 		_, exists := w.workers[hostName]
 		if !exists {
 			robotTxt := new(robotTxt)
@@ -57,7 +56,11 @@ func (w *hostWorkers) Init(db *content.DBrw, baseHosts []string, cnt int) error 
 			if err != nil {
 				return fmt.Errorf("Load robot.txt for host %s, message: %s", hostName, err)
 			}
-			err = db.AddHost(host, NormalizeURL(&url.URL{Scheme: "http", Host: hostName}))
+			baseURL, err := GenerateURLByHostName(hostName)
+			if err != nil {
+				return err
+			}
+			err = db.AddHost(host, baseURL)
 			if err != nil {
 				return err
 			}
