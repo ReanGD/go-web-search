@@ -127,12 +127,13 @@ func (db *DBrw) GetOrigin(meta *Meta) (sql.NullInt64, error) {
 
 // AddHash - add new hash to hash storage
 func (db *DBrw) AddHash(meta *Meta) error {
-	if (meta.State != StateSuccess && meta.State != StateParseError) || meta.Content.Data.IsNull() {
+	if !meta.IsValidHash() {
 		return nil
 	}
-	if !meta.ContentID.Valid {
+	if !meta.ContentID.Valid || meta.Content.Data.IsNull() {
 		return fmt.Errorf("ContentID is null in item 'Meta' for URL %s", meta.URL)
 	}
+
 	hash := meta.Content.Hash
 	item := hashVal{MetaID: meta.ID, ContentID: meta.ContentID.Int64}
 	_, exists := db.hashes[hash]

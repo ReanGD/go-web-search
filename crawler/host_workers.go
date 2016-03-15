@@ -24,7 +24,7 @@ func (w *hostWorker) Start(wgParent *sync.WaitGroup) {
 		w.ChDB <- result
 		fmt.Printf(".")
 		state := result.MetaItem.State
-		if state != content.StateErrorURLFormat && state != content.StateDisabledByRobotsTxt && i != cnt-1 {
+		if result.MetaItem.NeedWaitAfterRequest() && i != cnt-1 {
 			time.Sleep(1 * time.Second)
 		}
 	}

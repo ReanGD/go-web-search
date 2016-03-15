@@ -71,3 +71,13 @@ type URL struct {
 	HostID sql.NullInt64 `gorm:"type:integer REFERENCES host(id);index"`
 	Loaded bool          `gorm:"not null;index"`
 }
+
+// IsValidHash - Check is valid hash by state
+func (m *Meta) IsValidHash() bool {
+	return (m.State == StateSuccess || m.State == StateParseError)
+}
+
+// NeedWaitAfterRequest - Check is need wait after request by state
+func (m *Meta) NeedWaitAfterRequest() bool {
+	return !(m.State == StateErrorURLFormat || m.State == StateDisabledByRobotsTxt)
+}
