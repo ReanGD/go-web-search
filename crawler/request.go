@@ -1,10 +1,13 @@
 package crawler
 
 import (
+	"bytes"
+	"compress/gzip"
 	"crypto/md5"
 	"database/sql"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"mime"
@@ -79,8 +82,8 @@ func (r *request) get(urlStr string) (*content.Meta, error) {
 		result.State = content.StateErrorURLFormat
 		return &result, err
 	}
+	request.Header.Add("Accept-Encoding", "gzip")
 
-	// response, err := http.Get(urlStr)
 	response, err := r.client.Do(request)
 	if err != nil {
 		result.State = content.StateConnectError
@@ -116,7 +119,20 @@ func (r *request) get(urlStr string) (*content.Meta, error) {
 		return &result, nil
 	}
 
-	body, err := ioutil.ReadAll(response.Body)
+	var body []byte
+	contentEncoding, ok := response.Header["Content-Encoding"]
+	if ok && contentEncoding[0] == "gzip" {
+		reader, err := gzip.NewReader(response.Body)
+		if err != nil {
+			result.State = content.StateAnswerError
+			return &result, err
+		}
+		body, err = ioutil.ReadAll(response.Body)
+		reader.Close()
+	} else {
+		log.Printf("INFO: URL %s returns without gzip", urlStr)
+		body, err = ioutil.ReadAll(response.Body)
+	}
 	if err != nil {
 		result.State = content.StateAnswerError
 		return &result, err
@@ -163,6 +179,12 @@ func (r *request) Init() {
 			return nil
 		}
 		r.redirectCnt++
+		for attr, val := range via[0].Header {
+			if _, ok := req.Header[attr]; !ok {
+				req.Header[attr] = val
+			}
+		}
+
 		return nil
 	}
 }

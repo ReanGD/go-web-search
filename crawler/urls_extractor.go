@@ -48,7 +48,7 @@ func (result *pageURLs) parseElements(node *html.Node) {
 func (result *pageURLs) parseNode(node *html.Node) error {
 	switch node.Type {
 	case html.ErrorNode:
-		return errors.New("ErrorNode on html")
+		return errors.New("ErrorNode in html")
 	case html.DocumentNode:
 		result.parseChildren(node)
 		return nil
