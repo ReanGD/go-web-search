@@ -51,13 +51,9 @@ func (r *robotTxt) FromHostName(hostName string) (*content.Host, error) {
 	return host, r.FromHost(host)
 }
 
-func (r *robotTxt) Test(urlStr string) (bool, error) {
-	parsed, err := url.Parse(urlStr)
-	if err != nil {
-		return false, err
-	}
-
-	parsed.Scheme = ""
-	parsed.Host = ""
-	return r.Group.Test(parsed.String()), nil
+func (r *robotTxt) Test(u *url.URL) bool {
+	copyURL := *u
+	copyURL.Scheme = ""
+	copyURL.Host = ""
+	return r.Group.Test(copyURL.String())
 }

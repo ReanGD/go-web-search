@@ -1,13 +1,11 @@
 package crawler
 
 import (
-	"bytes"
 	"compress/gzip"
 	"crypto/md5"
 	"database/sql"
 	"errors"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"log"
 	"mime"
@@ -20,21 +18,16 @@ import (
 )
 
 type request struct {
-	Robot       *robotTxt
-	client      *http.Client
-	redirectCnt int
+	Robot  *robotTxt
+	client *http.Client
+	meta   *content.Meta
 }
 
-func (r *request) parsePage(body []byte, baseURL string) (map[string]string, error) {
+func (r *request) parsePage(body []byte, baseURL *url.URL) (map[string]string, error) {
 	result := make(map[string]string)
 
 	parser := new(pageURLs)
 	rawURLs, err := parser.Parse(body)
-	if err != nil {
-		return result, err
-	}
-
-	base, err := url.Parse(baseURL)
 	if err != nil {
 		return result, err
 	}
@@ -45,11 +38,11 @@ func (r *request) parsePage(body []byte, baseURL string) (map[string]string, err
 			log.Printf("ERROR: Parse URL on page %s, message: %s", baseURL, err)
 			continue
 		}
-		parsed := base.ResolveReference(relative)
+		parsed := baseURL.ResolveReference(relative)
 		urlStr := NormalizeURL(parsed)
 		parsed, err = url.Parse(urlStr)
 
-		if (parsed.Scheme == "http" || parsed.Scheme == "https") && urlStr != baseURL {
+		if (parsed.Scheme == "http" || parsed.Scheme == "https") && urlStr != baseURL.String() {
 			result[urlStr] = NormalizeHostName(parsed.Host)
 		}
 	}
@@ -57,66 +50,70 @@ func (r *request) parsePage(body []byte, baseURL string) (map[string]string, err
 	return result, nil
 }
 
-func (r *request) get(urlStr string) (*content.Meta, error) {
-	r.redirectCnt = 0
-	result := content.Meta{
-		URL:         urlStr,
-		MIME:        sql.NullString{Valid: false},
-		Timestamp:   time.Now(),
-		RedirectCnt: sql.NullInt64{Valid: false},
-		StatusCode:  sql.NullInt64{Valid: false}}
+func (r *request) get(u *url.URL) error {
+	urlStr := u.String()
+	r.meta = &content.Meta{
+		URL:             urlStr,
+		MIME:            sql.NullString{Valid: false},
+		Timestamp:       time.Now(),
+		RedirectReferer: nil,
+		RedirectCnt:     0,
+		HostName:        NormalizeHostName(u.Host),
+		StatusCode:      sql.NullInt64{Valid: false}}
 
-	allow, err := r.Robot.Test(urlStr)
-	if err != nil {
-		result.State = content.StateErrorURLFormat
-		return &result, err
-	}
-	if !allow {
-		result.State = content.StateDisabledByRobotsTxt
+	if !r.Robot.Test(u) {
+		r.meta.State = content.StateDisabledByRobotsTxt
 		log.Printf("INFO: URL %s blocked by robot.txt", urlStr)
-		return &result, nil
+		return nil
 	}
 
-	request, err := http.NewRequest("GET", urlStr, nil)
-	if err != nil {
-		result.State = content.StateErrorURLFormat
-		return &result, err
+	request := &http.Request{
+		Method:     "GET",
+		URL:        u,
+		Proto:      "HTTP/1.1",
+		ProtoMajor: 1,
+		ProtoMinor: 1,
+		Header:     make(http.Header),
+		Body:       nil,
+		Host:       u.Host,
 	}
 	request.Header.Add("Accept-Encoding", "gzip")
 
 	response, err := r.client.Do(request)
 	if err != nil {
-		result.State = content.StateConnectError
-		return &result, err
+		r.meta.State = content.StateConnectError
+		return err
 	}
-	result.RedirectCnt = sql.NullInt64{Int64: int64(r.redirectCnt), Valid: true}
 	defer response.Body.Close()
+	if r.meta.URL != urlStr {
+		urlStr = urlStr + "->" + r.meta.URL
+	}
 
-	result.StatusCode = sql.NullInt64{Int64: int64(response.StatusCode), Valid: true}
+	r.meta.StatusCode = sql.NullInt64{Int64: int64(response.StatusCode), Valid: true}
 	if response.StatusCode != 200 {
-		result.State = content.StateErrorStatusCode
-		return &result, fmt.Errorf("StatusCode = %d", response.StatusCode)
+		r.meta.State = content.StateErrorStatusCode
+		return fmt.Errorf("StatusCode = %d", response.StatusCode)
 	}
 
 	contentType, ok := response.Header["Content-Type"]
 	if !ok {
-		result.MIME = sql.NullString{String: "not found", Valid: true}
-		result.State = content.StateUnsupportedFormat
-		return &result, fmt.Errorf("Not found Content-Type in headers")
+		r.meta.MIME = sql.NullString{String: "not found", Valid: true}
+		r.meta.State = content.StateUnsupportedFormat
+		return fmt.Errorf("Not found Content-Type in headers")
 	}
 
 	mediatype, _, err := mime.ParseMediaType(contentType[0])
 	if err != nil {
-		result.MIME = sql.NullString{String: "parse error", Valid: true}
-		result.State = content.StateUnsupportedFormat
-		return &result, err
+		r.meta.MIME = sql.NullString{String: "parse error", Valid: true}
+		r.meta.State = content.StateUnsupportedFormat
+		return err
 	}
 
-	result.MIME = sql.NullString{String: mediatype, Valid: true}
+	r.meta.MIME = sql.NullString{String: mediatype, Valid: true}
 	if mediatype != "text/html" {
-		result.State = content.StateUnsupportedFormat
+		r.meta.State = content.StateUnsupportedFormat
 		log.Printf("INFO: URL %s has unsupported mime format = %s", urlStr, mediatype)
-		return &result, nil
+		return nil
 	}
 
 	var body []byte
@@ -124,48 +121,44 @@ func (r *request) get(urlStr string) (*content.Meta, error) {
 	if ok && contentEncoding[0] == "gzip" {
 		reader, err := gzip.NewReader(response.Body)
 		if err != nil {
-			result.State = content.StateAnswerError
-			return &result, err
+			r.meta.State = content.StateAnswerError
+			return err
 		}
-		body, err = ioutil.ReadAll(response.Body)
+		body, err = ioutil.ReadAll(reader)
 		reader.Close()
 	} else {
-		log.Printf("INFO: URL %s returns without gzip", urlStr)
 		body, err = ioutil.ReadAll(response.Body)
 	}
 	if err != nil {
-		result.State = content.StateAnswerError
-		return &result, err
+		r.meta.State = content.StateAnswerError
+		return err
 	}
 
-	result.State = content.StateSuccess
+	r.meta.State = content.StateSuccess
 	hash := md5.Sum(body)
-	result.Content = content.Content{Hash: string(hash[:]), Data: content.Compressed{Data: body}}
+	r.meta.Content = content.Content{Hash: string(hash[:]), Data: content.Compressed{Data: body}}
 
-	return &result, nil
+	return nil
 }
 
 // Send - load and parse the urlStr
 // urlStr - valid URL
-func (r *request) Process(urlStr string) *content.PageData {
-	meta, err := r.get(urlStr)
+func (r *request) Process(u *url.URL) *content.PageData {
+	err := r.get(u)
 	if err != nil {
-		log.Printf("ERROR: Get URL %s, message: %s", urlStr, err)
+		log.Printf("ERROR: Get URL %s, message: %s", u.String(), err)
 	}
 
 	urls := make(map[string]string)
-	if meta.State == content.StateSuccess {
-		urls, err = r.parsePage(meta.Content.Data.Data, urlStr)
+	if r.meta.State == content.StateSuccess {
+		urls, err = r.parsePage(r.meta.Content.Data.Data, u)
 		if err != nil {
-			meta.State = content.StateParseError
-			log.Printf("ERROR: Parse URL %s, message: %s", urlStr, err)
+			r.meta.State = content.StateParseError
+			log.Printf("ERROR: Parse URL %s, message: %s", u.String(), err)
 		}
 	}
 
-	return &content.PageData{
-		HostName: r.Robot.HostName,
-		MetaItem: meta,
-		URLs:     urls}
+	return &content.PageData{MetaItem: r.meta, URLs: urls}
 }
 
 // Init - init request structure
@@ -178,7 +171,26 @@ func (r *request) Init() {
 		if len(via) == 0 {
 			return nil
 		}
-		r.redirectCnt++
+
+		r.meta.State = content.StateDublicate
+		r.meta.StatusCode = sql.NullInt64{Int64: 301, Valid: true}
+
+		copyURL := *req.URL
+		r.meta = &content.Meta{
+			URL:             NormalizeURL(&copyURL),
+			MIME:            sql.NullString{Valid: false},
+			Timestamp:       time.Now(),
+			RedirectReferer: r.meta,
+			RedirectCnt:     0,
+			HostName:        NormalizeHostName(req.Host),
+			StatusCode:      sql.NullInt64{Valid: false}}
+
+		currentMeta := r.meta.RedirectReferer
+		for currentMeta != nil {
+			currentMeta.RedirectCnt++
+			currentMeta = currentMeta.RedirectReferer
+		}
+
 		for attr, val := range via[0].Header {
 			if _, ok := req.Header[attr]; !ok {
 				req.Header[attr] = val

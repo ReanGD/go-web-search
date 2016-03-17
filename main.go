@@ -19,6 +19,7 @@ var baseHosts = []string{
 	"rsdn.ru",
 	"3dnews.ru",
 	"ferra.ru",
+	"opennet.ru",
 	"computerra.ru"}
 
 func test() error {

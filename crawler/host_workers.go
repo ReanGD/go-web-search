@@ -2,6 +2,8 @@ package crawler
 
 import (
 	"fmt"
+	"log"
+	"net/url"
 	"sync"
 	"time"
 
@@ -20,10 +22,14 @@ func (w *hostWorker) Start(wgParent *sync.WaitGroup) {
 
 	cnt := len(w.Tasks)
 	for i := 0; i != cnt; i++ {
-		result := w.Request.Process(w.Tasks[i])
+		parsed, err := url.Parse(w.Tasks[i])
+		if err != nil {
+			log.Printf("ERROR: Worker query. Parse URL %s, message: %s", w.Tasks[i], err)
+			continue
+		}
+		result := w.Request.Process(parsed)
 		w.ChDB <- result
 		fmt.Printf(".")
-		state := result.MetaItem.State
 		if result.MetaItem.NeedWaitAfterRequest() && i != cnt-1 {
 			time.Sleep(1 * time.Second)
 		}

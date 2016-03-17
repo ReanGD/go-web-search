@@ -11,8 +11,6 @@ type State uint8
 const (
 	//StateSuccess - page without error
 	StateSuccess State = iota
-	//StateErrorURLFormat - can not parse URL
-	StateErrorURLFormat = iota
 	//StateDisabledByRobotsTxt - URL disabled in robots.txt
 	StateDisabledByRobotsTxt = iota
 	//StateConnectError - can not connect to server
@@ -27,6 +25,8 @@ const (
 	StateParseError = iota
 	//StateDublicate - dublicate see "Origin" field for origin URL
 	StateDublicate = iota
+	//StateExternal - found URL for external (body not save)
+	StateExternal = iota
 )
 
 // Host - host information
@@ -50,17 +50,19 @@ type Content struct {
 // Parent - first parent URL
 // Origin - link to origin document (for State == CtStateDublicate)
 type Meta struct {
-	ID          int64          `gorm:"primary_key;not null"`
-	URL         string         `gorm:"size:2048;not null;unique_index"`
-	State       State          `gorm:"not null"`
-	MIME        sql.NullString `gorm:"size:100"`
-	Timestamp   time.Time      `gorm:"not null"`
-	RedirectCnt sql.NullInt64
-	Parent      sql.NullInt64 `gorm:"type:integer REFERENCES meta(id)"`
-	Origin      sql.NullInt64 `gorm:"type:integer REFERENCES meta(id)"`
-	ContentID   sql.NullInt64 `gorm:"type:integer REFERENCES content(id)"`
-	Content     Content
-	StatusCode  sql.NullInt64
+	ID              int64          `gorm:"primary_key;not null"`
+	URL             string         `gorm:"size:2048;not null;unique_index"`
+	State           State          `gorm:"not null"`
+	MIME            sql.NullString `gorm:"size:100"`
+	Timestamp       time.Time      `gorm:"not null"`
+	Parent          sql.NullInt64  `gorm:"type:integer REFERENCES meta(id)"`
+	Origin          sql.NullInt64  `gorm:"type:integer REFERENCES meta(id)"`
+	ContentID       sql.NullInt64  `gorm:"type:integer REFERENCES content(id)"`
+	RedirectReferer *Meta          `sql:"-"`
+	HostName        string
+	RedirectCnt     int
+	Content         Content
+	StatusCode      sql.NullInt64
 }
 
 // URL - struct for save all URLs in db
@@ -79,5 +81,5 @@ func (m *Meta) IsValidHash() bool {
 
 // NeedWaitAfterRequest - Check is need wait after request by state
 func (m *Meta) NeedWaitAfterRequest() bool {
-	return !(m.State == StateErrorURLFormat || m.State == StateDisabledByRobotsTxt)
+	return m.State != StateDisabledByRobotsTxt
 }
