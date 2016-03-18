@@ -11,8 +11,7 @@ import (
 )
 
 type robotTxt struct {
-	Group    *robotstxt.Group
-	HostName string
+	Group *robotstxt.Group
 }
 
 // FromHost - init by db element content.Host
@@ -21,7 +20,6 @@ func (r *robotTxt) FromHost(host *content.Host) error {
 	if err != nil {
 		return err
 	}
-	r.HostName = host.Name
 	r.Group = robot.FindGroup("Googlebot")
 
 	return nil
