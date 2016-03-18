@@ -59,7 +59,7 @@ type Meta struct {
 	Origin          sql.NullInt64  `gorm:"type:integer REFERENCES meta(id)"`
 	ContentID       sql.NullInt64  `gorm:"type:integer REFERENCES content(id)"`
 	RedirectReferer *Meta          `sql:"-"`
-	HostName        string
+	HostName        string         `sql:"-"`
 	RedirectCnt     int
 	Content         Content
 	StatusCode      sql.NullInt64

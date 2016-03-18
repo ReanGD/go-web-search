@@ -182,7 +182,7 @@ func (r *request) Init() {
 			Timestamp:       time.Now(),
 			RedirectReferer: r.meta,
 			RedirectCnt:     0,
-			HostName:        NormalizeHostName(req.Host),
+			HostName:        NormalizeHostName(req.URL.Host),
 			StatusCode:      sql.NullInt64{Valid: false}}
 
 		currentMeta := r.meta.RedirectReferer
