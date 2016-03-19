@@ -21,7 +21,7 @@ func (c Compressed) Value() (driver.Value, error) {
 	}
 
 	var zContent bytes.Buffer
-	w := zlib.NewWriter(&zContent)
+	w, _ := zlib.NewWriterLevelDict(&zContent, 6, nil)
 	_, err := w.Write(c.Data)
 	w.Close()
 	if err != nil {
