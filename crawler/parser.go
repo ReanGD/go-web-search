@@ -63,7 +63,10 @@ func (result *HTMLParser) parseElements(node *html.Node) {
 	switch node.DataAtom {
 	case atom.A, atom.Area:
 		if result.MetaTagFollow {
-			result.processLink(result.getAttrVal(node, "href"))
+			rel := result.getAttrValLower(node, "rel")
+			if rel != "nofollow" {
+				result.processLink(result.getAttrVal(node, "href"))
+			}
 		}
 	case atom.Frame:
 		if result.MetaTagFollow {
