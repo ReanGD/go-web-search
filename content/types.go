@@ -21,12 +21,14 @@ const (
 	StateUnsupportedFormat = iota
 	//StateAnswerError - can not read body
 	StateAnswerError = iota
-	//StateParseError - can not parse body
+	//StateParseError - can not parse body (body be saved)
 	StateParseError = iota
 	//StateDublicate - dublicate see "Origin" field for origin URL
 	StateDublicate = iota
-	//StateExternal - found URL for external (body not save)
+	//StateExternal - after redirect - host is external (body not save)
 	StateExternal = iota
+	//StateNoFollow - found meta tag nofollow (body not save)
+	StateNoFollow = iota
 )
 
 // Host - host information

@@ -11,7 +11,6 @@ import (
 	"mime"
 	"net/http"
 	"net/url"
-	"strings"
 	"time"
 
 	"github.com/ReanGD/go-web-search/content"
@@ -21,33 +20,6 @@ type request struct {
 	Robot  *robotTxt
 	client *http.Client
 	meta   *content.Meta
-}
-
-func (r *request) parsePage(body []byte, baseURL *url.URL) (map[string]string, error) {
-	result := make(map[string]string)
-
-	parser := new(pageURLs)
-	rawURLs, err := parser.Parse(body)
-	if err != nil {
-		return result, err
-	}
-
-	for itRawURL := rawURLs.Front(); itRawURL != nil; itRawURL = itRawURL.Next() {
-		relative, err := url.Parse(strings.TrimSpace(itRawURL.Value.(string)))
-		if err != nil {
-			log.Printf("ERROR: Parse URL on page %s, message: %s", baseURL, err)
-			continue
-		}
-		parsed := baseURL.ResolveReference(relative)
-		urlStr := NormalizeURL(parsed)
-		parsed, err = url.Parse(urlStr)
-
-		if (parsed.Scheme == "http" || parsed.Scheme == "https") && urlStr != baseURL.String() {
-			result[urlStr] = NormalizeHostName(parsed.Host)
-		}
-	}
-
-	return result, nil
 }
 
 func (r *request) get(u *url.URL) error {
@@ -149,16 +121,22 @@ func (r *request) Process(u *url.URL) *content.PageData {
 		log.Printf("ERROR: Get URL %s, message: %s", u.String(), err)
 	}
 
-	urls := make(map[string]string)
 	if r.meta.State == content.StateSuccess {
-		urls, err = r.parsePage(r.meta.Content.Data.Data, u)
+		parser := new(HTMLParser)
+		err = parser.Parse(r.meta.Content.Data.Data, u)
 		if err != nil {
 			r.meta.State = content.StateParseError
 			log.Printf("ERROR: Parse URL %s, message: %s", u.String(), err)
+			return &content.PageData{MetaItem: r.meta, URLs: make(map[string]string)}
 		}
+		if !parser.MetaTagIndex {
+			r.meta.State = content.StateNoFollow
+			r.meta.Content = content.Content{}
+		}
+		return &content.PageData{MetaItem: r.meta, URLs: parser.URLs}
 	}
 
-	return &content.PageData{MetaItem: r.meta, URLs: urls}
+	return &content.PageData{MetaItem: r.meta, URLs: make(map[string]string)}
 }
 
 // Init - init request structure
