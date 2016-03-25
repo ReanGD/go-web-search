@@ -10,25 +10,25 @@ type State uint8
 
 const (
 	//StateSuccess - page without error
-	StateSuccess State = iota
+	StateSuccess State = 0
 	//StateDisabledByRobotsTxt - URL disabled in robots.txt
-	StateDisabledByRobotsTxt = iota
+	StateDisabledByRobotsTxt = 1
 	//StateConnectError - can not connect to server
-	StateConnectError = iota
+	StateConnectError = 2
 	//StateErrorStatusCode - status code != 200
-	StateErrorStatusCode = iota
+	StateErrorStatusCode = 3
 	//StateUnsupportedFormat - MIME type != text/html
-	StateUnsupportedFormat = iota
+	StateUnsupportedFormat = 4
 	//StateAnswerError - can not read body
-	StateAnswerError = iota
+	StateAnswerError = 5
 	//StateParseError - can not parse body (body be saved)
-	StateParseError = iota
+	StateParseError = 6
 	//StateDublicate - dublicate see "Origin" field for origin URL
-	StateDublicate = iota
+	StateDublicate = 7
 	//StateExternal - after redirect - host is external (body not save)
-	StateExternal = iota
+	StateExternal = 8
 	//StateNoFollow - found meta tag nofollow (body not save)
-	StateNoFollow = iota
+	StateNoFollow = 9
 )
 
 // Host - host information
