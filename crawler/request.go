@@ -50,6 +50,7 @@ func (r *request) get(u *url.URL) error {
 		Host:       u.Host,
 	}
 	request.Header.Add("Accept-Encoding", "gzip")
+	request.Header.Add("User-Agent", "Mozilla/5.0 (compatible; GoWebSearch/0.1)")
 
 	response, err := r.client.Do(request)
 	if err != nil {
