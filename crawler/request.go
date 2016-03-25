@@ -45,12 +45,16 @@ func (r *request) get(u *url.URL) error {
 		Proto:      "HTTP/1.1",
 		ProtoMajor: 1,
 		ProtoMinor: 1,
-		Header:     make(http.Header),
-		Body:       nil,
-		Host:       u.Host,
+		Header: map[string][]string{
+			"User-Agent":      {"Mozilla/5.0 (compatible; GoWebSearch/0.1)"},
+			"Accept":          {"text/html;q=0.9,*/*;q=0.1"},
+			"Accept-Encoding": {"gzip"},
+			"Accept-Language": {"ru-RU,ru;q=0.9,en-US;q=0.2,en;q=0.1"},
+			"Accept-Charset":  {"utf-8;q=0.9,windows-1251;q=0.8,*;q=0.1"},
+		},
+		Body: nil,
+		Host: u.Host,
 	}
-	request.Header.Add("Accept-Encoding", "gzip")
-	request.Header.Add("User-Agent", "Mozilla/5.0 (compatible; GoWebSearch/0.1)")
 
 	response, err := r.client.Do(request)
 	if err != nil {
