@@ -112,7 +112,7 @@ func (w *DBWorker) saveMeta(tr *DBrw, meta *Meta, origin sql.NullInt64) error {
 func (w *DBWorker) savePageData(tr *DBrw, data *PageData) error {
 	err := w.saveMeta(tr, data.MetaItem, sql.NullInt64{Valid: false})
 	if err != nil {
-		return nil
+		return err
 	}
 
 	parent := sql.NullInt64{Int64: data.MetaItem.ID, Valid: true}

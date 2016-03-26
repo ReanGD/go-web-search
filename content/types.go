@@ -21,7 +21,7 @@ const (
 	StateUnsupportedFormat = 4
 	//StateAnswerError - can not read body
 	StateAnswerError = 5
-	//StateParseError - can not parse body (body be saved)
+	//StateParseError - can not parse body (body not save)
 	StateParseError = 6
 	//StateDublicate - dublicate see "Origin" field for origin URL
 	StateDublicate = 7
@@ -43,25 +43,26 @@ type Host struct {
 // Content - store page content
 // Hash - hash of uncompressed content
 type Content struct {
-	ID   int64      `gorm:"primary_key;not null"`
-	Hash string     `gorm:"size:16;not null"`
-	Data Compressed `gorm:"not null"`
+	ID          int64             `gorm:"primary_key;not null"`
+	HashBody    string            `gorm:"size:16;not null"`
+	Body        Compressed        `gorm:"not null"`
+	HashHeaders string            `gorm:"size:16;not null"`
+	Headers     CompressedHeaders `gorm:"not null"`
 }
 
 // Meta - meta information about processed URL
 // Parent - first parent URL
 // Origin - link to origin document (for State == CtStateDublicate)
 type Meta struct {
-	ID              int64          `gorm:"primary_key;not null"`
-	URL             string         `gorm:"size:2048;not null;unique_index"`
-	State           State          `gorm:"not null"`
-	MIME            sql.NullString `gorm:"size:100"`
-	Timestamp       time.Time      `gorm:"not null"`
-	Parent          sql.NullInt64  `gorm:"type:integer REFERENCES meta(id)"`
-	Origin          sql.NullInt64  `gorm:"type:integer REFERENCES meta(id)"`
-	ContentID       sql.NullInt64  `gorm:"type:integer REFERENCES content(id)"`
-	RedirectReferer *Meta          `sql:"-"`
-	HostName        string         `sql:"-"`
+	ID              int64         `gorm:"primary_key;not null"`
+	URL             string        `gorm:"size:2048;not null;unique_index"`
+	State           State         `gorm:"not null"`
+	Timestamp       time.Time     `gorm:"not null"`
+	Parent          sql.NullInt64 `gorm:"type:integer REFERENCES meta(id)"`
+	Origin          sql.NullInt64 `gorm:"type:integer REFERENCES meta(id)"`
+	ContentID       sql.NullInt64 `gorm:"type:integer REFERENCES content(id)"`
+	RedirectReferer *Meta         `sql:"-"`
+	HostName        string        `sql:"-"`
 	RedirectCnt     int
 	Content         Content
 	StatusCode      sql.NullInt64
@@ -78,7 +79,7 @@ type URL struct {
 
 // IsValidHash - Check is valid hash by state
 func (m *Meta) IsValidHash() bool {
-	return (m.State == StateSuccess || m.State == StateParseError)
+	return m.State == StateSuccess
 }
 
 // NeedWaitAfterRequest - Check is need wait after request by state

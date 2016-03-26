@@ -20,13 +20,14 @@ type request struct {
 	Robot  *robotTxt
 	client *http.Client
 	meta   *content.Meta
+	urls   map[string]string
 }
 
 func (r *request) get(u *url.URL) error {
 	urlStr := u.String()
+	r.urls = make(map[string]string)
 	r.meta = &content.Meta{
 		URL:             urlStr,
-		MIME:            sql.NullString{Valid: false},
 		Timestamp:       time.Now(),
 		RedirectReferer: nil,
 		RedirectCnt:     0,
@@ -74,19 +75,16 @@ func (r *request) get(u *url.URL) error {
 
 	contentType, ok := response.Header["Content-Type"]
 	if !ok {
-		r.meta.MIME = sql.NullString{String: "not found", Valid: true}
 		r.meta.State = content.StateUnsupportedFormat
 		return fmt.Errorf("Not found Content-Type in headers")
 	}
 
 	mediatype, _, err := mime.ParseMediaType(contentType[0])
 	if err != nil {
-		r.meta.MIME = sql.NullString{String: "parse error", Valid: true}
 		r.meta.State = content.StateUnsupportedFormat
-		return err
+		return fmt.Errorf("Parse Content-Type, error %s", err)
 	}
 
-	r.meta.MIME = sql.NullString{String: mediatype, Valid: true}
 	if mediatype != "text/html" {
 		r.meta.State = content.StateUnsupportedFormat
 		log.Printf("INFO: URL %s has unsupported mime format = %s", urlStr, mediatype)
@@ -111,9 +109,72 @@ func (r *request) get(u *url.URL) error {
 		return err
 	}
 
+	parser := new(HTMLParser)
+	err = parser.Parse(body, u)
+	if err != nil {
+		r.meta.State = content.StateParseError
+		return fmt.Errorf("Html parse error: %s", err)
+	}
+	if !parser.MetaTagIndex {
+		r.meta.State = content.StateNoFollow
+		return nil
+	}
+
+	dbHashBody := md5.Sum(body)
+	dbBody := content.Compressed{Data: body}
+	dbHeaders := new(content.CompressedHeaders)
+	headers := make(map[string]string, len(response.Header))
+	for k, v := range response.Header {
+		if k != "Age" &&
+			k != "Date" &&
+			k != "Server" &&
+			k != "Connection" &&
+			k != "Set-Cookie" &&
+			k != "Content-MD5" &&
+			k != "Cache-Control" &&
+			k != "Accept-Ranges" &&
+			k != "Content-Length" &&
+			k != "Content-Encoding" &&
+			k != "P3p" &&
+			k != "Ckey" &&
+			k != "X-Powered-By" &&
+			k != "X-Content-Type-Options" &&
+			k != "X-Xss-Protection" &&
+			k != "X-Frame-Options" &&
+			k != "X-Content-Security-Policy" &&
+			k != "X-Aspnet-Version" &&
+			k != "X-Aspnetmvc-Version" &&
+			k != "X-Runtime" &&
+			k != "X-Version" &&
+			k != "X-Passed" &&
+			k != "X-Pass-Why" &&
+			k != "X-Cache-Group" &&
+			k != "X-Type" &&
+			k != "X-Cacheable" &&
+			k != "X-Cache" &&
+			k != "X-Engine" &&
+			k != "X-3d-Section" &&
+			k != "X-3d-Cached" &&
+			k != "X-3d-Nocache" &&
+			k != "Wp-Super-Cache" {
+			headers[k] = v[0]
+		}
+	}
+	err = dbHeaders.Set(headers)
+	if err != nil {
+		fmt.Printf("serialize error %s\n", err)
+		r.meta.State = content.StateParseError
+		return fmt.Errorf("serialize error %s", err)
+	}
+	dbHashHeaders := md5.Sum(dbHeaders.Data)
+
+	r.urls = parser.URLs
 	r.meta.State = content.StateSuccess
-	hash := md5.Sum(body)
-	r.meta.Content = content.Content{Hash: string(hash[:]), Data: content.Compressed{Data: body}}
+	r.meta.Content = content.Content{
+		HashBody:    string(dbHashBody[:]),
+		Body:        dbBody,
+		HashHeaders: string(dbHashHeaders[:]),
+		Headers:     *dbHeaders}
 
 	return nil
 }
@@ -126,22 +187,7 @@ func (r *request) Process(u *url.URL) *content.PageData {
 		log.Printf("ERROR: Get URL %s, message: %s", u.String(), err)
 	}
 
-	if r.meta.State == content.StateSuccess {
-		parser := new(HTMLParser)
-		err = parser.Parse(r.meta.Content.Data.Data, u)
-		if err != nil {
-			r.meta.State = content.StateParseError
-			log.Printf("ERROR: Parse URL %s, message: %s", u.String(), err)
-			return &content.PageData{MetaItem: r.meta, URLs: make(map[string]string)}
-		}
-		if !parser.MetaTagIndex {
-			r.meta.State = content.StateNoFollow
-			r.meta.Content = content.Content{}
-		}
-		return &content.PageData{MetaItem: r.meta, URLs: parser.URLs}
-	}
-
-	return &content.PageData{MetaItem: r.meta, URLs: make(map[string]string)}
+	return &content.PageData{MetaItem: r.meta, URLs: r.urls}
 }
 
 // Init - init request structure
@@ -161,7 +207,6 @@ func (r *request) Init() {
 		copyURL := *req.URL
 		r.meta = &content.Meta{
 			URL:             NormalizeURL(&copyURL),
-			MIME:            sql.NullString{Valid: false},
 			Timestamp:       time.Now(),
 			RedirectReferer: r.meta,
 			RedirectCnt:     0,

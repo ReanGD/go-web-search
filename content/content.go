@@ -67,7 +67,7 @@ func GetDBrw() (*DBrw, error) {
 	}
 
 	var hashResults []hashResult
-	sql := "SELECT meta.id as meta_id, content.id as content_id, content.hash as hash"
+	sql := "SELECT meta.id as meta_id, content.id as content_id, content.hash_body as hash"
 	sql += " FROM meta JOIN content ON content.id == meta.content_id"
 	sql += " WHERE meta.content_id IS NOT NULL AND meta.state IN (?, ?)"
 	err = db.Raw(sql, StateSuccess, StateParseError).Scan(&hashResults).Error

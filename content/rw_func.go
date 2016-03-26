@@ -103,11 +103,11 @@ func (db *DBrw) GetNewURLs(hostName string, cnt int) ([]string, error) {
 // GetOrigin - get origin row id in table 'Meta'
 func (db *DBrw) GetOrigin(meta *Meta) (sql.NullInt64, error) {
 	null := sql.NullInt64{Valid: false}
-	if meta.Content.Data.IsNull() {
+	if meta.Content.Body.IsNull() {
 		return null, nil
 	}
 
-	ids, exists := db.hashes[meta.Content.Hash]
+	ids, exists := db.hashes[meta.Content.HashBody]
 	if !exists {
 		return null, nil
 	}
@@ -118,7 +118,7 @@ func (db *DBrw) GetOrigin(meta *Meta) (sql.NullInt64, error) {
 		if err != nil {
 			return null, fmt.Errorf("find in 'Content' with id %d, message: %s", id.ContentID, err)
 		}
-		if meta.Content.Data.Equals(content.Data) {
+		if meta.Content.Body.Equals(content.Body) {
 			return sql.NullInt64{Int64: id.MetaID, Valid: true}, nil
 		}
 	}
@@ -130,11 +130,11 @@ func (db *DBrw) AddHash(meta *Meta) error {
 	if !meta.IsValidHash() {
 		return nil
 	}
-	if !meta.ContentID.Valid || meta.Content.Data.IsNull() {
+	if !meta.ContentID.Valid || meta.Content.Body.IsNull() {
 		return fmt.Errorf("ContentID is null in item 'Meta' for URL %s", meta.URL)
 	}
 
-	hash := meta.Content.Hash
+	hash := meta.Content.HashBody
 	item := hashVal{MetaID: meta.ID, ContentID: meta.ContentID.Int64}
 	_, exists := db.hashes[hash]
 	if exists {
