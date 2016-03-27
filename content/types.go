@@ -21,7 +21,7 @@ const (
 	StateUnsupportedFormat = 4
 	//StateAnswerError - can not read body
 	StateAnswerError = 5
-	//StateParseError - can not parse body (body not save)
+	//StateParseError - can not parse body or body not html (body not save)
 	StateParseError = 6
 	//StateDublicate - dublicate see "Origin" field for origin URL
 	StateDublicate = 7

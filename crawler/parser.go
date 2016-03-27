@@ -124,3 +124,28 @@ func (result *HTMLParser) Parse(body []byte, baseURL *url.URL) error {
 
 	return result.parseNode(node)
 }
+
+// IsHTML - check is content has html tag
+func IsHTML(content []byte) bool {
+	isHTML := false
+	if len(content) == 0 {
+		return isHTML
+	}
+
+	z := html.NewTokenizer(bytes.NewReader(content[:1024]))
+	isFinish := false
+	for !isFinish {
+		switch z.Next() {
+		case html.ErrorToken:
+			isFinish = true
+		case html.StartTagToken:
+			tagName, _ := z.TagName()
+			if bytes.Equal(tagName, []byte("html")) {
+				isHTML = true
+				isFinish = true
+			}
+		}
+	}
+
+	return isHTML
+}

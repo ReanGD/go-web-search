@@ -109,6 +109,11 @@ func (r *request) get(u *url.URL) error {
 		return err
 	}
 
+	if !IsHTML(body) {
+		r.meta.State = content.StateParseError
+		return fmt.Errorf("Body not html")
+	}
+
 	parser := new(HTMLParser)
 	err = parser.Parse(body, u)
 	if err != nil {
