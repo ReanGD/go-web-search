@@ -51,7 +51,7 @@ func (r *request) get(u *url.URL) error {
 			"Accept":          {"text/html;q=0.9,*/*;q=0.1"},
 			"Accept-Encoding": {"gzip"},
 			"Accept-Language": {"ru-RU,ru;q=0.9,en-US;q=0.2,en;q=0.1"},
-			"Accept-Charset":  {"utf-8;q=0.9,windows-1251;q=0.8,*;q=0.1"},
+			"Accept-Charset":  {"utf-8;q=0.9,windows-1251;q=0.8,koi8-r;q=0.7,*;q=0.1"},
 		},
 		Body: nil,
 		Host: u.Host,
@@ -120,61 +120,12 @@ func (r *request) get(u *url.URL) error {
 		return nil
 	}
 
-	dbHashBody := md5.Sum(body)
-	dbBody := content.Compressed{Data: body}
-	dbHeaders := new(content.CompressedHeaders)
-	headers := make(map[string]string, len(response.Header))
-	for k, v := range response.Header {
-		if k != "Age" &&
-			k != "Date" &&
-			k != "Server" &&
-			k != "Connection" &&
-			k != "Set-Cookie" &&
-			k != "Content-MD5" &&
-			k != "Cache-Control" &&
-			k != "Accept-Ranges" &&
-			k != "Content-Length" &&
-			k != "Content-Encoding" &&
-			k != "P3p" &&
-			k != "Ckey" &&
-			k != "X-Powered-By" &&
-			k != "X-Content-Type-Options" &&
-			k != "X-Xss-Protection" &&
-			k != "X-Frame-Options" &&
-			k != "X-Content-Security-Policy" &&
-			k != "X-Aspnet-Version" &&
-			k != "X-Aspnetmvc-Version" &&
-			k != "X-Runtime" &&
-			k != "X-Version" &&
-			k != "X-Passed" &&
-			k != "X-Pass-Why" &&
-			k != "X-Cache-Group" &&
-			k != "X-Type" &&
-			k != "X-Cacheable" &&
-			k != "X-Cache" &&
-			k != "X-Engine" &&
-			k != "X-3d-Section" &&
-			k != "X-3d-Cached" &&
-			k != "X-3d-Nocache" &&
-			k != "Wp-Super-Cache" {
-			headers[k] = v[0]
-		}
-	}
-	err = dbHeaders.Set(headers)
-	if err != nil {
-		fmt.Printf("serialize error %s\n", err)
-		r.meta.State = content.StateParseError
-		return fmt.Errorf("serialize error %s", err)
-	}
-	dbHashHeaders := md5.Sum(dbHeaders.Data)
-
+	hash := md5.Sum(body)
 	r.urls = parser.URLs
 	r.meta.State = content.StateSuccess
 	r.meta.Content = content.Content{
-		HashBody:    string(dbHashBody[:]),
-		Body:        dbBody,
-		HashHeaders: string(dbHashHeaders[:]),
-		Headers:     *dbHeaders}
+		Hash: string(hash[:]),
+		Body: content.Compressed{Data: body}}
 
 	return nil
 }

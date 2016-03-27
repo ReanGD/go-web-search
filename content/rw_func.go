@@ -107,7 +107,7 @@ func (db *DBrw) GetOrigin(meta *Meta) (sql.NullInt64, error) {
 		return null, nil
 	}
 
-	ids, exists := db.hashes[meta.Content.HashBody]
+	ids, exists := db.hashes[meta.Content.Hash]
 	if !exists {
 		return null, nil
 	}
@@ -134,7 +134,7 @@ func (db *DBrw) AddHash(meta *Meta) error {
 		return fmt.Errorf("ContentID is null in item 'Meta' for URL %s", meta.URL)
 	}
 
-	hash := meta.Content.HashBody
+	hash := meta.Content.Hash
 	item := hashVal{MetaID: meta.ID, ContentID: meta.ContentID.Int64}
 	_, exists := db.hashes[hash]
 	if exists {

@@ -43,11 +43,9 @@ type Host struct {
 // Content - store page content
 // Hash - hash of uncompressed content
 type Content struct {
-	ID          int64             `gorm:"primary_key;not null"`
-	HashBody    string            `gorm:"size:16;not null"`
-	Body        Compressed        `gorm:"not null"`
-	HashHeaders string            `gorm:"size:16;not null"`
-	Headers     CompressedHeaders `gorm:"not null"`
+	ID   int64      `gorm:"primary_key;not null"`
+	Hash string     `gorm:"size:16;not null"`
+	Body Compressed `gorm:"not null"`
 }
 
 // Meta - meta information about processed URL
