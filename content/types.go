@@ -23,12 +23,14 @@ const (
 	StateAnswerError = 5
 	//StateParseError - can not parse body or body not html (body not save)
 	StateParseError = 6
+	//StateEncodingError - can not find or apply encoding (body not save)
+	StateEncodingError = 7
 	//StateDublicate - dublicate see "Origin" field for origin URL
-	StateDublicate = 7
+	StateDublicate = 8
 	//StateExternal - after redirect - host is external (body not save)
-	StateExternal = 8
+	StateExternal = 9
 	//StateNoFollow - found meta tag nofollow (body not save)
-	StateNoFollow = 9
+	StateNoFollow = 10
 )
 
 // Host - host information

@@ -131,8 +131,11 @@ func IsHTML(content []byte) bool {
 	if len(content) == 0 {
 		return isHTML
 	}
+	if len(content) > 1024 {
+		content = content[:1024]
+	}
 
-	z := html.NewTokenizer(bytes.NewReader(content[:1024]))
+	z := html.NewTokenizer(bytes.NewReader(content))
 	isFinish := false
 	for !isFinish {
 		switch z.Next() {

@@ -1,6 +1,7 @@
 package crawler
 
 import (
+	"bytes"
 	"compress/gzip"
 	"crypto/md5"
 	"database/sql"
@@ -12,6 +13,10 @@ import (
 	"net/http"
 	"net/url"
 	"time"
+
+	"golang.org/x/net/html/charset"
+	"golang.org/x/text/encoding"
+	"golang.org/x/text/transform"
 
 	"github.com/ReanGD/go-web-search/content"
 )
@@ -112,6 +117,19 @@ func (r *request) get(u *url.URL) error {
 	if !IsHTML(body) {
 		r.meta.State = content.StateParseError
 		return fmt.Errorf("Body not html")
+	}
+
+	enc, _, _ := charset.DetermineEncoding(body, contentType[0])
+	if enc == encoding.Nop {
+		r.meta.State = content.StateEncodingError
+		return fmt.Errorf("Not found encoding")
+	}
+
+	bodyReader := transform.NewReader(bytes.NewReader(body), enc.NewDecoder())
+	body, err = ioutil.ReadAll(bodyReader)
+	if err != nil {
+		r.meta.State = content.StateEncodingError
+		return fmt.Errorf("Encoding body, error = %s", err)
 	}
 
 	parser := new(HTMLParser)
