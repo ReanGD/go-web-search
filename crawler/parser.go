@@ -68,6 +68,11 @@ func (result *HTMLParser) parseElements(node *html.Node) {
 				result.processLink(result.getAttrVal(node, "href"))
 			}
 		}
+	case atom.Link:
+		rel := result.getAttrValLower(node, "rel")
+		if rel == "next" || rel == "prev" || rel == "previous" {
+			result.processLink(result.getAttrVal(node, "href"))
+		}
 	case atom.Frame:
 		if result.MetaTagFollow {
 			result.processLink(result.getAttrVal(node, "src"))
@@ -104,7 +109,7 @@ func (result *HTMLParser) parseNode(node *html.Node) error {
 	case html.ElementNode:
 		result.parseElements(node)
 		return nil
-	case html.TextNode, html.CommentNode, html.DoctypeNode: // skip
+	case html.CommentNode, html.TextNode, html.DoctypeNode: // skip
 		return nil
 	default:
 		return errors.New("Unknown node type on html")
