@@ -12,7 +12,6 @@ import (
 	"mime"
 	"net/http"
 	"net/url"
-	"time"
 
 	"golang.org/x/net/html/charset"
 	"golang.org/x/text/encoding"
@@ -33,7 +32,6 @@ func (r *request) get(u *url.URL) error {
 	r.urls = make(map[string]string)
 	r.meta = &content.Meta{
 		URL:             urlStr,
-		Timestamp:       time.Now(),
 		RedirectReferer: nil,
 		RedirectCnt:     0,
 		HostName:        NormalizeHostName(u.Host),
@@ -181,7 +179,6 @@ func (r *request) Init() {
 		copyURL := *req.URL
 		r.meta = &content.Meta{
 			URL:             NormalizeURL(&copyURL),
-			Timestamp:       time.Now(),
 			RedirectReferer: r.meta,
 			RedirectCnt:     0,
 			HostName:        NormalizeHostName(req.URL.Host),

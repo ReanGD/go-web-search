@@ -57,7 +57,6 @@ type Meta struct {
 	ID              int64         `gorm:"primary_key;not null"`
 	URL             string        `gorm:"size:2048;not null;unique_index"`
 	State           State         `gorm:"not null"`
-	Timestamp       time.Time     `gorm:"not null"`
 	Parent          sql.NullInt64 `gorm:"type:integer REFERENCES meta(id)"`
 	Origin          sql.NullInt64 `gorm:"type:integer REFERENCES meta(id)"`
 	ContentID       sql.NullInt64 `gorm:"type:integer REFERENCES content(id)"`
