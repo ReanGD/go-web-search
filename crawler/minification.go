@@ -1,28 +1,28 @@
 package crawler
 
 import (
-	"bufio"
-	"bytes"
 	"errors"
+	"strings"
 
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
 )
 
-type miniHTML struct {
+// Minification - struct with functions for minimize html
+type Minification struct {
 }
 
-func (m *miniHTML) removeNode(node *html.Node) error {
+func (m *Minification) removeNode(node *html.Node) error {
 	node.Parent.RemoveChild(node)
 
 	return nil
 }
 
-func (m *miniHTML) parseChildren(node *html.Node) error {
+func (m *Minification) parseChildren(node *html.Node) error {
 	for it := node.FirstChild; it != nil; {
 		currentNode := it
 		it = it.NextSibling
-		err := m.parseNode(currentNode)
+		err := m.Run(currentNode)
 		if err != nil {
 			return err
 		}
@@ -31,7 +31,7 @@ func (m *miniHTML) parseChildren(node *html.Node) error {
 	return nil
 }
 
-func (m *miniHTML) parseElements(node *html.Node) error {
+func (m *Minification) parseElements(node *html.Node) error {
 	switch node.DataAtom {
 	case atom.Script:
 		return m.removeNode(node)
@@ -41,16 +41,45 @@ func (m *miniHTML) parseElements(node *html.Node) error {
 		return m.removeNode(node)
 	case atom.Button:
 		return m.removeNode(node)
-	default:
+	case atom.Time:
+		return m.removeNode(node)
+	}
+
+	len := len(node.Attr)
+	if len != 0 {
+		attr := node.Attr
+		i := 0
+		j := 0
+		for ; i != len; i++ {
+			switch strings.ToLower(attr[i].Key) {
+			case "id":
+			case "style":
+			case "onclick":
+			case "target":
+			case "title":
+			case "class":
+			case "width":
+			case "height":
+			case "alt":
+			case "disabled":
+			default:
+				if i != j {
+					attr[j] = attr[i]
+				}
+				j++
+			}
+		}
+		if i != j {
+			node.Attr = attr[:j]
+		}
 	}
 
 	return m.parseChildren(node)
 }
 
-func (m *miniHTML) parseNode(node *html.Node) error {
+// Run - start minification node
+func (m *Minification) Run(node *html.Node) error {
 	switch node.Type {
-	case html.ErrorNode:
-		return errors.New("Found error node in html")
 	case html.DocumentNode: // +children -attr (first node)
 		return m.parseChildren(node)
 	case html.ElementNode: // +children +attr
@@ -59,34 +88,9 @@ func (m *miniHTML) parseNode(node *html.Node) error {
 		return nil
 	case html.DoctypeNode: // ignore
 		return nil
-	case html.CommentNode:
-		node.Parent.RemoveChild(node)
-		return nil
+	case html.CommentNode: // remove
+		return m.removeNode(node)
 	default:
-		return errors.New("Unknown node type on html")
+		return errors.New("minification.Minification.Run: unexpected node type")
 	}
-}
-
-// Minification - start minification body
-func Minification(body []byte) ([]byte, error) {
-	startNode, err := html.Parse(bytes.NewReader(body))
-	if err != nil {
-		return nil, err
-	}
-
-	parser := miniHTML{}
-	err = parser.parseNode(startNode)
-	if err != nil {
-		return nil, err
-	}
-
-	var buf bytes.Buffer
-	w := bufio.NewWriter(&buf)
-	err = html.Render(w, startNode)
-	if err != nil {
-		return nil, err
-	}
-	w.Flush()
-
-	return buf.Bytes(), nil
 }
