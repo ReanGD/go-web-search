@@ -43,6 +43,8 @@ func (m *Minification) parseElements(node *html.Node) error {
 		return m.removeNode(node)
 	case atom.Time:
 		return m.removeNode(node)
+	case atom.Img:
+		return m.removeNode(node)
 	}
 
 	len := len(node.Attr)
@@ -53,14 +55,18 @@ func (m *Minification) parseElements(node *html.Node) error {
 		for ; i != len; i++ {
 			switch strings.ToLower(attr[i].Key) {
 			case "id":
+			case "alt":
 			case "style":
-			case "onclick":
-			case "target":
 			case "title":
 			case "class":
 			case "width":
+			case "align":
+			case "target":
 			case "height":
-			case "alt":
+			case "border":
+			case "hspace":
+			case "vspace":
+			case "onclick":
 			case "disabled":
 			default:
 				if i != j {
