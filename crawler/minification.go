@@ -18,6 +18,26 @@ func (m *Minification) removeNode(node *html.Node) error {
 	return nil
 }
 
+func (m *Minification) removeTextNode(node *html.Node) error {
+	prevCheck := node.PrevSibling == nil ||
+		node.PrevSibling.Type != html.TextNode ||
+		len(strings.TrimSpace(node.PrevSibling.Data)) == 0
+	nextCheck := node.NextSibling == nil ||
+		node.NextSibling.Type != html.TextNode ||
+		len(strings.TrimSpace(node.NextSibling.Data)) == 0
+
+	if prevCheck || nextCheck {
+		node.Parent.RemoveChild(node)
+	} else {
+		node.Type = html.TextNode
+		node.Data = " "
+		node.FirstChild = nil
+		node.LastChild = nil
+	}
+
+	return nil
+}
+
 func (m *Minification) parseChildren(node *html.Node) error {
 	for it := node.FirstChild; it != nil; {
 		currentNode := it
@@ -38,36 +58,55 @@ func (m *Minification) parseElements(node *html.Node) error {
 	case atom.Style:
 		return m.removeNode(node)
 	case atom.Form:
-		return m.removeNode(node)
+		return m.removeTextNode(node)
 	case atom.Button:
-		return m.removeNode(node)
-	case atom.Time:
-		return m.removeNode(node)
+		return m.removeTextNode(node)
 	case atom.Img:
-		return m.removeNode(node)
+		return m.removeTextNode(node)
+	case atom.Time:
+		return m.removeTextNode(node)
+	case atom.Br:
+		return m.removeTextNode(node)
+	case atom.Hr:
+		return m.removeTextNode(node)
 	}
 
-	len := len(node.Attr)
-	if len != 0 {
+	lenAttr := len(node.Attr)
+	if lenAttr != 0 {
 		attr := node.Attr
 		i := 0
 		j := 0
-		for ; i != len; i++ {
-			switch strings.ToLower(attr[i].Key) {
+		for ; i != lenAttr; i++ {
+			key := strings.ToLower(attr[i].Key)
+			if strings.HasPrefix(key, "data-") {
+				continue
+			}
+			switch key {
 			case "id":
 			case "alt":
-			case "style":
-			case "title":
+			case "cols":
 			case "class":
+			case "title":
 			case "width":
 			case "align":
+			case "style":
+			case "color":
+			case "valign":
 			case "target":
 			case "height":
 			case "border":
 			case "hspace":
 			case "vspace":
+			case "bgcolor":
 			case "onclick":
+			case "colspan":
+			case "itemprop":
 			case "disabled":
+			case "itemtype":
+			case "itemscope":
+			case "cellspacing":
+			case "cellpadding":
+			case "bordercolor":
 			default:
 				if i != j {
 					attr[j] = attr[i]
