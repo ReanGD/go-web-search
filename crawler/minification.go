@@ -38,6 +38,13 @@ func (m *Minification) removeTextNode(node *html.Node) error {
 	return nil
 }
 
+func (m *Minification) toTextNode(node *html.Node) error {ddd
+	node.Type = html.TextNode
+	node.Data = " "
+
+	return nil
+}
+
 func (m *Minification) parseChildren(node *html.Node) error {
 	for it := node.FirstChild; it != nil; {
 		currentNode := it
