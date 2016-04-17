@@ -41,7 +41,10 @@ func renderNode(node *html.Node) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	w.Flush()
+	err = w.Flush()
+	if err != nil {
+		return nil, err
+	}
 
 	return buf.Bytes(), err
 }
@@ -226,7 +229,14 @@ func sortAndShow(m map[string]int) {
 			fmt.Printf("%s, %d\n", s, k)
 		}
 	}
+}
 
+// ClearClose ...
+func ClearClose(db *content.DBrw) {
+	err := db.Close()
+	if err != nil {
+		fmt.Printf("Error close db %s", err)
+	}
 }
 
 func test() error {
@@ -234,7 +244,7 @@ func test() error {
 	if err != nil {
 		return err
 	}
-	defer db.Close()
+	defer ClearClose(db)
 	var contents []content.Content
 	err = db.Limit(100).Find(&contents).Error
 	// err = db.Find(&contents).Error
@@ -242,7 +252,7 @@ func test() error {
 	if err != nil {
 		return err
 	}
-	compress := false
+	CountCompressStatistic := false
 	newLength := false
 	statisticAttr := false
 	statisticTag := false
@@ -263,7 +273,7 @@ func test() error {
 		// post</div>
 		// </body></html>`)
 		oldLen += uint64(len(body))
-		if compress {
+		if CountCompressStatistic {
 			bodyCompress, err := rec.Body.Compress()
 			if err != nil {
 				return err
@@ -291,7 +301,7 @@ func test() error {
 				return err
 			}
 			newLen += uint64(len(buf))
-			if compress {
+			if CountCompressStatistic {
 				newField := content.Compressed{Data: buf}
 				bodyCompress, err := newField.Compress()
 				if err != nil {
@@ -305,12 +315,12 @@ func test() error {
 	}
 
 	fmt.Println(oldLen)
-	if compress {
+	if CountCompressStatistic {
 		fmt.Println(oldLenCompress)
 	}
 	if newLength {
 		fmt.Println(newLen)
-		if compress {
+		if CountCompressStatistic {
 			fmt.Println(newLenCompress)
 		}
 	}
@@ -328,6 +338,13 @@ func run() error {
 	return crawler.Run(baseHosts, 5000)
 }
 
+func clearCloseFile(f *os.File) {
+	err := f.Close()
+	if err != nil {
+		fmt.Printf("Error close file: %s", err)
+	}
+}
+
 func main() {
 	f, err := os.OpenFile("app.log", os.O_APPEND|os.O_CREATE|os.O_RDWR, 0666)
 	if err != nil {
@@ -335,7 +352,7 @@ func main() {
 		return
 	}
 
-	defer f.Close()
+	defer clearCloseFile(f)
 
 	log.SetOutput(f)
 

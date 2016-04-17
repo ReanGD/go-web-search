@@ -13,7 +13,7 @@ func createTables(db *gorm.DB, values ...interface{}) error {
 			if err != nil {
 				errClose := db.Close()
 				if errClose != nil {
-					fmt.Printf("%s", err)
+					fmt.Printf("%s", errClose)
 				}
 				return err
 			}
@@ -54,7 +54,7 @@ func GetDBrw() (*DBrw, error) {
 	if err != nil {
 		errClose := db.Close()
 		if errClose != nil {
-			fmt.Printf("%s", err)
+			fmt.Printf("%s", errClose)
 		}
 		return nil, err
 	}
@@ -64,7 +64,7 @@ func GetDBrw() (*DBrw, error) {
 	if err != nil {
 		errClose := db.Close()
 		if errClose != nil {
-			fmt.Printf("%s", err)
+			fmt.Printf("%s", errClose)
 		}
 		return nil, fmt.Errorf("Get hosts list from db, message: %s", err)
 	}
@@ -83,7 +83,7 @@ func GetDBrw() (*DBrw, error) {
 	if err != nil {
 		errClose := db.Close()
 		if errClose != nil {
-			fmt.Printf("%s", err)
+			fmt.Printf("%s", errClose)
 		}
 		return nil, fmt.Errorf("Get content list from db, message: %s", err)
 	}
