@@ -26,7 +26,7 @@ func (w *DBWorker) markURLLoaded(tr *DBrw, urlStr string, hostID sql.NullInt64) 
 	var urlRec URL
 	parent := sql.NullInt64{Valid: false}
 	err := tr.Where("id = ?", urlStr).First(&urlRec).Error
-	if err == gorm.RecordNotFound {
+	if err == gorm.ErrRecordNotFound {
 		newItem := URL{
 			ID:     urlStr,
 			Parent: parent,
@@ -55,7 +55,7 @@ func (w *DBWorker) saveMeta(tr *DBrw, meta *Meta, origin sql.NullInt64) error {
 	urlStr := meta.URL
 	var metaRec Meta
 	err := tr.Where("url = ?", urlStr).First(&metaRec).Error
-	if err == gorm.RecordNotFound {
+	if err == gorm.ErrRecordNotFound {
 		meta.Parent, err = w.markURLLoaded(tr, urlStr, hostID)
 		if err != nil {
 			return err
@@ -119,7 +119,7 @@ func (w *DBWorker) savePageData(tr *DBrw, data *PageData) error {
 	for urlStr, hostName := range data.URLs {
 		var dbItem URL
 		err = tr.Where("id = ?", urlStr).First(&dbItem).Error
-		if err == gorm.RecordNotFound {
+		if err == gorm.ErrRecordNotFound {
 			newItem := &URL{ID: urlStr, Parent: parent, HostID: tr.GetHostID(hostName), Loaded: false}
 			err = tr.Create(&newItem).Error
 			if err != nil {

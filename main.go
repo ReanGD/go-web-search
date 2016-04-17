@@ -15,7 +15,7 @@ import (
 
 	"github.com/ReanGD/go-web-search/content"
 	"github.com/ReanGD/go-web-search/crawler"
-	_ "github.com/mattn/go-sqlite3"
+	_ "github.com/jinzhu/gorm/dialects/sqlite"
 )
 
 var baseHosts = []string{
@@ -324,7 +324,7 @@ func test() error {
 }
 
 func run() error {
-	return crawler.Run(baseHosts, 2000)
+	return crawler.Run(baseHosts, 200)
 }
 
 func main() {
@@ -340,8 +340,8 @@ func main() {
 
 	// runtime.GOMAXPROCS(runtime.NumCPU())
 
-	// err = run()
-	err = test()
+	err = run()
+	// err = test()
 	if err != nil {
 		fmt.Printf("%s", err)
 	}

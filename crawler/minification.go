@@ -38,7 +38,7 @@ func (m *Minification) removeTextNode(node *html.Node) error {
 	return nil
 }
 
-func (m *Minification) toTextNode(node *html.Node) error {ddd
+func (m *Minification) toTextNode(node *html.Node) error {
 	node.Type = html.TextNode
 	node.Data = " "
 

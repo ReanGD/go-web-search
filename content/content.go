@@ -47,7 +47,7 @@ func GetDBrw() (*DBrw, error) {
 	db.SetLogger(defaultLogger)
 	db.LogMode(false)
 
-	err = createTables(&db, Host{}, Content{}, Meta{}, URL{})
+	err = db.CreateTable(&Host{}, &Content{}, &Meta{}, &URL{}).Error
 	if err != nil {
 		db.Close()
 		return nil, err
@@ -77,7 +77,7 @@ func GetDBrw() (*DBrw, error) {
 	}
 
 	result := &DBrw{
-		DB:     &db,
+		DB:     db,
 		hosts:  make(map[string]*Host, len(hosts)),
 		hashes: make(map[string][]hashVal, len(hashResults))}
 
