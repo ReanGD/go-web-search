@@ -8,12 +8,26 @@ import (
 	"golang.org/x/net/html/atom"
 )
 
+var (
+	// ErrMinificationUnexpectedNodeType - found unexpected node type
+	ErrMinificationUnexpectedNodeType = errors.New("minification.Minification.Run: unexpected node type")
+)
+
 // Minification - struct with functions for minimize html
 type Minification struct {
 }
 
 func (m *Minification) removeNode(node *html.Node) error {
 	node.Parent.RemoveChild(node)
+
+	return nil
+}
+
+func (m *Minification) toEmptyTextNode(node *html.Node) error {
+	node.Type = html.TextNode
+	node.Data = " "
+	node.FirstChild = nil
+	node.LastChild = nil
 
 	return nil
 }
@@ -27,22 +41,10 @@ func (m *Minification) removeTextNode(node *html.Node) error {
 		len(strings.TrimSpace(node.NextSibling.Data)) == 0
 
 	if prevCheck || nextCheck {
-		node.Parent.RemoveChild(node)
-	} else {
-		node.Type = html.TextNode
-		node.Data = " "
-		node.FirstChild = nil
-		node.LastChild = nil
+		return m.removeNode(node)
 	}
 
-	return nil
-}
-
-func (m *Minification) toTextNode(node *html.Node) error {
-	node.Type = html.TextNode
-	node.Data = " "
-
-	return nil
+	return m.toEmptyTextNode(node)
 }
 
 func (m *Minification) parseChildren(node *html.Node) error {
@@ -143,6 +145,6 @@ func (m *Minification) Run(node *html.Node) error {
 	case html.CommentNode: // remove
 		return m.removeNode(node)
 	default:
-		return errors.New("minification.Minification.Run: unexpected node type")
+		return ErrMinificationUnexpectedNodeType
 	}
 }

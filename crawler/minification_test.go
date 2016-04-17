@@ -42,7 +42,7 @@ func TestErrorTag(t *testing.T) {
 
 		node.FirstChild.Type = html.ErrorNode
 		m := Minification{}
-		So(m.Run(node).Error(), ShouldEqual, "minification.Minification.Run: unexpected node type")
+		So(m.Run(node).Error(), ShouldEqual, ErrMinificationUnexpectedNodeType.Error())
 	})
 }
 
@@ -106,17 +106,22 @@ func TestRemoveTags(t *testing.T) {
 		minificationCheck(in, emptyBody)
 	})
 
-	Convey("Removing the tag br", t, func() {
-		in := `<html><head></head><body>
-<br />
-</body></html>`
-
-		minificationCheck(in, emptyBody)
+	Convey("Removal of all other attribute", t, func() {
+		tags := []string{
+			"br",
+			"hr",
+		}
+		for _, tagName := range tags {
+			in := fmt.Sprintf(`<html><head></head><body>
+<%s />
+</body></html>`, tagName)
+			minificationCheck(in, emptyBody)
+		}
 	})
 }
 
 func TestRemoveTextNode(t *testing.T) {
-	Convey("Deleting1", t, func() {
+	Convey("Removing a tag inside a div", t, func() {
 		in := `<html><head></head><body>
 <div><time a="1">remove</time></div>
 </body></html>`
@@ -126,7 +131,7 @@ func TestRemoveTextNode(t *testing.T) {
 
 		minificationCheck(in, out)
 	})
-	Convey("Deleting2", t, func() {
+	Convey("Removing a tag with the text on the left", t, func() {
 		in := `<html><head></head><body>
 <div>pre<time a="1">remove</time></div>
 </body></html>`
@@ -136,7 +141,17 @@ func TestRemoveTextNode(t *testing.T) {
 
 		minificationCheck(in, out)
 	})
-	Convey("Deleting3", t, func() {
+	Convey("Removing a tag with the text on the right", t, func() {
+		in := `<html><head></head><body>
+<div><time a="1">remove</time>post</div>
+</body></html>`
+		out := `<html><head></head><body>
+<div>post</div>
+</body></html>`
+
+		minificationCheck(in, out)
+	})
+	Convey("Removing a tag with the text on the right and left", t, func() {
 		in := `<html><head></head><body>
 <div>pre<time a="1">remove</time>post</div>
 </body></html>`
@@ -146,7 +161,7 @@ func TestRemoveTextNode(t *testing.T) {
 
 		minificationCheck(in, out)
 	})
-	Convey("Deleting4", t, func() {
+	Convey("Removing a tag when left blank", t, func() {
 		in := `<html><head></head><body>
 <div> <time a="1">remove</time>post</div>
 </body></html>`
@@ -156,7 +171,7 @@ func TestRemoveTextNode(t *testing.T) {
 
 		minificationCheck(in, out)
 	})
-	Convey("Deleting5", t, func() {
+	Convey("Removing a tag when right blank", t, func() {
 		in := `<html><head></head><body>
 <div>pre<time a="1">remove</time> </div>
 </body></html>`
@@ -166,7 +181,7 @@ func TestRemoveTextNode(t *testing.T) {
 
 		minificationCheck(in, out)
 	})
-	Convey("Deleting5", t, func() {
+	Convey("Removing the tag when the tag is left", t, func() {
 		in := `<html><head></head><body>
 <div><div>pre</div><time a="1">remove</time>post</div>
 </body></html>`
@@ -176,7 +191,7 @@ func TestRemoveTextNode(t *testing.T) {
 
 		minificationCheck(in, out)
 	})
-	Convey("Deleting6", t, func() {
+	Convey("Removing the tag when the tag is right", t, func() {
 		in := `<html><head></head><body>
 <div>pre<time a="1">remove</time><div>post</div></div>
 </body></html>`
@@ -186,7 +201,7 @@ func TestRemoveTextNode(t *testing.T) {
 
 		minificationCheck(in, out)
 	})
-	Convey("Deleting7", t, func() {
+	Convey("Removing a tag from the right line break", t, func() {
 		in := `<html><head></head><body>
 <div>pre<time a="1">remove</time>
 <div>post</div></div>
