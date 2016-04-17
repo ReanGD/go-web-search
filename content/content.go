@@ -11,7 +11,10 @@ func createTables(db *gorm.DB, values ...interface{}) error {
 		if !db.HasTable(value) {
 			err := db.CreateTable(value).Error
 			if err != nil {
-				db.Close()
+				errClose := db.Close()
+				if errClose != nil {
+					fmt.Printf("%s", err)
+				}
 				return err
 			}
 		}
@@ -47,16 +50,22 @@ func GetDBrw() (*DBrw, error) {
 	db.SetLogger(defaultLogger)
 	db.LogMode(false)
 
-	err = db.CreateTable(&Host{}, &Content{}, &Meta{}, &URL{}).Error
+	err = createTables(db, &Host{}, &Content{}, &Meta{}, &URL{})
 	if err != nil {
-		db.Close()
+		errClose := db.Close()
+		if errClose != nil {
+			fmt.Printf("%s", err)
+		}
 		return nil, err
 	}
 
 	var hosts []Host
 	err = db.Find(&hosts).Error
 	if err != nil {
-		db.Close()
+		errClose := db.Close()
+		if errClose != nil {
+			fmt.Printf("%s", err)
+		}
 		return nil, fmt.Errorf("Get hosts list from db, message: %s", err)
 	}
 
@@ -72,7 +81,10 @@ func GetDBrw() (*DBrw, error) {
 	sql += " WHERE meta.content_id IS NOT NULL AND meta.state IN (?, ?)"
 	err = db.Raw(sql, StateSuccess, StateParseError).Scan(&hashResults).Error
 	if err != nil {
-		db.Close()
+		errClose := db.Close()
+		if errClose != nil {
+			fmt.Printf("%s", err)
+		}
 		return nil, fmt.Errorf("Get content list from db, message: %s", err)
 	}
 

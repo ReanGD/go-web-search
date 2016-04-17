@@ -28,6 +28,7 @@ var baseHosts = []string{
 	"rsdn.ru",
 	"3dnews.ru",
 	"ferra.ru",
+	"nixp.ru",
 	"opennet.ru",
 	"computerra.ru"}
 
@@ -324,7 +325,7 @@ func test() error {
 }
 
 func run() error {
-	return crawler.Run(baseHosts, 200)
+	return crawler.Run(baseHosts, 5000)
 }
 
 func main() {
@@ -340,8 +341,8 @@ func main() {
 
 	// runtime.GOMAXPROCS(runtime.NumCPU())
 
-	err = run()
-	// err = test()
+	// err = run()
+	err = test()
 	if err != nil {
 		fmt.Printf("%s", err)
 	}
