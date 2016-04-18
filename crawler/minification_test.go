@@ -215,6 +215,64 @@ func TestRemoveTextNode(t *testing.T) {
 	})
 }
 
+func TestMinimizeHierarchyNode(t *testing.T) {
+
+	Convey("Minimize. One tag inside", t, func() {
+		in := `<html><head></head><body>
+<div><span><a>ref</a></span></div>
+</body></html>`
+		out := `<html><head></head><body>
+<div><a>ref</a></div>
+</body></html>`
+
+		minificationCheck(in, out)
+	})
+
+	Convey("Minimize. Text inside", t, func() {
+		in := `<html><head></head><body>
+<div><span>text</span></div>
+</body></html>`
+		out := `<html><head></head><body>
+<div><span>text</span></div>
+</body></html>`
+
+		minificationCheck(in, out)
+	})
+
+	Convey("Minimize. Double tag inside", t, func() {
+		in := `<html><head></head><body>
+<div><span><br/><a>ref</a></span></div>
+</body></html>`
+		out := `<html><head></head><body>
+<div><span><br/><a>ref</a></span></div>
+</body></html>`
+
+		minificationCheck(in, out)
+	})
+
+	Convey("Minimize. Tag with text inside", t, func() {
+		in := `<html><head></head><body>
+<div><span>text<a>ref</a></span></div>
+</body></html>`
+		out := `<html><head></head><body>
+<div><span>text<a>ref</a></span></div>
+</body></html>`
+
+		minificationCheck(in, out)
+	})
+
+	Convey("Minimize. Tag with text inside and attr", t, func() {
+		in := `<html><head></head><body>
+<div><span class="a">text<a>ref</a></span></div>
+</body></html>`
+		out := `<html><head></head><body>
+<div><span>text<a>ref</a></span></div>
+</body></html>`
+
+		minificationCheck(in, out)
+	})
+}
+
 func TestRemoveAttrs(t *testing.T) {
 
 	Convey("Attributes are not deleted", t, func() {
