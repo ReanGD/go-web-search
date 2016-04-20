@@ -11,14 +11,13 @@ import (
 
 var (
 	// ErrMinificationUnexpectedNodeType - found unexpected node type
-	ErrMinificationUnexpectedNodeType = errors.New("minification.Minification.parseNode: unexpected node type")
+	ErrMinificationUnexpectedNodeType = errors.New("minification1.minification1.parseNode: unexpected node type")
 )
 
-// Minification - struct with functions for minimize html
-type Minification struct {
+type minification1 struct {
 }
 
-func (m *Minification) removeAttr(node *html.Node) {
+func (m *minification1) removeAttr(node *html.Node) {
 	lenAttr := len(node.Attr)
 	if lenAttr != 0 {
 		attr := node.Attr
@@ -68,7 +67,7 @@ func (m *Minification) removeAttr(node *html.Node) {
 	}
 }
 
-func (m *Minification) removeNode(node *html.Node) (*html.Node, error) {
+func (m *minification1) removeNode(node *html.Node) (*html.Node, error) {
 	parent := node.Parent
 	prev := node.PrevSibling
 	prevText := prev != nil && prev.Type == html.TextNode
@@ -101,7 +100,7 @@ func (m *Minification) removeNode(node *html.Node) (*html.Node, error) {
 	return result, nil
 }
 
-func (m *Minification) parseChildren(node *html.Node) (*html.Node, error) {
+func (m *minification1) parseChildren(node *html.Node) (*html.Node, error) {
 	var err error
 	for it := node.FirstChild; it != nil; {
 		it, err = m.parseNode(it)
@@ -113,7 +112,7 @@ func (m *Minification) parseChildren(node *html.Node) (*html.Node, error) {
 	return node.NextSibling, nil
 }
 
-func (m *Minification) parseElements(node *html.Node) (*html.Node, error) {
+func (m *minification1) parseElements(node *html.Node) (*html.Node, error) {
 	switch node.DataAtom {
 	case atom.Script:
 		return m.removeNode(node)
@@ -138,16 +137,16 @@ func (m *Minification) parseElements(node *html.Node) (*html.Node, error) {
 	return m.parseChildren(node)
 }
 
-func (m *Minification) parseNode(node *html.Node) (*html.Node, error) {
+func (m *minification1) parseNode(node *html.Node) (*html.Node, error) {
 	switch node.Type {
 	case html.DocumentNode: // +children -attr (first node)
 		return m.parseChildren(node)
 	case html.ElementNode: // +children +attr
 		return m.parseElements(node)
 	case html.TextNode: // -children -attr
-		return nil, nil
+		return node.NextSibling, nil
 	case html.DoctypeNode: // ignore
-		return nil, nil
+		return node.NextSibling, nil
 	case html.CommentNode: // remove
 		return m.removeNode(node)
 	default:
@@ -155,8 +154,9 @@ func (m *Minification) parseNode(node *html.Node) (*html.Node, error) {
 	}
 }
 
-// Run - start minification node
-func (m *Minification) Run(node *html.Node) error {
-	_, err := parseNode(node)
+// RunMinification1 - start minification node
+func RunMinification1(node *html.Node) error {
+	m := minification1{}
+	_, err := m.parseNode(node)
 	return err
 }
