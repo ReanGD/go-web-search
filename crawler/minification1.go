@@ -67,6 +67,20 @@ func (m *minification1) removeAttr(node *html.Node) {
 	}
 }
 
+func (m *minification1) getAttrVal(node *html.Node, attrName string) string {
+	for _, attr := range node.Attr {
+		if attr.Key == attrName {
+			return attr.Val
+		}
+	}
+
+	return ""
+}
+
+func (m *minification1) getAttrValLower(node *html.Node, attrName string) string {
+	return strings.ToLower(m.getAttrVal(node, attrName))
+}
+
 func (m *minification1) removeNode(node *html.Node) (*html.Node, error) {
 	parent := node.Parent
 	prev := node.PrevSibling
@@ -126,10 +140,18 @@ func (m *minification1) parseElements(node *html.Node) (*html.Node, error) {
 		return m.removeNode(node)
 	case atom.Time:
 		return m.removeNode(node)
+	case atom.Param:
+		return m.removeNode(node)
+	case atom.Svg:
+		return m.removeNode(node)
 	case atom.Br:
 		return m.removeNode(node)
 	case atom.Hr:
 		return m.removeNode(node)
+	case atom.Input:
+		if m.getAttrValLower(node, "type") == "hidden" {
+			return m.removeNode(node)
+		}
 	}
 
 	m.removeAttr(node)

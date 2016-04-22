@@ -188,7 +188,9 @@ func TestRemoveTags(t *testing.T) {
 		"<form>text</form>",
 		"<button>text</button>",
 		"<img src=\"URL\"></img>",
+		"<param name=\"a\"/>",
 		"<time>text</time>",
+		"<svg>text</svg>",
 		"<br/>",
 		"<hr/>",
 	}
@@ -201,6 +203,27 @@ func TestRemoveTags(t *testing.T) {
 			minificationCheck(in, out)
 		})
 	}
+
+	Convey("Removing tag hidden input", t, func() {
+		in := `<html><head></head><body>
+<input type="hidden" />
+</body></html>`
+		minificationCheck(in, out)
+	})
+
+	Convey("Not Removing no hidden tag input", t, func() {
+		in := `<html><head></head><body>
+<input type="hidden1"/>
+</body></html>`
+		minificationCheck(in, in)
+	})
+
+	Convey("Not Removing tag input without type", t, func() {
+		in := `<html><head></head><body>
+<input v="val"/>
+</body></html>`
+		minificationCheck(in, in)
+	})
 }
 
 func TestFuncRemoveAttr(t *testing.T) {
