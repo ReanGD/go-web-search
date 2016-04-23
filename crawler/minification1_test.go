@@ -184,12 +184,15 @@ func TestFuncRemoveNode(t *testing.T) {
 func TestRemoveTags(t *testing.T) {
 	tags := []string{
 		"<script>i=0;</script>",
-		"<style>.a: 1px</style>",
-		"<form>text</form>",
 		"<button>text</button>",
-		"<img src=\"URL\"></img>",
+		"<object>text</object>",
+		"<select>text</select>",
+		"<style>.a: 1px</style>",
 		"<param name=\"a\"/>",
+		"<embed a=\"1\"></embed>",
+		"<form>text</form>",
 		"<time>text</time>",
+		"<img src=\"URL\"></img>",
 		"<svg>text</svg>",
 		"<br/>",
 		"<hr/>",
@@ -223,6 +226,26 @@ func TestRemoveTags(t *testing.T) {
 <input v="val"/>
 </body></html>`
 		minificationCheck(in, in)
+	})
+
+	Convey("Removing tag wdr", t, func() {
+		in := `<html><head></head><body>
+pre<wbr>post
+</body></html>`
+		out := `<html><head></head><body>
+prepost
+</body></html>`
+		minificationCheck(in, out)
+	})
+
+	Convey("Removing tag wdr between tags", t, func() {
+		in := `<html><head></head><body>
+<div>pre</div><wbr><div>post</div>
+</body></html>`
+		out := `<html><head></head><body>
+<div>pre</div><div>post</div>
+</body></html>`
+		minificationCheck(in, out)
 	})
 }
 

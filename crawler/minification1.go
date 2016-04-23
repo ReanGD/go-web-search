@@ -81,37 +81,48 @@ func (m *minification1) getAttrValLower(node *html.Node, attrName string) string
 	return strings.ToLower(m.getAttrVal(node, attrName))
 }
 
-func (m *minification1) removeNode(node *html.Node) (*html.Node, error) {
+func (m *minification1) removeNodeEx(node *html.Node, addSeparator bool) (*html.Node, error) {
 	parent := node.Parent
 	prev := node.PrevSibling
 	prevText := prev != nil && prev.Type == html.TextNode
 	next := node.NextSibling
 	nextText := next != nil && next.Type == html.TextNode
 	var result *html.Node
+	delim := " "
+	if !addSeparator {
+		delim = ""
+	}
 
 	if prevText && nextText {
 		prev.Data = strings.TrimRightFunc(prev.Data, unicode.IsSpace) +
-			" " + strings.TrimLeftFunc(next.Data, unicode.IsSpace)
+			delim + strings.TrimLeftFunc(next.Data, unicode.IsSpace)
 		parent.RemoveChild(node)
 		parent.RemoveChild(next)
 		result = prev.NextSibling
 	} else if prevText {
-		prev.Data = strings.TrimRightFunc(prev.Data, unicode.IsSpace) + " "
+		prev.Data = strings.TrimRightFunc(prev.Data, unicode.IsSpace) + delim
 		parent.RemoveChild(node)
 		result = prev.NextSibling
 	} else if nextText {
-		next.Data = " " + strings.TrimLeftFunc(next.Data, unicode.IsSpace)
+		next.Data = delim + strings.TrimLeftFunc(next.Data, unicode.IsSpace)
 		parent.RemoveChild(node)
 		result = next
-	} else {
+	} else if addSeparator {
 		node.Type = html.TextNode
-		node.Data = " "
+		node.Data = delim
 		node.FirstChild = nil
 		node.LastChild = nil
+		result = next
+	} else {
+		parent.RemoveChild(node)
 		result = next
 	}
 
 	return result, nil
+}
+
+func (m *minification1) removeNode(node *html.Node) (*html.Node, error) {
+	return m.removeNodeEx(node, true)
 }
 
 func (m *minification1) parseChildren(node *html.Node) (*html.Node, error) {
@@ -130,17 +141,23 @@ func (m *minification1) parseElements(node *html.Node) (*html.Node, error) {
 	switch node.DataAtom {
 	case atom.Script:
 		return m.removeNode(node)
+	case atom.Button:
+		return m.removeNode(node)
+	case atom.Object:
+		return m.removeNode(node)
+	case atom.Select:
+		return m.removeNode(node)
 	case atom.Style:
+		return m.removeNode(node)
+	case atom.Param:
+		return m.removeNode(node)
+	case atom.Embed:
 		return m.removeNode(node)
 	case atom.Form:
 		return m.removeNode(node)
-	case atom.Button:
-		return m.removeNode(node)
-	case atom.Img:
-		return m.removeNode(node)
 	case atom.Time:
 		return m.removeNode(node)
-	case atom.Param:
+	case atom.Img:
 		return m.removeNode(node)
 	case atom.Svg:
 		return m.removeNode(node)
@@ -148,8 +165,18 @@ func (m *minification1) parseElements(node *html.Node) (*html.Node, error) {
 		return m.removeNode(node)
 	case atom.Hr:
 		return m.removeNode(node)
+	case atom.Wbr:
+		return m.removeNodeEx(node, false)
 	case atom.Input:
-		if m.getAttrValLower(node, "type") == "hidden" {
+		typeInput := m.getAttrValLower(node, "type")
+		if typeInput == "radio" ||
+			typeInput == "checkbox" ||
+			typeInput == "hidden" ||
+			typeInput == "button" ||
+			typeInput == "submit" ||
+			typeInput == "reset" ||
+			typeInput == "file" ||
+			typeInput == "image" {
 			return m.removeNode(node)
 		}
 	}
