@@ -137,6 +137,45 @@ func (m *minification1) removeNode(node *html.Node, addSeparator bool) (*html.No
 	return result, nil
 }
 
+func (m *minification1) openNode(node *html.Node, addSeparator bool) (*html.Node, error) {
+	parent := node.Parent
+	first, last := node.FirstChild, node.LastChild
+	prev, next := node.PrevSibling, node.NextSibling
+
+	if first == nil {
+		return m.removeNode(node, addSeparator)
+	}
+
+	for it := first; it != nil; it = it.NextSibling {
+		it.Parent = parent
+	}
+
+	if parent.FirstChild == node {
+		parent.FirstChild = first
+	}
+	if parent.LastChild == node {
+		parent.LastChild = last
+	}
+
+	if prev != nil {
+		first.PrevSibling = prev
+		prev.NextSibling = first
+	}
+	if next != nil {
+		last.NextSibling = next
+		next.PrevSibling = last
+	}
+
+	node.Parent = nil
+	node.PrevSibling = nil
+	node.NextSibling = nil
+
+	result := m.mergeNodes(parent, prev, first, addSeparator)
+	result = m.mergeNodes(parent, last, next, addSeparator)
+
+	return result, nil
+}
+
 func (m *minification1) parseChildren(node *html.Node) (*html.Node, error) {
 	var err error
 	for it := node.FirstChild; it != nil; {
@@ -191,6 +230,11 @@ func (m *minification1) parseElements(node *html.Node) (*html.Node, error) {
 			typeInput == "image" {
 			return m.removeNode(node, true)
 		}
+	}
+
+	switch node.DataAtom {
+	case atom.B:
+		return m.openNode(node, false)
 	}
 
 	m.removeAttr(node)
