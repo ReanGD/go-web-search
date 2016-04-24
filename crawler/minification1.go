@@ -235,6 +235,8 @@ func (m *minification1) parseElements(node *html.Node) (*html.Node, error) {
 	switch node.DataAtom {
 	case atom.B:
 		return m.openNode(node, false)
+	case atom.I:
+		return m.openNode(node, false)
 	}
 
 	m.removeAttr(node)

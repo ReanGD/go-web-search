@@ -353,136 +353,63 @@ prepost
 	})
 }
 
+func HelperFuncOpenNode(name string, t *testing.T, in, out string) {
+	Convey(name, t, func() {
+		fin := fmt.Sprintf(`<html><head></head><body>
+<div>%s</div>
+</body></html>`, in)
+		fout := fmt.Sprintf(`<html><head></head><body>
+<div>%s</div>
+</body></html>`, out)
+
+		minificationCheck(fin, fout)
+	})
+}
+
 func TestFuncOpenNode(t *testing.T) {
-	Convey("Empty", t, func() {
-		in := `<html><head></head><body>
-<div><b></b></div>
-</body></html>`
-		out := `<html><head></head><body>
-<div></div>
-</body></html>`
+	HelperFuncOpenNode("Empty", t,
+		"<b></b>", "")
+	HelperFuncOpenNode("Text inside", t,
+		"<b>itext</b>", "itext")
+	HelperFuncOpenNode("One tag inside", t,
+		"<b><a>itext</a></b>", "<a>itext</a>")
+	HelperFuncOpenNode("Left text, right tag inside", t,
+		"<b>ipre<a>itext</a></b>", "ipre<a>itext</a>")
+	HelperFuncOpenNode("Left tag, right text inside", t,
+		"<b><a>itext</a>ipost</b>", "<a>itext</a>ipost")
+	HelperFuncOpenNode("Left text, right text inside", t,
+		"<b>ipre<a>itext</a>ipost</b>", "ipre<a>itext</a>ipost")
+	HelperFuncOpenNode("Text {text text} text", t,
+		"pre<b>ipre<a>itext</a>ipost</b>post", "preipre<a>itext</a>ipostpost")
+	HelperFuncOpenNode("Text {tag tag} text", t,
+		"pre<b><a>itext1</a><a>itext2</a></b>post", "pre<a>itext1</a><a>itext2</a>post")
+	HelperFuncOpenNode("Tag {text text} tag", t,
+		"<div>pre</div><b>ipre<a>itext</a>ipost</b><div>post</div>",
+		"<div>pre</div>ipre<a>itext</a>ipost<div>post</div>")
+	HelperFuncOpenNode("Tag {tag tag} tag", t,
+		"<div>pre</div><b><a>itext1</a><a>itext2</a></b><div>post</div>",
+		"<div>pre</div><a>itext1</a><a>itext2</a><div>post</div>")
+	HelperFuncOpenNode("Tag {text} tag", t,
+		"<div>pre</div><b>itext</b><div>post</div>", "<div>pre</div>itext<div>post</div>")
+	HelperFuncOpenNode("Tag {tag} tag", t,
+		"<div>pre</div><b><a>itext</a></b><div>post</div>", "<div>pre</div><a>itext</a><div>post</div>")
+}
 
-		minificationCheck(in, out)
-	})
-
-	Convey("Text inside", t, func() {
-		in := `<html><head></head><body>
-<div><b>itext</b></div>
+func TestOpenTags(t *testing.T) {
+	tags := []string{
+		"b",
+		"i",
+	}
+	out := `<html><head></head><body>
+<div>text</div>
 </body></html>`
-		out := `<html><head></head><body>
-<div>itext</div>
-</body></html>`
+	for _, tagName := range tags {
+		Convey("Open tag "+tagName, t, func() {
+			in := fmt.Sprintf(`<html><head></head><body>
+<div><%s>text</%s></div>
+</body></html>`, tagName, tagName)
 
-		minificationCheck(in, out)
-	})
-
-	Convey("One tag inside", t, func() {
-		in := `<html><head></head><body>
-<div><b><a>itext</a></b></div>
-</body></html>`
-		out := `<html><head></head><body>
-<div><a>itext</a></div>
-</body></html>`
-
-		minificationCheck(in, out)
-	})
-
-	Convey("Left text, right tag inside", t, func() {
-		in := `<html><head></head><body>
-<div><b>ipre<a>itext</a></b></div>
-</body></html>`
-		out := `<html><head></head><body>
-<div>ipre<a>itext</a></div>
-</body></html>`
-
-		minificationCheck(in, out)
-	})
-
-	Convey("Left tag, right text inside", t, func() {
-		in := `<html><head></head><body>
-<div><b><a>itext</a>ipost</b></div>
-</body></html>`
-		out := `<html><head></head><body>
-<div><a>itext</a>ipost</div>
-</body></html>`
-
-		minificationCheck(in, out)
-	})
-
-	Convey("Left text, right text inside", t, func() {
-		in := `<html><head></head><body>
-<div><b>ipre<a>itext</a>ipost</b></div>
-</body></html>`
-		out := `<html><head></head><body>
-<div>ipre<a>itext</a>ipost</div>
-</body></html>`
-
-		minificationCheck(in, out)
-	})
-
-	Convey("Text {text text} text", t, func() {
-		in := `<html><head></head><body>
-<div>pre<b>ipre<a>itext</a>ipost</b>post</div>
-</body></html>`
-		out := `<html><head></head><body>
-<div>preipre<a>itext</a>ipostpost</div>
-</body></html>`
-
-		minificationCheck(in, out)
-	})
-
-	Convey("Text {tag tag} text", t, func() {
-		in := `<html><head></head><body>
-<div>pre<b><a>itext1</a><a>itext2</a></b>post</div>
-</body></html>`
-		out := `<html><head></head><body>
-<div>pre<a>itext1</a><a>itext2</a>post</div>
-</body></html>`
-
-		minificationCheck(in, out)
-	})
-
-	Convey("Tag {text text} tag", t, func() {
-		in := `<html><head></head><body>
-<div><div>pre</div><b>ipre<a>itext</a>ipost</b><div>post</div></div>
-</body></html>`
-		out := `<html><head></head><body>
-<div><div>pre</div>ipre<a>itext</a>ipost<div>post</div></div>
-</body></html>`
-
-		minificationCheck(in, out)
-	})
-
-	Convey("Tag {tag tag} tag", t, func() {
-		in := `<html><head></head><body>
-<div><div>pre</div><b><a>itext1</a><a>itext2</a></b><div>post</div></div>
-</body></html>`
-		out := `<html><head></head><body>
-<div><div>pre</div><a>itext1</a><a>itext2</a><div>post</div></div>
-</body></html>`
-
-		minificationCheck(in, out)
-	})
-
-	Convey("Tag {text} tag", t, func() {
-		in := `<html><head></head><body>
-<div><div>pre</div><b>itext</b><div>post</div></div>
-</body></html>`
-		out := `<html><head></head><body>
-<div><div>pre</div>itext<div>post</div></div>
-</body></html>`
-
-		minificationCheck(in, out)
-	})
-
-	Convey("Tag {tag} tag", t, func() {
-		in := `<html><head></head><body>
-<div><div>pre</div><b><a>itext</a></b><div>post</div></div>
-</body></html>`
-		out := `<html><head></head><body>
-<div><div>pre</div><a>itext</a><div>post</div></div>
-</body></html>`
-
-		minificationCheck(in, out)
-	})
+			minificationCheck(in, out)
+		})
+	}
 }
