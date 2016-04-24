@@ -69,6 +69,110 @@ func TestRemoveComments(t *testing.T) {
 	})
 }
 
+func TestFuncRemoveAttr(t *testing.T) {
+	Convey("Attributes are not deleted", t, func() {
+		in := `<html><head></head><body>
+	<div begin="begin" end="end">text</div>
+	</body></html>`
+		out := `<html><head></head><body>
+	<div begin="begin" end="end">text</div>
+	</body></html>`
+		minificationCheck(in, out)
+	})
+
+	Convey("Left and right attributes are not removed", t, func() {
+		in := `<html><head></head><body>
+	<div begin="begin" id="remove" end="end">text</div>
+	</body></html>`
+		out := `<html><head></head><body>
+	<div begin="begin" end="end">text</div>
+	</body></html>`
+		minificationCheck(in, out)
+	})
+
+	Convey("Left attributes are not removed", t, func() {
+		in := `<html><head></head><body>
+	<div begin="begin" alt="remove">text</div>
+	</body></html>`
+		out := `<html><head></head><body>
+	<div begin="begin">text</div>
+	</body></html>`
+		minificationCheck(in, out)
+	})
+
+	Convey("Right attributes are not removed", t, func() {
+		in := `<html><head></head><body>
+	<div alt="remove" end="end">text</div>
+	</body></html>`
+		out := `<html><head></head><body>
+	<div end="end">text</div>
+	</body></html>`
+		minificationCheck(in, out)
+	})
+
+	Convey("One attribute for remove", t, func() {
+		in := `<html><head></head><body>
+	<div cols="remove">text</div>
+	</body></html>`
+		out := `<html><head></head><body>
+	<div>text</div>
+	</body></html>`
+		minificationCheck(in, out)
+	})
+
+	Convey("All attributes for remove", t, func() {
+		in := `<html><head></head><body>
+	<div class="remove" title="remove" width="remove" disabled>text</div>
+	</body></html>`
+		out := `<html><head></head><body>
+	<div>text</div>
+	</body></html>`
+		minificationCheck(in, out)
+	})
+}
+
+func TestRemoveAttrs(t *testing.T) {
+	attrs := []string{
+		"id",
+		"alt",
+		"cols",
+		"class",
+		"title",
+		"width",
+		"align",
+		"style",
+		"color",
+		"valign",
+		"target",
+		"height",
+		"border",
+		"hspace",
+		"vspace",
+		"bgcolor",
+		"onclick",
+		"colspan",
+		"itemprop",
+		"disabled",
+		"itemtype",
+		"itemscope",
+		"data-width",
+		"cellspacing",
+		"cellpadding",
+		"bordercolor",
+	}
+	for _, attr := range attrs {
+		Convey("Removing attribute "+attr, t, func() {
+			out := `<html><head></head><body>
+<div>text</div>
+</body></html>`
+			in := fmt.Sprintf(`<html><head></head><body>
+<div %s="remove">text</div>
+</body></html>`, attr)
+			minificationCheck(in, out)
+		})
+	}
+}
+
 func TestFuncRemoveNode(t *testing.T) {
 	Convey("One tag inside", t, func() {
 		in := `<html><head></head><body>
@@ -249,106 +353,136 @@ prepost
 	})
 }
 
-func TestFuncRemoveAttr(t *testing.T) {
-	Convey("Attributes are not deleted", t, func() {
+func TestFuncOpenNode(t *testing.T) {
+	Convey("Empty", t, func() {
 		in := `<html><head></head><body>
-	<div begin="begin" end="end">text</div>
-	</body></html>`
-		out := `<html><head></head><body>
-	<div begin="begin" end="end">text</div>
-	</body></html>`
-		minificationCheck(in, out)
-	})
-
-	Convey("Left and right attributes are not removed", t, func() {
-		in := `<html><head></head><body>
-	<div begin="begin" id="remove" end="end">text</div>
-	</body></html>`
-		out := `<html><head></head><body>
-	<div begin="begin" end="end">text</div>
-	</body></html>`
-		minificationCheck(in, out)
-	})
-
-	Convey("Left attributes are not removed", t, func() {
-		in := `<html><head></head><body>
-	<div begin="begin" alt="remove">text</div>
-	</body></html>`
-		out := `<html><head></head><body>
-	<div begin="begin">text</div>
-	</body></html>`
-		minificationCheck(in, out)
-	})
-
-	Convey("Right attributes are not removed", t, func() {
-		in := `<html><head></head><body>
-	<div alt="remove" end="end">text</div>
-	</body></html>`
-		out := `<html><head></head><body>
-	<div end="end">text</div>
-	</body></html>`
-		minificationCheck(in, out)
-	})
-
-	Convey("One attribute for remove", t, func() {
-		in := `<html><head></head><body>
-	<div cols="remove">text</div>
-	</body></html>`
-		out := `<html><head></head><body>
-	<div>text</div>
-	</body></html>`
-		minificationCheck(in, out)
-	})
-
-	Convey("All attributes for remove", t, func() {
-		in := `<html><head></head><body>
-	<div class="remove" title="remove" width="remove" disabled>text</div>
-	</body></html>`
-		out := `<html><head></head><body>
-	<div>text</div>
-	</body></html>`
-		minificationCheck(in, out)
-	})
-}
-
-func TestRemoveAttrs(t *testing.T) {
-	attrs := []string{
-		"id",
-		"alt",
-		"cols",
-		"class",
-		"title",
-		"width",
-		"align",
-		"style",
-		"color",
-		"valign",
-		"target",
-		"height",
-		"border",
-		"hspace",
-		"vspace",
-		"bgcolor",
-		"onclick",
-		"colspan",
-		"itemprop",
-		"disabled",
-		"itemtype",
-		"itemscope",
-		"data-width",
-		"cellspacing",
-		"cellpadding",
-		"bordercolor",
-	}
-	for _, attr := range attrs {
-		Convey("Removing attribute "+attr, t, func() {
-			out := `<html><head></head><body>
-<div>text</div>
+<div><b></b></div>
 </body></html>`
-			in := fmt.Sprintf(`<html><head></head><body>
-<div %s="remove">text</div>
-</body></html>`, attr)
-			minificationCheck(in, out)
-		})
-	}
+		out := `<html><head></head><body>
+<div></div>
+</body></html>`
+
+		minificationCheck(in, out)
+	})
+
+	Convey("Text inside", t, func() {
+		in := `<html><head></head><body>
+<div><b>itext</b></div>
+</body></html>`
+		out := `<html><head></head><body>
+<div>itext</div>
+</body></html>`
+
+		minificationCheck(in, out)
+	})
+
+	Convey("One tag inside", t, func() {
+		in := `<html><head></head><body>
+<div><b><a>itext</a></b></div>
+</body></html>`
+		out := `<html><head></head><body>
+<div><a>itext</a></div>
+</body></html>`
+
+		minificationCheck(in, out)
+	})
+
+	Convey("Left text, right tag inside", t, func() {
+		in := `<html><head></head><body>
+<div><b>ipre<a>itext</a></b></div>
+</body></html>`
+		out := `<html><head></head><body>
+<div>ipre<a>itext</a></div>
+</body></html>`
+
+		minificationCheck(in, out)
+	})
+
+	Convey("Left tag, right text inside", t, func() {
+		in := `<html><head></head><body>
+<div><b><a>itext</a>ipost</b></div>
+</body></html>`
+		out := `<html><head></head><body>
+<div><a>itext</a>ipost</div>
+</body></html>`
+
+		minificationCheck(in, out)
+	})
+
+	Convey("Left text, right text inside", t, func() {
+		in := `<html><head></head><body>
+<div><b>ipre<a>itext</a>ipost</b></div>
+</body></html>`
+		out := `<html><head></head><body>
+<div>ipre<a>itext</a>ipost</div>
+</body></html>`
+
+		minificationCheck(in, out)
+	})
+
+	Convey("Text {text text} text", t, func() {
+		in := `<html><head></head><body>
+<div>pre<b>ipre<a>itext</a>ipost</b>post</div>
+</body></html>`
+		out := `<html><head></head><body>
+<div>preipre<a>itext</a>ipostpost</div>
+</body></html>`
+
+		minificationCheck(in, out)
+	})
+
+	Convey("Text {tag tag} text", t, func() {
+		in := `<html><head></head><body>
+<div>pre<b><a>itext1</a><a>itext2</a></b>post</div>
+</body></html>`
+		out := `<html><head></head><body>
+<div>pre<a>itext1</a><a>itext2</a>post</div>
+</body></html>`
+
+		minificationCheck(in, out)
+	})
+
+	Convey("Tag {text text} tag", t, func() {
+		in := `<html><head></head><body>
+<div><div>pre</div><b>ipre<a>itext</a>ipost</b><div>post</div></div>
+</body></html>`
+		out := `<html><head></head><body>
+<div><div>pre</div>ipre<a>itext</a>ipost<div>post</div></div>
+</body></html>`
+
+		minificationCheck(in, out)
+	})
+
+	Convey("Tag {tag tag} tag", t, func() {
+		in := `<html><head></head><body>
+<div><div>pre</div><b><a>itext1</a><a>itext2</a></b><div>post</div></div>
+</body></html>`
+		out := `<html><head></head><body>
+<div><div>pre</div><a>itext1</a><a>itext2</a><div>post</div></div>
+</body></html>`
+
+		minificationCheck(in, out)
+	})
+
+	Convey("Tag {text} tag", t, func() {
+		in := `<html><head></head><body>
+<div><div>pre</div><b>itext</b><div>post</div></div>
+</body></html>`
+		out := `<html><head></head><body>
+<div><div>pre</div>itext<div>post</div></div>
+</body></html>`
+
+		minificationCheck(in, out)
+	})
+
+	Convey("Tag {tag} tag", t, func() {
+		in := `<html><head></head><body>
+<div><div>pre</div><b><a>itext</a></b><div>post</div></div>
+</body></html>`
+		out := `<html><head></head><body>
+<div><div>pre</div><a>itext</a><div>post</div></div>
+</body></html>`
+
+		minificationCheck(in, out)
+	})
 }
