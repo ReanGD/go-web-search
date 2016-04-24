@@ -81,48 +81,60 @@ func (m *minification1) getAttrValLower(node *html.Node, attrName string) string
 	return strings.ToLower(m.getAttrVal(node, attrName))
 }
 
-func (m *minification1) removeNodeEx(node *html.Node, addSeparator bool) (*html.Node, error) {
-	parent := node.Parent
-	prev := node.PrevSibling
-	prevText := prev != nil && prev.Type == html.TextNode
-	next := node.NextSibling
-	nextText := next != nil && next.Type == html.TextNode
+func (m *minification1) mergeNodes(parent, prev, next *html.Node, addSeparator bool) *html.Node {
 	var result *html.Node
-	delim := " "
-	if !addSeparator {
-		delim = ""
+	prevText := prev != nil && prev.Type == html.TextNode
+	nextText := next != nil && next.Type == html.TextNode
+	delim := ""
+	if addSeparator {
+		delim = " "
 	}
 
 	if prevText && nextText {
 		prev.Data = strings.TrimRightFunc(prev.Data, unicode.IsSpace) +
 			delim + strings.TrimLeftFunc(next.Data, unicode.IsSpace)
-		parent.RemoveChild(node)
 		parent.RemoveChild(next)
 		result = prev.NextSibling
 	} else if prevText {
 		prev.Data = strings.TrimRightFunc(prev.Data, unicode.IsSpace) + delim
-		parent.RemoveChild(node)
-		result = prev.NextSibling
+		result = next
 	} else if nextText {
 		next.Data = delim + strings.TrimLeftFunc(next.Data, unicode.IsSpace)
-		parent.RemoveChild(node)
 		result = next
 	} else if addSeparator {
-		node.Type = html.TextNode
-		node.Data = delim
-		node.FirstChild = nil
-		node.LastChild = nil
+		newNode := &html.Node{
+			Parent:      parent,
+			FirstChild:  nil,
+			LastChild:   nil,
+			PrevSibling: prev,
+			NextSibling: next,
+			Type:        html.TextNode,
+			Data:        delim,
+			Namespace:   parent.Namespace}
+		if prev != nil {
+			prev.NextSibling = newNode
+		} else {
+			parent.FirstChild = newNode
+		}
+		if next != nil {
+			next.PrevSibling = newNode
+		} else {
+			parent.LastChild = newNode
+		}
 		result = next
 	} else {
-		parent.RemoveChild(node)
 		result = next
 	}
 
-	return result, nil
+	return result
 }
 
-func (m *minification1) removeNode(node *html.Node) (*html.Node, error) {
-	return m.removeNodeEx(node, true)
+func (m *minification1) removeNode(node *html.Node, addSeparator bool) (*html.Node, error) {
+	prev, next, parent := node.PrevSibling, node.NextSibling, node.Parent
+	parent.RemoveChild(node)
+	result := m.mergeNodes(parent, prev, next, addSeparator)
+
+	return result, nil
 }
 
 func (m *minification1) parseChildren(node *html.Node) (*html.Node, error) {
@@ -140,33 +152,33 @@ func (m *minification1) parseChildren(node *html.Node) (*html.Node, error) {
 func (m *minification1) parseElements(node *html.Node) (*html.Node, error) {
 	switch node.DataAtom {
 	case atom.Script:
-		return m.removeNode(node)
+		return m.removeNode(node, true)
 	case atom.Button:
-		return m.removeNode(node)
+		return m.removeNode(node, true)
 	case atom.Object:
-		return m.removeNode(node)
+		return m.removeNode(node, true)
 	case atom.Select:
-		return m.removeNode(node)
+		return m.removeNode(node, true)
 	case atom.Style:
-		return m.removeNode(node)
+		return m.removeNode(node, true)
 	case atom.Param:
-		return m.removeNode(node)
+		return m.removeNode(node, true)
 	case atom.Embed:
-		return m.removeNode(node)
+		return m.removeNode(node, true)
 	case atom.Form:
-		return m.removeNode(node)
+		return m.removeNode(node, true)
 	case atom.Time:
-		return m.removeNode(node)
+		return m.removeNode(node, true)
 	case atom.Img:
-		return m.removeNode(node)
+		return m.removeNode(node, true)
 	case atom.Svg:
-		return m.removeNode(node)
+		return m.removeNode(node, true)
 	case atom.Br:
-		return m.removeNode(node)
+		return m.removeNode(node, true)
 	case atom.Hr:
-		return m.removeNode(node)
+		return m.removeNode(node, true)
 	case atom.Wbr:
-		return m.removeNodeEx(node, false)
+		return m.removeNode(node, false)
 	case atom.Input:
 		typeInput := m.getAttrValLower(node, "type")
 		if typeInput == "radio" ||
@@ -177,7 +189,7 @@ func (m *minification1) parseElements(node *html.Node) (*html.Node, error) {
 			typeInput == "reset" ||
 			typeInput == "file" ||
 			typeInput == "image" {
-			return m.removeNode(node)
+			return m.removeNode(node, true)
 		}
 	}
 
@@ -197,7 +209,7 @@ func (m *minification1) parseNode(node *html.Node) (*html.Node, error) {
 	case html.DoctypeNode: // ignore
 		return node.NextSibling, nil
 	case html.CommentNode: // remove
-		return m.removeNode(node)
+		return m.removeNode(node, true)
 	default:
 		return nil, ErrMinificationUnexpectedNodeType
 	}
