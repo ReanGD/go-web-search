@@ -17,6 +17,20 @@ var (
 type minification1 struct {
 }
 
+func (m *minification1) getAttrVal(node *html.Node, attrName string) string {
+	for _, attr := range node.Attr {
+		if attr.Key == attrName {
+			return attr.Val
+		}
+	}
+
+	return ""
+}
+
+func (m *minification1) getAttrValLower(node *html.Node, attrName string) string {
+	return strings.ToLower(m.getAttrVal(node, attrName))
+}
+
 func (m *minification1) removeAttr(node *html.Node) {
 	lenAttr := len(node.Attr)
 	if lenAttr != 0 {
@@ -67,20 +81,6 @@ func (m *minification1) removeAttr(node *html.Node) {
 	}
 }
 
-func (m *minification1) getAttrVal(node *html.Node, attrName string) string {
-	for _, attr := range node.Attr {
-		if attr.Key == attrName {
-			return attr.Val
-		}
-	}
-
-	return ""
-}
-
-func (m *minification1) getAttrValLower(node *html.Node, attrName string) string {
-	return strings.ToLower(m.getAttrVal(node, attrName))
-}
-
 func (m *minification1) mergeNodes(parent, prev, next *html.Node, addSeparator bool) *html.Node {
 	var result *html.Node
 	prevText := prev != nil && prev.Type == html.TextNode
@@ -127,6 +127,23 @@ func (m *minification1) mergeNodes(parent, prev, next *html.Node, addSeparator b
 	}
 
 	return result
+}
+
+func (m *minification1) AddChildTextNodeToBegining(node *html.Node, text string) {
+	newNode := &html.Node{
+		Parent:      nil,
+		FirstChild:  nil,
+		LastChild:   nil,
+		PrevSibling: nil,
+		NextSibling: nil,
+		Type:        html.TextNode,
+		Data:        text,
+		Namespace:   node.Namespace}
+	if node.FirstChild == nil {
+		node.AppendChild(newNode)
+	} else {
+		node.InsertBefore(newNode, node.FirstChild)
+	}
 }
 
 func (m *minification1) removeNode(node *html.Node, addSeparator bool) (*html.Node, error) {
@@ -233,6 +250,12 @@ func (m *minification1) parseElements(node *html.Node) (*html.Node, error) {
 	}
 
 	switch node.DataAtom {
+	case atom.Abbr:
+		title := m.getAttrValLower(node, "title")
+		if title != "" {
+			m.AddChildTextNodeToBegining(node, " "+title+" ")
+		}
+		return m.openNode(node, true)
 	case atom.B:
 		return m.openNode(node, false)
 	case atom.I:

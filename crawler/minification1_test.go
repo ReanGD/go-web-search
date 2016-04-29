@@ -393,9 +393,42 @@ func TestFuncOpenNode(t *testing.T) {
 		"<div>pre</div><b>itext</b><div>post</div>", "<div>pre</div>itext<div>post</div>")
 	HelperFuncOpenNode("Tag {tag} tag", t,
 		"<div>pre</div><b><a>itext</a></b><div>post</div>", "<div>pre</div><a>itext</a><div>post</div>")
+
+	HelperFuncOpenNode("Empty with delimeter", t,
+		"<abbr></abbr>", " ")
+	HelperFuncOpenNode("Text inside with delimeter", t,
+		"<abbr>itext</abbr>", " itext ")
+	HelperFuncOpenNode("One tag inside with delimeter", t,
+		"<abbr><a>itext</a></abbr>", " <a>itext</a> ")
+	HelperFuncOpenNode("Left text, right tag inside with delimeter", t,
+		"<abbr>ipre<a>itext</a></abbr>", " ipre<a>itext</a> ")
+	HelperFuncOpenNode("Left tag, right text inside with delimeter", t,
+		"<abbr><a>itext</a>ipost</abbr>", " <a>itext</a>ipost ")
+	HelperFuncOpenNode("Left text, right text inside with delimeter", t,
+		"<abbr>ipre<a>itext</a>ipost</abbr>", " ipre<a>itext</a>ipost ")
+	HelperFuncOpenNode("Text {text text} text with delimeter", t,
+		"pre<abbr>ipre<a>itext</a>ipost</abbr>post", "pre ipre<a>itext</a>ipost post")
+	HelperFuncOpenNode("Text {tag tag} text with delimeter", t,
+		"pre<abbr><a>itext1</a><a>itext2</a></abbr>post", "pre <a>itext1</a><a>itext2</a> post")
+	HelperFuncOpenNode("Tag {text text} tag with delimeter", t,
+		"<div>pre</div><abbr>ipre<a>itext</a>ipost</abbr><div>post</div>",
+		"<div>pre</div> ipre<a>itext</a>ipost <div>post</div>")
+	HelperFuncOpenNode("Tag {tag tag} tag with delimeter", t,
+		"<div>pre</div><abbr><a>itext1</a><a>itext2</a></abbr><div>post</div>",
+		"<div>pre</div> <a>itext1</a><a>itext2</a> <div>post</div>")
+	HelperFuncOpenNode("Tag {text} tag with delimeter", t,
+		"<div>pre</div><abbr>itext</abbr><div>post</div>", "<div>pre</div> itext <div>post</div>")
+	HelperFuncOpenNode("Tag {tag} tag with delimeter", t,
+		"<div>pre</div><abbr><a>itext</a></abbr><div>post</div>", "<div>pre</div> <a>itext</a> <div>post</div>")
 }
 
 func TestOpenTags(t *testing.T) {
+	HelperFuncOpenNode("Open tag abbr with title", t,
+		"<abbr title=\"title value\">text</abbr>", " title value text ")
+
+	HelperFuncOpenNode("Open tag abbr without title", t,
+		"<abbr>text</abbr>", " text ")
+
 	tags := []string{
 		"b",
 		"i",
