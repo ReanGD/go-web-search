@@ -175,20 +175,24 @@ func (m *minification1) openNode(node *html.Node, addSeparator bool) (*html.Node
 	}
 
 	if prev != nil {
-		first.PrevSibling = prev
 		prev.NextSibling = first
+		first.PrevSibling = prev
 	}
 	if next != nil {
-		last.NextSibling = next
 		next.PrevSibling = last
+		last.NextSibling = next
+	}
+
+	result := m.mergeNodes(parent, prev, first, addSeparator)
+	if result != next {
+		_ = m.mergeNodes(parent, last, next, addSeparator)
+	} else {
+		result = m.mergeNodes(parent, prev, next, addSeparator)
 	}
 
 	node.Parent = nil
 	node.PrevSibling = nil
 	node.NextSibling = nil
-
-	result := m.mergeNodes(parent, prev, first, addSeparator)
-	result = m.mergeNodes(parent, last, next, addSeparator)
 
 	return result, nil
 }
@@ -250,14 +254,29 @@ func (m *minification1) parseElements(node *html.Node) (*html.Node, error) {
 	}
 
 	switch node.DataAtom {
+	// case atom.A:
 	case atom.Abbr:
 		title := m.getAttrValLower(node, "title")
 		if title != "" {
 			m.AddChildTextNodeToBegining(node, " "+title+" ")
 		}
 		return m.openNode(node, true)
+	// case atom.Acronym:
+	// case atom.Address:
+	// case atom.Applet:
+	// case atom.Area:
+	// case atom.Article:
+	// case atom.Aside:
+	// case atom.Audio:
 	case atom.B:
 		return m.openNode(node, false)
+	// case atom.Base:
+	// case atom.Basefont:
+	// case atom.Bdi:
+	// case atom.Bdo:
+	// case atom.Bgsound:
+	case atom.Blockquote:
+		return m.openNode(node, true)
 	case atom.I:
 		return m.openNode(node, false)
 	}

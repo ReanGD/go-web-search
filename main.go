@@ -55,6 +55,7 @@ type Minification struct {
 	Tags       map[string]int
 	Attrs      map[string]int
 	lvl        int
+	RenderTag  atom.Atom
 }
 
 func (m *Minification) removeNode(node *html.Node) error {
@@ -145,12 +146,14 @@ func (m *Minification) parseElements(node *html.Node) error {
 		}
 	}
 
-	if node.DataAtom == atom.Span {
-		buf, err := renderNode(node.Parent)
+	if node.DataAtom == m.RenderTag {
+		buf, err := renderNode(node)
+		// buf, err := renderNode(node.Parent)
 		if err != nil {
 			return err
 		}
-		fmt.Println(string(buf))
+		fmt.Println(gID, string(buf))
+		// fmt.Println(string(buf))
 	}
 
 	// for _, v := range node.Attr {
@@ -176,7 +179,7 @@ func (m *Minification) show(node *html.Node) {
 	case html.ElementNode: // +children +attr
 		fmt.Println(strings.Repeat(" ", m.lvl), "ElementNode:", node.Data)
 	case html.TextNode: // -children -attr
-		fmt.Println(strings.Repeat(" ", m.lvl), "TextNode:", node.Data)
+		fmt.Println(strings.Repeat(" ", m.lvl), "TextNode:\"", node.Data, "\"")
 	case html.DoctypeNode: // ignore
 		fmt.Println(strings.Repeat(" ", m.lvl), "DoctypeNode:", node.Data)
 	case html.CommentNode: // remove
@@ -246,9 +249,9 @@ func test() error {
 	}
 	defer ClearClose(db)
 	var contents []content.Content
-	err = db.Limit(100).Find(&contents).Error
+	// err = db.Limit(200).Find(&contents).Error
 	// err = db.Find(&contents).Error
-	// err = db.Where("id = ?", 7).Find(&contents).Error
+	err = db.Where("id = 169", 7).Find(&contents).Error
 	if err != nil {
 		return err
 	}
@@ -259,8 +262,9 @@ func test() error {
 	localMinification := Minification{
 		ShowEnable: false,
 		Tags:       make(map[string]int),
-		Attrs:      make(map[string]int)}
-	minification := crawler.Minification{}
+		Attrs:      make(map[string]int),
+		RenderTag:  atom.Style}
+
 	var oldLen uint64
 	var oldLenCompress uint64
 	var newLen uint64
@@ -268,10 +272,10 @@ func test() error {
 	for _, rec := range contents {
 		gID = rec.ID
 		body := rec.Body.Data
-		// 		body = []byte(`<html><head></head><body>
-		// <div>pre<div a="1">remove</div>
-		// post</div>
-		// </body></html>`)
+		body = []byte(`<html><head></head><body>
+<b>М</b>
+<script>S</script>
+</body></html>`)
 		oldLen += uint64(len(body))
 		if CountCompressStatistic {
 			bodyCompress, err := rec.Body.Compress()
@@ -285,10 +289,16 @@ func test() error {
 		if err != nil {
 			return err
 		}
-		err = minification.Run(node)
+		err = crawler.RunMinification1(node)
 		if err != nil {
 			return err
 		}
+
+		buf, err := renderNode(node)
+		if err != nil {
+			return err
+		}
+		fmt.Println(string(buf))
 
 		err = localMinification.Run(node)
 		if err != nil {
@@ -314,14 +324,14 @@ func test() error {
 		// fmt.Println(string(buf))
 	}
 
-	fmt.Println(oldLen)
+	fmt.Println("oldLen = ", oldLen)
 	if CountCompressStatistic {
-		fmt.Println(oldLenCompress)
+		fmt.Println("oldLenCompress = ", oldLenCompress)
 	}
 	if newLength {
-		fmt.Println(newLen)
+		fmt.Println("newLen = ", newLen)
 		if CountCompressStatistic {
-			fmt.Println(newLenCompress)
+			fmt.Println("newLenCompress = ", newLenCompress)
 		}
 	}
 	if statisticAttr {
@@ -335,7 +345,7 @@ func test() error {
 }
 
 func run() error {
-	return crawler.Run(baseHosts, 5000)
+	return crawler.Run(baseHosts, 1000)
 }
 
 func clearCloseFile(f *os.File) {
