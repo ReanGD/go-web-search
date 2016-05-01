@@ -240,8 +240,6 @@ func (m *minification1) parseElements(node *html.Node) (*html.Node, error) {
 	switch node.DataAtom {
 	case atom.Script:
 		return m.removeNode(node, true)
-	case atom.Button:
-		return m.removeNode(node, true)
 	case atom.Object:
 		return m.removeNode(node, true)
 	case atom.Select:
@@ -259,8 +257,6 @@ func (m *minification1) parseElements(node *html.Node) (*html.Node, error) {
 	case atom.Img:
 		return m.removeNode(node, true)
 	case atom.Svg:
-		return m.removeNode(node, true)
-	case atom.Br:
 		return m.removeNode(node, true)
 	case atom.Hr:
 		return m.removeNode(node, true)
@@ -303,6 +299,17 @@ func (m *minification1) parseElements(node *html.Node) (*html.Node, error) {
 	// case atom.Bdo:
 	// case atom.Bgsound:
 	case atom.Blockquote:
+		return m.openNode(node, true)
+	// case atom.Big:
+	// case atom.Body:
+	// case atom.Blink:
+	case atom.Br:
+		return m.removeNode(node, true)
+	case atom.Button:
+		return m.removeNode(node, true)
+	case atom.Canvas:
+		return m.removeNode(node, true)
+	case atom.Caption:
 		return m.openNode(node, true)
 	case atom.I:
 		return m.openNode(node, false)

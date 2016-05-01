@@ -298,14 +298,17 @@ func TestRemoveTags(t *testing.T) {
 		"<time>text</time>",
 		"<img src=\"URL\"></img>",
 		"<svg>text</svg>",
+		"<canvas>text</canvas>",
 		"<br/>",
 		"<hr/>",
 	}
-	out := `<html><head></head><body> </body></html>`
+	out := `<html><head></head><body>
+pre post
+</body></html>`
 	for _, tagName := range tags {
 		Convey("Removing tag "+html.EscapeString(tagName), t, func() {
 			in := fmt.Sprintf(`<html><head></head><body>
-%s
+pre%spost
 </body></html>`, tagName)
 			minificationCheck(in, out)
 		})
@@ -313,21 +316,21 @@ func TestRemoveTags(t *testing.T) {
 
 	Convey("Removing tag hidden input", t, func() {
 		in := `<html><head></head><body>
-<input type="hidden" />
+pre<input type="hidden" />post
 </body></html>`
 		minificationCheck(in, out)
 	})
 
 	Convey("Not Removing no hidden tag input", t, func() {
 		in := `<html><head></head><body>
-<input type="hidden1"/>
+pre<input type="hidden1"/>post
 </body></html>`
 		minificationCheck(in, in)
 	})
 
 	Convey("Not Removing tag input without type", t, func() {
 		in := `<html><head></head><body>
-<input v="val"/>
+pre<input v="val"/>post
 </body></html>`
 		minificationCheck(in, in)
 	})
@@ -437,23 +440,45 @@ func TestFuncOpenNode(t *testing.T) {
 func TestOpenTags(t *testing.T) {
 	HelperFuncOpenNode("Open tag abbr with title", t,
 		"<abbr title=\"title value\">text</abbr>", " title value text ")
-	HelperFuncOpenNode("Open tag abbr without title", t, "<abbr>text</abbr>", " text ")
-	HelperFuncOpenNode("Open tag abbr without text", t, "<abbr title=\"title value\"></abbr>", " title value ")
-	HelperFuncOpenNode("Open tag blockquote", t, "<blockquote>pre<div>text</div>post</blockquote>", " pre<div>text</div>post ")
+	HelperFuncOpenNode("Open tag abbr without title", t,
+		"<abbr>text</abbr>", " text ")
+	HelperFuncOpenNode("Open tag abbr without text", t,
+		"<abbr title=\"title value\"></abbr>", " title value ")
+	HelperFuncOpenNode("Open tag caption", t,
+		"<table><caption>text</caption></table>", "<table> text </table>")
 
+	// without add space
 	tags := []string{
 		"b",
 		"i",
 	}
 	out := `<html><head></head><body>
-<div>text</div>
+<div>pretextpost</div>
 </body></html>`
 	for _, tagName := range tags {
 		Convey("Open tag "+tagName, t, func() {
 			in := fmt.Sprintf(`<html><head></head><body>
-<div><%s>text</%s></div>
+<div>pre<%s>text</%s>post</div>
 </body></html>`, tagName, tagName)
 
+			minificationCheck(in, out)
+		})
+	}
+
+	// with add space
+	tags = []string{
+		"blockquote",
+	}
+	out = `<html><head></head><body>
+<div>pre text post</div>
+</body></html>`
+	for _, tagName := range tags {
+		Convey("Open tag "+tagName, t, func() {
+			in := fmt.Sprintf(`<html><head></head><body>
+<div>pre<%s>text</%s>post</div>
+</body></html>`, tagName, tagName)
+
+			fmt.Println(in)
 			minificationCheck(in, out)
 		})
 	}
