@@ -405,3 +405,20 @@ func TestOpenTags(t *testing.T) {
 			"pre text post")
 	}
 }
+
+func TestLists(t *testing.T) {
+	HelperBody("Ul", t,
+		`<ul a="a"><li a="a">text1</li><li a="a">text2</li></ul>`,
+		"<div> text1 text2 </div>")
+
+	HelperBody("Ol", t,
+		`<ol a="a"><li a="a">text1</li><li a="a">text2</li></ol>`,
+		"<div> text1 text2 </div>")
+
+	HelperBody("Dt", t,
+		`<dl a="a">
+<dt a="a">dt text1</dt><dd a="a">dd text1</dd>
+<dt a="a">dt text2</dt><dd a="a">dd text2</dd>
+</dl>`,
+		"<div> dt text1 dd text1 dt text2 dd text2 </div>")
+}

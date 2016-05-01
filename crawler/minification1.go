@@ -224,6 +224,12 @@ func (m *minification1) openNode(node *html.Node, addSeparator bool) (*html.Node
 	return result, nil
 }
 
+func (m *minification1) toDiv(node *html.Node) {
+	node.DataAtom = atom.Div
+	node.Data = "div"
+	node.Attr = make([]html.Attribute, 0)
+}
+
 func (m *minification1) parseChildren(node *html.Node) (*html.Node, error) {
 	var err error
 	for it := node.FirstChild; it != nil; {
@@ -281,7 +287,8 @@ func (m *minification1) parseElements(node *html.Node) (*html.Node, error) {
 	// case atom.Comment:
 	// case atom.Data:
 	// case atom.Datalist:
-	// case atom.Dd:
+	case atom.Dd:
+		return m.openNode(node, true)
 	case atom.Del:
 		return m.openNode(node, false)
 	// case atom.Details:
@@ -289,8 +296,10 @@ func (m *minification1) parseElements(node *html.Node) (*html.Node, error) {
 	// case atom.Dialog:
 	// case atom.Dir:
 	// case atom.Div:
-	// case atom.Dl:
-	// case atom.Dt:
+	case atom.Dl:
+		m.toDiv(node)
+	case atom.Dt:
+		return m.openNode(node, true)
 	case atom.Em:
 		return m.openNode(node, false)
 	case atom.Embed:
@@ -336,12 +345,13 @@ func (m *minification1) parseElements(node *html.Node) (*html.Node, error) {
 		}
 	case atom.Ins:
 		return m.openNode(node, false)
-		// case atom.Isindex:
-		// case atom.Kbd:
-		// case atom.Keygen:
-		// case atom.Label:
-		// case atom.Legend:
-		// case atom.Li:
+	// case atom.Isindex:
+	// case atom.Kbd:
+	// case atom.Keygen:
+	// case atom.Label:
+	// case atom.Legend:
+	case atom.Li:
+		return m.openNode(node, true)
 		// case atom.Link:
 		// case atom.Listing:
 		// case atom.Main:
@@ -361,7 +371,8 @@ func (m *minification1) parseElements(node *html.Node) (*html.Node, error) {
 		// case atom.Noscript:
 	case atom.Object:
 		return m.removeNode(node, true)
-		// case atom.Ol:
+	case atom.Ol:
+		m.toDiv(node)
 		// case atom.Optgroup:
 		// case atom.Option:
 		// case atom.Output:
@@ -421,7 +432,8 @@ func (m *minification1) parseElements(node *html.Node) (*html.Node, error) {
 		return m.openNode(node, false)
 	case atom.U:
 		return m.openNode(node, false)
-		// case atom.Ul:
+	case atom.Ul:
+		m.toDiv(node)
 	case atom.Var:
 		return m.openNode(node, false)
 	case atom.Video:
