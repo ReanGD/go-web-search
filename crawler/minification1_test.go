@@ -32,6 +32,22 @@ func minificationCheck(in string, out string) {
 	So(err, ShouldEqual, nil)
 }
 
+func HelperBody(name string, t *testing.T, in, out string) {
+	Convey(name, t, func() {
+		fin := fmt.Sprintf("<html><head></head><body>\n%s\n</body></html>", in)
+		fout := fmt.Sprintf("<html><head></head><body>\n%s\n</body></html>", out)
+		minificationCheck(fin, fout)
+	})
+}
+
+func HelperDiv(name string, t *testing.T, in, out string) {
+	Convey(name, t, func() {
+		fin := fmt.Sprintf("<html><head></head><body>\n<div>%s</div>\n</body></html>", in)
+		fout := fmt.Sprintf("<html><head></head><body>\n<div>%s</div>\n</body></html>", out)
+		minificationCheck(fin, fout)
+	})
+}
+
 func TestErrorTag(t *testing.T) {
 	Convey("Test error tag", t, func() {
 		in := "<html><head></head><body></body></html>"
@@ -70,65 +86,29 @@ func TestRemoveComments(t *testing.T) {
 }
 
 func TestFuncRemoveAttr(t *testing.T) {
-	Convey("Attributes are not deleted", t, func() {
-		in := `<html><head></head><body>
-	<div begin="begin" end="end">text</div>
-	</body></html>`
-		out := `<html><head></head><body>
-	<div begin="begin" end="end">text</div>
-	</body></html>`
-		minificationCheck(in, out)
-	})
+	HelperBody("Attributes are not deleted", t,
+		`<div begin="begin" end="end">text</div>`,
+		`<div begin="begin" end="end">text</div>`)
 
-	Convey("Left and right attributes are not removed", t, func() {
-		in := `<html><head></head><body>
-	<div begin="begin" id="remove" end="end">text</div>
-	</body></html>`
-		out := `<html><head></head><body>
-	<div begin="begin" end="end">text</div>
-	</body></html>`
-		minificationCheck(in, out)
-	})
+	HelperBody("Left and right attributes are not removed", t,
+		`<div begin="begin" id="remove" end="end">text</div>`,
+		`<div begin="begin" end="end">text</div>`)
 
-	Convey("Left attributes are not removed", t, func() {
-		in := `<html><head></head><body>
-	<div begin="begin" alt="remove">text</div>
-	</body></html>`
-		out := `<html><head></head><body>
-	<div begin="begin">text</div>
-	</body></html>`
-		minificationCheck(in, out)
-	})
+	HelperBody("Left attributes are not removed", t,
+		`<div begin="begin" alt="remove">text</div>`,
+		`<div begin="begin">text</div>`)
 
-	Convey("Right attributes are not removed", t, func() {
-		in := `<html><head></head><body>
-	<div alt="remove" end="end">text</div>
-	</body></html>`
-		out := `<html><head></head><body>
-	<div end="end">text</div>
-	</body></html>`
-		minificationCheck(in, out)
-	})
+	HelperBody("Right attributes are not removed", t,
+		`<div alt="remove" end="end">text</div>`,
+		`<div end="end">text</div>`)
 
-	Convey("One attribute for remove", t, func() {
-		in := `<html><head></head><body>
-	<div cols="remove">text</div>
-	</body></html>`
-		out := `<html><head></head><body>
-	<div>text</div>
-	</body></html>`
-		minificationCheck(in, out)
-	})
+	HelperBody("One attribute for remove", t,
+		`<div cols="remove">text</div>`,
+		`<div>text</div>`)
 
-	Convey("All attributes for remove", t, func() {
-		in := `<html><head></head><body>
-	<div class="remove" title="remove" width="remove" disabled>text</div>
-	</body></html>`
-		out := `<html><head></head><body>
-	<div>text</div>
-	</body></html>`
-		minificationCheck(in, out)
-	})
+	HelperBody("All attributes for remove", t,
+		`<div class="remove" title="remove" width="remove" disabled>text</div>`,
+		`<div>text</div>`)
 }
 
 func TestRemoveAttrs(t *testing.T) {
@@ -161,128 +141,52 @@ func TestRemoveAttrs(t *testing.T) {
 		"bordercolor",
 	}
 	for _, attr := range attrs {
-		Convey("Removing attribute "+attr, t, func() {
-			out := `<html><head></head><body>
-<div>text</div>
-</body></html>`
-			in := fmt.Sprintf(`<html><head></head><body>
-<div %s="remove">text</div>
-</body></html>`, attr)
-			minificationCheck(in, out)
-		})
+		HelperBody("Removing attribute "+attr, t,
+			fmt.Sprintf(`<div %s="remove">text</div>`, attr),
+			"<div>text</div>")
 	}
 }
 
 func TestFuncRemoveNode(t *testing.T) {
-	Convey("One tag inside", t, func() {
-		in := `<html><head></head><body>
-<div><form attr="a"><div>aaa</div></form></div>
-</body></html>`
-		out := `<html><head></head><body>
-<div> </div>
-</body></html>`
+	HelperDiv("One tag inside", t,
+		`<form attr="a"><div>aaa</div></form>`,
+		" ")
 
-		minificationCheck(in, out)
-	})
+	HelperDiv("Left text", t,
+		"pre<form></form>",
+		"pre ")
 
-	Convey("Left text", t, func() {
-		in := `<html><head></head><body>
-<div>pre<form></form></div>
-</body></html>`
-		out := `<html><head></head><body>
-<div>pre </div>
-</body></html>`
+	HelperDiv("Left text with space", t,
+		"pre \n \t \r <form></form>",
+		"pre ")
 
-		minificationCheck(in, out)
-	})
+	HelperDiv("Right text", t,
+		"<form></form>post",
+		" post")
 
-	Convey("Left text with space", t, func() {
-		in := "<html><head></head><body>\n" +
-			"<div>pre \n \t \r <form></form></div>\n" +
-			"</body></html>"
-		out := `<html><head></head><body>
-<div>pre </div>
-</body></html>`
+	HelperDiv("Right text with space", t,
+		"<form></form> \n \t \r post",
+		" post")
 
-		minificationCheck(in, out)
-	})
+	HelperDiv("Left and right text", t,
+		"pre<form></form>post",
+		"pre post")
 
-	Convey("Right text", t, func() {
-		in := `<html><head></head><body>
-<div><form></form>post</div>
-</body></html>`
-		out := `<html><head></head><body>
-<div> post</div>
-</body></html>`
+	HelperDiv("Left and right text with space", t,
+		"pre \n \t \r <form></form> \n \t \r post",
+		"pre post")
 
-		minificationCheck(in, out)
-	})
+	HelperDiv("Left tag", t,
+		"<div>pre</div><form></form>",
+		"<div>pre</div> ")
 
-	Convey("Right text with space", t, func() {
-		in := "<html><head></head><body>\n" +
-			"<div><form></form> \n \t \r post</div>\n" +
-			"</body></html>"
-		out := `<html><head></head><body>
-<div> post</div>
-</body></html>`
+	HelperDiv("Right tag", t,
+		"<form></form><div>post</div>",
+		" <div>post</div>")
 
-		minificationCheck(in, out)
-	})
-
-	Convey("Left and right text", t, func() {
-		in := `<html><head></head><body>
-<div>pre<form></form>post</div>
-</body></html>`
-		out := `<html><head></head><body>
-<div>pre post</div>
-</body></html>`
-
-		minificationCheck(in, out)
-	})
-
-	Convey("Left and right text with space", t, func() {
-		in := "<html><head></head><body>\n" +
-			"<div>pre \n \t \r <form></form> \n \t \r post</div>\n" +
-			"</body></html>"
-		out := `<html><head></head><body>
-<div>pre post</div>
-</body></html>`
-
-		minificationCheck(in, out)
-	})
-
-	Convey("Left tag", t, func() {
-		in := `<html><head></head><body>
-<div><div>pre</div><form></form></div>
-</body></html>`
-		out := `<html><head></head><body>
-<div><div>pre</div> </div>
-</body></html>`
-
-		minificationCheck(in, out)
-	})
-
-	Convey("Right tag", t, func() {
-		in := `<html><head></head><body>
-<div><form></form><div>post</div></div>
-</body></html>`
-		out := `<html><head></head><body>
-<div> <div>post</div></div>
-</body></html>`
-
-		minificationCheck(in, out)
-	})
-
-	Convey("Left and right tag", t, func() {
-		in := `<html><head></head><body>
-<div><div>pre</div><form></form><div>post</div></div>
-</body></html>`
-		out := `<html><head></head><body>
-<div><div>pre</div> <div>post</div></div>
-</body></html>`
-
-		minificationCheck(in, out)
-	})
+	HelperDiv("Left and right tag", t,
+		"<div>pre</div><form></form><div>post</div>",
+		"<div>pre</div> <div>post</div>")
 }
 
 func TestRemoveTags(t *testing.T) {
@@ -302,149 +206,166 @@ func TestRemoveTags(t *testing.T) {
 		"<br/>",
 		"<hr/>",
 	}
-	out := `<html><head></head><body>
-pre post
-</body></html>`
 	for _, tagName := range tags {
-		Convey("Removing tag "+html.EscapeString(tagName), t, func() {
-			in := fmt.Sprintf(`<html><head></head><body>
-pre%spost
-</body></html>`, tagName)
-			minificationCheck(in, out)
-		})
+		HelperBody("Removing tag "+html.EscapeString(tagName), t,
+			fmt.Sprintf("pre%spost", tagName),
+			"pre post")
 	}
 
-	Convey("Removing tag hidden input", t, func() {
-		in := `<html><head></head><body>
-pre<input type="hidden" />post
-</body></html>`
-		minificationCheck(in, out)
-	})
+	HelperBody("Removing tag hidden input", t,
+		`pre<input type="hidden" />post`,
+		"pre post")
 
-	Convey("Not Removing no hidden tag input", t, func() {
-		in := `<html><head></head><body>
-pre<input type="hidden1"/>post
-</body></html>`
-		minificationCheck(in, in)
-	})
+	HelperBody("Not Removing no hidden tag input", t,
+		`pre<input type="hidden1"/>post`,
+		`pre<input type="hidden1"/>post`)
 
-	Convey("Not Removing tag input without type", t, func() {
-		in := `<html><head></head><body>
-pre<input v="val"/>post
-</body></html>`
-		minificationCheck(in, in)
-	})
+	HelperBody("Not Removing tag input without type", t,
+		`pre<input v="val"/>post`,
+		`pre<input v="val"/>post`)
 
-	Convey("Removing tag wdr", t, func() {
-		in := `<html><head></head><body>
-pre<wbr>post
-</body></html>`
-		out := `<html><head></head><body>
-prepost
-</body></html>`
-		minificationCheck(in, out)
-	})
+	HelperBody("Removing tag wdr", t,
+		"pre<wbr>post",
+		"prepost")
 
-	Convey("Removing tag wdr between tags", t, func() {
-		in := `<html><head></head><body>
-<div>pre</div><wbr><div>post</div>
-</body></html>`
-		out := `<html><head></head><body>
-<div>pre</div><div>post</div>
-</body></html>`
-		minificationCheck(in, out)
-	})
+	HelperDiv("Removing tag wdr between tags", t,
+		"pre</div><wbr><div>post",
+		"pre</div><div>post")
 }
 
-func HelperFuncOpenNode(name string, t *testing.T, in, out string) {
-	Convey(name, t, func() {
-		fin := fmt.Sprintf(`<html><head></head><body>
-<div>%s</div>
-</body></html>`, in)
-		fout := fmt.Sprintf(`<html><head></head><body>
-<div>%s</div>
-</body></html>`, out)
+func TestFuncOpenNodeWithoutSeparator(t *testing.T) {
+	HelperDiv("Empty", t,
+		"<b></b>",
+		"")
 
-		minificationCheck(fin, fout)
-	})
-}
+	HelperDiv("Text inside", t,
+		"<b>itext</b>",
+		"itext")
 
-func TestFuncOpenNode(t *testing.T) {
-	HelperFuncOpenNode("Empty", t,
-		"<b></b>", "")
-	HelperFuncOpenNode("Text inside", t,
-		"<b>itext</b>", "itext")
-	HelperFuncOpenNode("One tag inside", t,
-		"<b><a>itext</a></b>", "<a>itext</a>")
-	HelperFuncOpenNode("Left text, right tag inside", t,
-		"<b>ipre<a>itext</a></b>", "ipre<a>itext</a>")
-	HelperFuncOpenNode("Left tag, right text inside", t,
-		"<b><a>itext</a>ipost</b>", "<a>itext</a>ipost")
-	HelperFuncOpenNode("Left text, right text inside", t,
-		"<b>ipre<a>itext</a>ipost</b>", "ipre<a>itext</a>ipost")
-	HelperFuncOpenNode("Text {text text} text", t,
-		"pre<b>ipre<a>itext</a>ipost</b>post", "preipre<a>itext</a>ipostpost")
-	HelperFuncOpenNode("Text {tag tag} text", t,
-		"pre<b><a>itext1</a><a>itext2</a></b>post", "pre<a>itext1</a><a>itext2</a>post")
-	HelperFuncOpenNode("Tag {text text} tag", t,
+	HelperDiv("One tag inside", t,
+		"<b><a>itext</a></b>",
+		"<a>itext</a>")
+
+	HelperDiv("Left text, right tag inside", t,
+		"<b>ipre<a>itext</a></b>",
+		"ipre<a>itext</a>")
+
+	HelperDiv("Left tag, right text inside", t,
+		"<b><a>itext</a>ipost</b>",
+		"<a>itext</a>ipost")
+
+	HelperDiv("Left text, right text inside", t,
+		"<b>ipre<a>itext</a>ipost</b>",
+		"ipre<a>itext</a>ipost")
+
+	HelperDiv("Text {text text} text", t,
+		"pre<b>ipre<a>itext</a>ipost</b>post",
+		"preipre<a>itext</a>ipostpost")
+
+	HelperDiv("Text {tag tag} text", t,
+		"pre<b><a>itext1</a><a>itext2</a></b>post",
+		"pre<a>itext1</a><a>itext2</a>post")
+
+	HelperDiv("Tag {text text} tag", t,
 		"<div>pre</div><b>ipre<a>itext</a>ipost</b><div>post</div>",
 		"<div>pre</div>ipre<a>itext</a>ipost<div>post</div>")
-	HelperFuncOpenNode("Tag {tag tag} tag", t,
+
+	HelperDiv("Tag {tag tag} tag", t,
 		"<div>pre</div><b><a>itext1</a><a>itext2</a></b><div>post</div>",
 		"<div>pre</div><a>itext1</a><a>itext2</a><div>post</div>")
-	HelperFuncOpenNode("Tag {text} tag", t,
-		"<div>pre</div><b>itext</b><div>post</div>", "<div>pre</div>itext<div>post</div>")
-	HelperFuncOpenNode("Tag {tag} tag", t,
-		"<div>pre</div><b><a>itext</a></b><div>post</div>", "<div>pre</div><a>itext</a><div>post</div>")
 
-	HelperFuncOpenNode("Text space {text} space text", t,
-		"<div>pre <b>text</b> post</div>", "<div>pre text post</div>")
-	HelperFuncOpenNode("space {text} space", t,
-		"<div> <b>text</b> </div>", "<div> text </div>")
-	HelperFuncOpenNode("{tag} space text", t,
-		"<div><b><a>text</a></b> post</div>", "<div><a>text</a> post</div>")
-	HelperFuncOpenNode("text space {tag}", t,
-		"<div>pre <b><a>text</a></b></div>", "<div>pre <a>text</a></div>")
+	HelperDiv("Tag {text} tag", t,
+		"<div>pre</div><b>itext</b><div>post</div>",
+		"<div>pre</div>itext<div>post</div>")
 
-	HelperFuncOpenNode("Empty with delimeter", t,
-		"<abbr></abbr>", " ")
-	HelperFuncOpenNode("Text inside with delimeter", t,
-		"<abbr>itext</abbr>", " itext ")
-	HelperFuncOpenNode("One tag inside with delimeter", t,
-		"<abbr><a>itext</a></abbr>", " <a>itext</a> ")
-	HelperFuncOpenNode("Left text, right tag inside with delimeter", t,
-		"<abbr>ipre<a>itext</a></abbr>", " ipre<a>itext</a> ")
-	HelperFuncOpenNode("Left tag, right text inside with delimeter", t,
-		"<abbr><a>itext</a>ipost</abbr>", " <a>itext</a>ipost ")
-	HelperFuncOpenNode("Left text, right text inside with delimeter", t,
-		"<abbr>ipre<a>itext</a>ipost</abbr>", " ipre<a>itext</a>ipost ")
-	HelperFuncOpenNode("Text {text text} text with delimeter", t,
-		"pre<abbr>ipre<a>itext</a>ipost</abbr>post", "pre ipre<a>itext</a>ipost post")
-	HelperFuncOpenNode("Text {tag tag} text with delimeter", t,
-		"pre<abbr><a>itext1</a><a>itext2</a></abbr>post", "pre <a>itext1</a><a>itext2</a> post")
-	HelperFuncOpenNode("Tag {text text} tag with delimeter", t,
+	HelperDiv("Tag {tag} tag", t,
+		"<div>pre</div><b><a>itext</a></b><div>post</div>",
+		"<div>pre</div><a>itext</a><div>post</div>")
+
+	HelperDiv("One child", t,
+		" <b>text</b> <script>s</script>",
+		" text ")
+}
+
+func TestFuncOpenNodeWithSpaces(t *testing.T) {
+	HelperDiv("Text space {text} space text", t,
+		"pre <b>text</b> post",
+		"pre text post")
+
+	HelperDiv("space {text} space", t,
+		" <b>text</b> ",
+		" text ")
+
+	HelperDiv("{tag} space text", t,
+		"<b><a>text</a></b> post",
+		"<a>text</a> post")
+
+	HelperDiv("text space {tag}", t,
+		"pre <b><a>text</a></b>",
+		"pre <a>text</a>")
+}
+
+func TestFuncOpenNodeWithSeparator(t *testing.T) {
+	HelperDiv("Empty", t,
+		"<abbr></abbr>",
+		" ")
+
+	HelperDiv("Text inside", t,
+		"<abbr>itext</abbr>",
+		" itext ")
+
+	HelperDiv("One tag inside", t,
+		"<abbr><a>itext</a></abbr>",
+		" <a>itext</a> ")
+
+	HelperDiv("Left text, right tag inside", t,
+		"<abbr>ipre<a>itext</a></abbr>",
+		" ipre<a>itext</a> ")
+
+	HelperDiv("Left tag, right text inside", t,
+		"<abbr><a>itext</a>ipost</abbr>",
+		" <a>itext</a>ipost ")
+
+	HelperDiv("Left text, right text inside", t,
+		"<abbr>ipre<a>itext</a>ipost</abbr>",
+		" ipre<a>itext</a>ipost ")
+
+	HelperDiv("Text {text text} text", t,
+		"pre<abbr>ipre<a>itext</a>ipost</abbr>post",
+		"pre ipre<a>itext</a>ipost post")
+
+	HelperDiv("Text {tag tag} text", t,
+		"pre<abbr><a>itext1</a><a>itext2</a></abbr>post",
+		"pre <a>itext1</a><a>itext2</a> post")
+
+	HelperDiv("Tag {text text} tag", t,
 		"<div>pre</div><abbr>ipre<a>itext</a>ipost</abbr><div>post</div>",
 		"<div>pre</div> ipre<a>itext</a>ipost <div>post</div>")
-	HelperFuncOpenNode("Tag {tag tag} tag with delimeter", t,
+
+	HelperDiv("Tag {tag tag} tag", t,
 		"<div>pre</div><abbr><a>itext1</a><a>itext2</a></abbr><div>post</div>",
 		"<div>pre</div> <a>itext1</a><a>itext2</a> <div>post</div>")
-	HelperFuncOpenNode("Tag {text} tag with delimeter", t,
-		"<div>pre</div><abbr>itext</abbr><div>post</div>", "<div>pre</div> itext <div>post</div>")
-	HelperFuncOpenNode("Tag {tag} tag with delimeter", t,
-		"<div>pre</div><abbr><a>itext</a></abbr><div>post</div>", "<div>pre</div> <a>itext</a> <div>post</div>")
 
-	HelperFuncOpenNode("One child", t,
-		"<div> <b>text</b> <script>s</script></div>", "<div> text </div>")
+	HelperDiv("Tag {text} tag", t,
+		"<div>pre</div><abbr>itext</abbr><div>post</div>",
+		"<div>pre</div> itext <div>post</div>")
+
+	HelperDiv("Tag {tag} tag", t,
+		"<div>pre</div><abbr><a>itext</a></abbr><div>post</div>",
+		"<div>pre</div> <a>itext</a> <div>post</div>")
 }
 
 func TestOpenTags(t *testing.T) {
-	HelperFuncOpenNode("Open tag abbr with title", t,
+	HelperDiv("Open tag abbr with title", t,
 		"<abbr title=\"title value\">text</abbr>", " title value text ")
-	HelperFuncOpenNode("Open tag abbr without title", t,
+
+	HelperDiv("Open tag abbr without title", t,
 		"<abbr>text</abbr>", " text ")
-	HelperFuncOpenNode("Open tag abbr without text", t,
+
+	HelperDiv("Open tag abbr without text", t,
 		"<abbr title=\"title value\"></abbr>", " title value ")
-	HelperFuncOpenNode("Open tag caption", t,
+
+	HelperDiv("Open tag caption", t,
 		"<table><caption>text</caption></table>", "<table> text </table>")
 
 	// without add space
@@ -452,34 +373,19 @@ func TestOpenTags(t *testing.T) {
 		"b",
 		"i",
 	}
-	out := `<html><head></head><body>
-<div>pretextpost</div>
-</body></html>`
 	for _, tagName := range tags {
-		Convey("Open tag "+tagName, t, func() {
-			in := fmt.Sprintf(`<html><head></head><body>
-<div>pre<%s>text</%s>post</div>
-</body></html>`, tagName, tagName)
-
-			minificationCheck(in, out)
-		})
+		HelperDiv("Open tag "+tagName, t,
+			fmt.Sprintf("pre<%s>text</%s>post", tagName, tagName),
+			"pretextpost")
 	}
 
 	// with add space
 	tags = []string{
 		"blockquote",
 	}
-	out = `<html><head></head><body>
-<div>pre text post</div>
-</body></html>`
 	for _, tagName := range tags {
-		Convey("Open tag "+tagName, t, func() {
-			in := fmt.Sprintf(`<html><head></head><body>
-<div>pre<%s>text</%s>post</div>
-</body></html>`, tagName, tagName)
-
-			fmt.Println(in)
-			minificationCheck(in, out)
-		})
+		HelperDiv("Open tag "+tagName, t,
+			fmt.Sprintf("pre<%s>text</%s>post", tagName, tagName),
+			"pre text post")
 	}
 }
