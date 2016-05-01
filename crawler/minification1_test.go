@@ -356,6 +356,22 @@ func TestFuncOpenNodeWithSeparator(t *testing.T) {
 		"<div>pre</div> <a>itext</a> <div>post</div>")
 }
 
+func TestConvertTagToDiv(t *testing.T) {
+	tags := []string{
+		"blockquote",
+		"center",
+		"figure",
+		"section",
+		"nav",
+		"pre",
+	}
+	for _, tagName := range tags {
+		HelperDiv("Convert tag "+tagName, t,
+			fmt.Sprintf("<%s>text</%s>", tagName, tagName),
+			"<div>text</div>")
+	}
+}
+
 func TestOpenTags(t *testing.T) {
 	HelperDiv("Open tag abbr with title", t,
 		"<abbr title=\"title value\">text</abbr>",
@@ -378,6 +394,7 @@ func TestOpenTags(t *testing.T) {
 		"font",
 		"ins",
 		"q",
+		"nobr",
 		"s",
 		"small",
 		"span",
@@ -388,6 +405,9 @@ func TestOpenTags(t *testing.T) {
 		"tt",
 		"u",
 		"var",
+		"time",
+		"cite",
+		"code",
 	}
 	for _, tagName := range tags {
 		HelperDiv("Open tag "+tagName, t,
@@ -397,7 +417,7 @@ func TestOpenTags(t *testing.T) {
 
 	// with add space
 	tags = []string{
-		"blockquote",
+		"figcaption",
 	}
 	for _, tagName := range tags {
 		HelperDiv("Open tag "+tagName, t,
