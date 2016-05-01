@@ -238,45 +238,6 @@ func (m *minification1) parseChildren(node *html.Node) (*html.Node, error) {
 
 func (m *minification1) parseElements(node *html.Node) (*html.Node, error) {
 	switch node.DataAtom {
-	case atom.Script:
-		return m.removeNode(node, true)
-	case atom.Object:
-		return m.removeNode(node, true)
-	case atom.Select:
-		return m.removeNode(node, true)
-	case atom.Style:
-		return m.removeNode(node, true)
-	case atom.Param:
-		return m.removeNode(node, true)
-	case atom.Embed:
-		return m.removeNode(node, true)
-	case atom.Form:
-		return m.removeNode(node, true)
-	case atom.Time:
-		return m.removeNode(node, true)
-	case atom.Img:
-		return m.removeNode(node, true)
-	case atom.Svg:
-		return m.removeNode(node, true)
-	case atom.Hr:
-		return m.removeNode(node, true)
-	case atom.Wbr:
-		return m.removeNode(node, false)
-	case atom.Input:
-		typeInput := m.getAttrValLower(node, "type")
-		if typeInput == "radio" ||
-			typeInput == "checkbox" ||
-			typeInput == "hidden" ||
-			typeInput == "button" ||
-			typeInput == "submit" ||
-			typeInput == "reset" ||
-			typeInput == "file" ||
-			typeInput == "image" {
-			return m.removeNode(node, true)
-		}
-	}
-
-	switch node.DataAtom {
 	// case atom.A:
 	case atom.Abbr:
 		title := m.getAttrValLower(node, "title")
@@ -338,8 +299,100 @@ func (m *minification1) parseElements(node *html.Node) (*html.Node, error) {
 	// case atom.Figure:
 	case atom.Font:
 		return m.openNode(node, false)
+	// case atom.Footer:
+	// case atom.Form:
+	// case atom.Frame:
+	// case atom.Frameset:
+	// case atom.H1:
+	// case atom.H2:
+	// case atom.H3:
+	// case atom.H4:
+	// case atom.H5:
+	// case atom.H6:
+	// case atom.Head:
+	// case atom.Header:
+	// case atom.Hgroup:
+	case atom.Hr:
+		return m.removeNode(node, true)
+	// case atom.Html:
 	case atom.I:
 		return m.openNode(node, false)
+	// case atom.Iframe:
+	case atom.Img:
+		return m.removeNode(node, true)
+	case atom.Input:
+		typeInput := m.getAttrValLower(node, "type")
+		if typeInput == "radio" ||
+			typeInput == "checkbox" ||
+			typeInput == "hidden" ||
+			typeInput == "button" ||
+			typeInput == "submit" ||
+			typeInput == "reset" ||
+			typeInput == "file" ||
+			typeInput == "image" {
+			return m.removeNode(node, true)
+		}
+	case atom.Ins:
+		return m.openNode(node, false)
+		// case atom.Isindex:
+		// case atom.Kbd:
+		// case atom.Keygen:
+		// case atom.Label:
+		// case atom.Legend:
+		// case atom.Li:
+		// case atom.Link:
+		// case atom.Listing:
+		// case atom.Main:
+		// case atom.Map:
+		// case atom.Marquee:
+		// case atom.Mark:
+		// case atom.Menu:
+		// case atom.Menuitem:
+		// case atom.Meta:
+		// case atom.Meter:
+		// case atom.Multicol:
+		// case atom.Nav:
+		// case atom.Nobr:
+		// case atom.Noembed:
+		// case atom.Noindex:
+		// case atom.Noframes:
+		// case atom.Noscript:
+		// case atom.Object:
+		// case atom.Ol:
+		// case atom.Optgroup:
+		// case atom.Option:
+		// case atom.Output:
+		// case atom.P:
+		// case atom.Param:
+		// case atom.Picture:
+		// case atom.Plaintext:
+		// case atom.Pre:
+		// case atom.Progress:
+	case atom.Q:
+		return m.openNode(node, false)
+	}
+
+	switch node.DataAtom {
+	case atom.Script:
+		return m.removeNode(node, true)
+	case atom.Object:
+		return m.removeNode(node, true)
+	case atom.Select:
+		return m.removeNode(node, true)
+	case atom.Style:
+		return m.removeNode(node, true)
+	case atom.Param:
+		return m.removeNode(node, true)
+	case atom.Embed:
+		return m.removeNode(node, true)
+	case atom.Form:
+		return m.removeNode(node, true)
+	case atom.Time:
+		return m.removeNode(node, true)
+	case atom.Svg:
+		return m.removeNode(node, true)
+	case atom.Wbr:
+		return m.removeNode(node, false)
 	}
 
 	m.removeAttr(node)
