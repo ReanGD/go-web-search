@@ -358,16 +358,16 @@ func TestFuncOpenNodeWithSeparator(t *testing.T) {
 
 func TestOpenTags(t *testing.T) {
 	HelperDiv("Open tag abbr with title", t,
-		"<abbr title=\"title value\">text</abbr>", " title value text ")
+		"<abbr title=\"title value\">text</abbr>",
+		" title value text ")
 
 	HelperDiv("Open tag abbr without title", t,
-		"<abbr>text</abbr>", " text ")
+		"<abbr>text</abbr>",
+		" text ")
 
 	HelperDiv("Open tag abbr without text", t,
-		"<abbr title=\"title value\"></abbr>", " title value ")
-
-	HelperDiv("Open tag caption", t,
-		"<table><caption>text</caption></table>", "<table> text </table>")
+		"<abbr title=\"title value\"></abbr>",
+		" title value ")
 
 	// without add space
 	tags := []string{
@@ -421,4 +421,66 @@ func TestLists(t *testing.T) {
 <dt a="a">dt text2</dt><dd a="a">dd text2</dd>
 </dl>`,
 		"<div> dt text1 dd text1 dt text2 dd text2 </div>")
+}
+
+func TestTable(t *testing.T) {
+	HelperBody("Open tag table.caption", t,
+		`<table a="a"><caption>caption text</caption></table>`,
+		`<div> caption text </div>`)
+
+	HelperBody("Remove tag table.col table.colgroup", t,
+		`<table>
+<col width="150" valign="top1">
+<col width="150" valign="top2">
+<colgroup width="150">
+</table>`,
+		`<div> </div>`)
+
+	HelperBody("Open tag table.thead table.tbody table.tfoot", t,
+		`<table><thead></thead><tbody></tbody><tfoot></tfoot></table>`,
+		`<div> </div>`)
+
+	HelperBody("Open table data tags", t,
+		`<table>
+<tr>
+ <th>Text th1</th>
+ <th>Text th2</th>
+</tr>
+<tr>
+ <td>Text td1</td>
+ <td>Text td2</td>
+</tr>
+</table>`,
+		`<div> <div>Text th1</div>
+ <div>Text th2</div> <div>Text td1</div>
+ <div>Text td2</div> </div>`)
+
+	HelperBody("Table full version", t,
+		`<table>
+	<col width="150" valign="top1">
+	<col width="150" valign="top2">
+	<colgroup width="150">
+<thead>
+ <tr>
+  <th>Text th1</th>
+  <th>Text th2</th>
+ </tr>
+</thead>
+<tbody>
+ <tr>
+  <td>Text td1</td>
+  <td>Text td2</td>
+ </tr>
+</tbody>
+<tfoot>
+ <tr>
+  <td>Text td3</td>
+  <td>Text td4</td>
+ </tr>
+</tfoot>
+	</table>`,
+		`<div> <div>Text th1</div>
+  <div>Text th2</div> <div>Text td1</div>
+  <div>Text td2</div> <div>Text td3</div>
+  <div>Text td4</div> </div>`)
 }

@@ -276,13 +276,15 @@ func (m *minification1) parseElements(node *html.Node) (*html.Node, error) {
 		return m.removeNode(node, true)
 	case atom.Canvas:
 		return m.removeNode(node, true)
-	case atom.Caption: // in table?
+	case atom.Caption:
 		return m.openNode(node, true)
 	// case atom.Center:
 	// case atom.Cite:
 	// case atom.Code:
-	// case atom.Col:
-	// case atom.Colgroup:
+	case atom.Col:
+		return m.removeNode(node, true)
+	case atom.Colgroup:
+		return m.removeNode(node, true)
 	// case atom.Command:
 	// case atom.Comment:
 	// case atom.Data:
@@ -416,17 +418,24 @@ func (m *minification1) parseElements(node *html.Node) (*html.Node, error) {
 		return m.openNode(node, false)
 	case atom.Svg:
 		return m.removeNode(node, true)
-	// case atom.Table:
-	// case atom.Tbody:
-	// case atom.Td:
+	case atom.Table:
+		m.toDiv(node)
+	case atom.Tbody:
+		return m.openNode(node, true)
+	case atom.Td:
+		m.toDiv(node)
 	case atom.Textarea:
 		return m.removeNode(node, true)
-	// case atom.Tfoot:
-	// case atom.Th:
-	// case atom.Thead:
+	case atom.Tfoot:
+		return m.openNode(node, true)
+	case atom.Th:
+		m.toDiv(node)
+	case atom.Thead:
+		return m.openNode(node, true)
 	// case atom.Time:
 	// case atom.Title:
-	// case atom.Tr:
+	case atom.Tr:
+		return m.openNode(node, true)
 	// case atom.Track:
 	case atom.Tt:
 		return m.openNode(node, false)
