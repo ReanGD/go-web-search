@@ -370,14 +370,28 @@ func (m *minification1) parseElements(node *html.Node) (*html.Node, error) {
 		// case atom.Progress:
 	case atom.Q:
 		return m.openNode(node, false)
+		// case atom.Rp:
+		// case atom.Rt:
+		// case atom.Rtc:
+		// case atom.Ruby:
+	case atom.S:
+		return m.openNode(node, false)
+	// case atom.Samp:
+	case atom.Script:
+		return m.removeNode(node, true)
+	// case atom.Section:
+	case atom.Select:
+		return m.removeNode(node, true)
+	case atom.Small:
+		return m.openNode(node, false)
+	// case atom.Source:
+	// case atom.Spacer:
+	case atom.Span:
+		return m.openNode(node, false)
 	}
 
 	switch node.DataAtom {
-	case atom.Script:
-		return m.removeNode(node, true)
 	case atom.Object:
-		return m.removeNode(node, true)
-	case atom.Select:
 		return m.removeNode(node, true)
 	case atom.Style:
 		return m.removeNode(node, true)
