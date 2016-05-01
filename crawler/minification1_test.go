@@ -372,6 +372,9 @@ func TestOpenTags(t *testing.T) {
 	tags := []string{
 		"b",
 		"i",
+		"del",
+		"em",
+		"font",
 	}
 	for _, tagName := range tags {
 		HelperDiv("Open tag "+tagName, t,

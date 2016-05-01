@@ -298,7 +298,7 @@ func (m *minification1) parseElements(node *html.Node) (*html.Node, error) {
 	// case atom.Bdi:
 	// case atom.Bdo:
 	// case atom.Bgsound:
-	case atom.Blockquote:
+	case atom.Blockquote: // to div?
 		return m.openNode(node, true)
 	// case atom.Big:
 	// case atom.Body:
@@ -309,8 +309,35 @@ func (m *minification1) parseElements(node *html.Node) (*html.Node, error) {
 		return m.removeNode(node, true)
 	case atom.Canvas:
 		return m.removeNode(node, true)
-	case atom.Caption:
+	case atom.Caption: // in table?
 		return m.openNode(node, true)
+	// case atom.Center:
+	// case atom.Cite:
+	// case atom.Code:
+	// case atom.Col:
+	// case atom.Colgroup:
+	// case atom.Command:
+	// case atom.Comment:
+	// case atom.Data:
+	// case atom.Datalist:
+	// case atom.Dd:
+	case atom.Del:
+		return m.openNode(node, false)
+	// case atom.Details:
+	// case atom.Dfn:
+	// case atom.Dialog:
+	// case atom.Dir:
+	// case atom.Div:
+	// case atom.Dl:
+	// case atom.Dt:
+	case atom.Em:
+		return m.openNode(node, false)
+	// case atom.Embed:
+	// case atom.Fieldset:
+	// case atom.Figcaption:
+	// case atom.Figure:
+	case atom.Font:
+		return m.openNode(node, false)
 	case atom.I:
 		return m.openNode(node, false)
 	}
