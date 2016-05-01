@@ -293,14 +293,16 @@ func (m *minification1) parseElements(node *html.Node) (*html.Node, error) {
 	// case atom.Dt:
 	case atom.Em:
 		return m.openNode(node, false)
-	// case atom.Embed:
+	case atom.Embed:
+		return m.removeNode(node, true)
 	// case atom.Fieldset:
 	// case atom.Figcaption:
 	// case atom.Figure:
 	case atom.Font:
 		return m.openNode(node, false)
 	// case atom.Footer:
-	// case atom.Form:
+	case atom.Form:
+		return m.removeNode(node, true)
 	// case atom.Frame:
 	// case atom.Frameset:
 	// case atom.H1:
@@ -357,13 +359,15 @@ func (m *minification1) parseElements(node *html.Node) (*html.Node, error) {
 		// case atom.Noindex:
 		// case atom.Noframes:
 		// case atom.Noscript:
-		// case atom.Object:
+	case atom.Object:
+		return m.removeNode(node, true)
 		// case atom.Ol:
 		// case atom.Optgroup:
 		// case atom.Option:
 		// case atom.Output:
 		// case atom.P:
-		// case atom.Param:
+	case atom.Param:
+		return m.removeNode(node, true)
 		// case atom.Picture:
 		// case atom.Plaintext:
 		// case atom.Pre:
@@ -388,25 +392,43 @@ func (m *minification1) parseElements(node *html.Node) (*html.Node, error) {
 	// case atom.Spacer:
 	case atom.Span:
 		return m.openNode(node, false)
-	}
-
-	switch node.DataAtom {
-	case atom.Object:
-		return m.removeNode(node, true)
+	case atom.Strike:
+		return m.openNode(node, false)
+	case atom.Strong:
+		return m.openNode(node, false)
 	case atom.Style:
 		return m.removeNode(node, true)
-	case atom.Param:
-		return m.removeNode(node, true)
-	case atom.Embed:
-		return m.removeNode(node, true)
-	case atom.Form:
-		return m.removeNode(node, true)
-	case atom.Time:
-		return m.removeNode(node, true)
+	case atom.Sub:
+		return m.openNode(node, false)
+		// case atom.Summary:
+	case atom.Sup:
+		return m.openNode(node, false)
 	case atom.Svg:
+		return m.removeNode(node, true)
+	// case atom.Table:
+	// case atom.Tbody:
+	// case atom.Td:
+	case atom.Textarea:
+		return m.removeNode(node, true)
+	// case atom.Tfoot:
+	// case atom.Th:
+	// case atom.Thead:
+	// case atom.Time:
+	// case atom.Title:
+	// case atom.Tr:
+	// case atom.Track:
+	case atom.Tt:
+		return m.openNode(node, false)
+	case atom.U:
+		return m.openNode(node, false)
+		// case atom.Ul:
+	case atom.Var:
+		return m.openNode(node, false)
+	case atom.Video:
 		return m.removeNode(node, true)
 	case atom.Wbr:
 		return m.removeNode(node, false)
+		// case atom.Xmp:
 	}
 
 	m.removeAttr(node)

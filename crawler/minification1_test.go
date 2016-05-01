@@ -199,10 +199,11 @@ func TestRemoveTags(t *testing.T) {
 		"<param name=\"a\"/>",
 		"<embed a=\"1\"></embed>",
 		"<form>text</form>",
-		"<time>text</time>",
 		"<img src=\"URL\"></img>",
 		"<svg>text</svg>",
 		"<canvas>text</canvas>",
+		"<video>text</video>",
+		"<textarea>text</textarea>",
 		"<br/>",
 		"<hr/>",
 	}
@@ -380,6 +381,13 @@ func TestOpenTags(t *testing.T) {
 		"s",
 		"small",
 		"span",
+		"strike",
+		"strong",
+		"sub",
+		"sup",
+		"tt",
+		"u",
+		"var",
 	}
 	for _, tagName := range tags {
 		HelperDiv("Open tag "+tagName, t,
