@@ -393,8 +393,15 @@ func TestFuncOpenNode(t *testing.T) {
 		"<div>pre</div><b>itext</b><div>post</div>", "<div>pre</div>itext<div>post</div>")
 	HelperFuncOpenNode("Tag {tag} tag", t,
 		"<div>pre</div><b><a>itext</a></b><div>post</div>", "<div>pre</div><a>itext</a><div>post</div>")
-	// HelperFuncOpenNode("Text space {text} space text", t,
-	// 	"<div>pre <b>text</b> post</div>", "<div>pre text post</div>")
+
+	HelperFuncOpenNode("Text space {text} space text", t,
+		"<div>pre <b>text</b> post</div>", "<div>pre text post</div>")
+	HelperFuncOpenNode("space {text} space", t,
+		"<div> <b>text</b> </div>", "<div> text </div>")
+	HelperFuncOpenNode("{tag} space text", t,
+		"<div><b><a>text</a></b> post</div>", "<div><a>text</a> post</div>")
+	HelperFuncOpenNode("text space {tag}", t,
+		"<div>pre <b><a>text</a></b></div>", "<div>pre <a>text</a></div>")
 
 	HelperFuncOpenNode("Empty with delimeter", t,
 		"<abbr></abbr>", " ")
@@ -424,29 +431,30 @@ func TestFuncOpenNode(t *testing.T) {
 		"<div>pre</div><abbr><a>itext</a></abbr><div>post</div>", "<div>pre</div> <a>itext</a> <div>post</div>")
 
 	HelperFuncOpenNode("One child", t,
-		"<div> <b>text</b> <script>s</script></div>", "<div>text </div>")
+		"<div> <b>text</b> <script>s</script></div>", "<div> text </div>")
 }
 
-// func TestOpenTags(t *testing.T) {
-// 	HelperFuncOpenNode("Open tag abbr with title", t,
-// 		"<abbr title=\"title value\">text</abbr>", " title value text ")
-// 	HelperFuncOpenNode("Open tag abbr without title", t, "<abbr>text</abbr>", " text ")
-// 	HelperFuncOpenNode("Open tag blockquote", t, "<blockquote>pre<div>text</div>post</blockquote>", " pre<div>text</div>post ")
+func TestOpenTags(t *testing.T) {
+	HelperFuncOpenNode("Open tag abbr with title", t,
+		"<abbr title=\"title value\">text</abbr>", " title value text ")
+	HelperFuncOpenNode("Open tag abbr without title", t, "<abbr>text</abbr>", " text ")
+	HelperFuncOpenNode("Open tag abbr without text", t, "<abbr title=\"title value\"></abbr>", " title value ")
+	HelperFuncOpenNode("Open tag blockquote", t, "<blockquote>pre<div>text</div>post</blockquote>", " pre<div>text</div>post ")
 
-// 	tags := []string{
-// 		"b",
-// 		"i",
-// 	}
-// 	out := `<html><head></head><body>
-// <div>text</div>
-// </body></html>`
-// 	for _, tagName := range tags {
-// 		Convey("Open tag "+tagName, t, func() {
-// 			in := fmt.Sprintf(`<html><head></head><body>
-// <div><%s>text</%s></div>
-// </body></html>`, tagName, tagName)
+	tags := []string{
+		"b",
+		"i",
+	}
+	out := `<html><head></head><body>
+<div>text</div>
+</body></html>`
+	for _, tagName := range tags {
+		Convey("Open tag "+tagName, t, func() {
+			in := fmt.Sprintf(`<html><head></head><body>
+<div><%s>text</%s></div>
+</body></html>`, tagName, tagName)
 
-// 			minificationCheck(in, out)
-// 		})
-// 	}
-// }
+			minificationCheck(in, out)
+		})
+	}
+}

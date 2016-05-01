@@ -4,6 +4,7 @@ import (
 	"errors"
 	"strings"
 	"unicode"
+	"unicode/utf8"
 
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
@@ -91,14 +92,40 @@ func (m *minification1) mergeNodes(parent, prev, next *html.Node, addSeparator b
 	}
 
 	if prevText && nextText {
+		if !addSeparator {
+			r, _ := utf8.DecodeLastRuneInString(prev.Data)
+			if unicode.IsSpace(r) {
+				delim = " "
+			} else {
+				r, _ = utf8.DecodeRuneInString(next.Data)
+				if unicode.IsSpace(r) {
+					delim = " "
+				}
+			}
+		}
+
 		prev.Data = strings.TrimRightFunc(prev.Data, unicode.IsSpace) +
 			delim + strings.TrimLeftFunc(next.Data, unicode.IsSpace)
 		parent.RemoveChild(next)
 		result = prev.NextSibling
 	} else if prevText {
+		if !addSeparator {
+			r, _ := utf8.DecodeLastRuneInString(prev.Data)
+			if unicode.IsSpace(r) {
+				delim = " "
+			}
+		}
+
 		prev.Data = strings.TrimRightFunc(prev.Data, unicode.IsSpace) + delim
 		result = next
 	} else if nextText {
+		if !addSeparator {
+			r, _ := utf8.DecodeRuneInString(next.Data)
+			if unicode.IsSpace(r) {
+				delim = " "
+			}
+		}
+
 		next.Data = delim + strings.TrimLeftFunc(next.Data, unicode.IsSpace)
 		result = next
 	} else if addSeparator {
