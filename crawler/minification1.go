@@ -230,6 +230,19 @@ func (m *minification1) toDiv(node *html.Node) {
 	node.Attr = make([]html.Attribute, 0)
 }
 
+func (m *minification1) toRef(node *html.Node, ref string) (*html.Node, error) {
+	node.DataAtom = atom.A
+	node.Data = "a"
+	node.FirstChild = nil
+	node.LastChild = nil
+	node.Attr = make([]html.Attribute, 1)
+	node.Attr[0] = html.Attribute{Key: "href", Val: ref}
+
+	prev, next := node.PrevSibling, node.NextSibling
+	_ = m.mergeNodes(node.Parent, prev, node, true)
+	return m.mergeNodes(node.Parent, node, next, true), nil
+}
+
 func (m *minification1) parseChildren(node *html.Node) (*html.Node, error) {
 	var err error
 	for it := node.FirstChild; it != nil; {
@@ -333,7 +346,12 @@ func (m *minification1) parseElements(node *html.Node) (*html.Node, error) {
 	// case atom.Html:
 	case atom.I:
 		return m.openNode(node, false)
-	// case atom.Iframe:
+	case atom.Iframe:
+		ref := m.getAttrValLower(node, "src")
+		if ref == "" {
+			return m.removeNode(node, true)
+		}
+		return m.toRef(node, ref)
 	case atom.Img:
 		return m.removeNode(node, true)
 	case atom.Input:

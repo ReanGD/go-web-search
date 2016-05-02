@@ -73,7 +73,7 @@ func (result *HTMLParser) parseElements(node *html.Node) {
 		if rel == "next" || rel == "prev" || rel == "previous" {
 			result.processLink(result.getAttrVal(node, "href"))
 		}
-	case atom.Frame:
+	case atom.Frame, atom.Iframe:
 		if result.MetaTagFollow {
 			result.processLink(result.getAttrVal(node, "src"))
 		}

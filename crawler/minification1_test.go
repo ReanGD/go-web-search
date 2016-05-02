@@ -372,6 +372,22 @@ func TestConvertTagToDiv(t *testing.T) {
 	}
 }
 
+func TestConvertTagToRef(t *testing.T) {
+	HelperDiv("Convert tag iframe", t,
+		`<iframe src="page/banner.html" width="468" height="60" align="left">
+	    Ваш браузер не поддерживает встроенные фреймы!
+	</iframe>`,
+		` <a href="page/banner.html"></a> `)
+
+	HelperDiv("Convert tag iframe between text", t,
+		`pre<iframe src="page/banner.html"></iframe>post`,
+		`pre <a href="page/banner.html"></a> post`)
+
+	HelperDiv("Convert tag iframe without src", t,
+		`pre<iframe width="468" height="60" align="left">text</iframe><div>post</div>`,
+		`pre <div>post</div>`)
+}
+
 func TestOpenTags(t *testing.T) {
 	HelperDiv("Open tag abbr with title", t,
 		"<abbr title=\"title value\">text</abbr>",
