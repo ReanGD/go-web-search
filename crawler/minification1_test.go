@@ -358,12 +358,21 @@ func TestFuncOpenNodeWithSeparator(t *testing.T) {
 
 func TestConvertTagToDiv(t *testing.T) {
 	tags := []string{
+		"article",
+		"footer",
 		"blockquote",
 		"center",
 		"figure",
 		"section",
 		"nav",
 		"pre",
+		"h1",
+		"h2",
+		"h3",
+		"h4",
+		"h5",
+		"h6",
+		"p",
 	}
 	for _, tagName := range tags {
 		HelperDiv("Convert tag "+tagName, t,
