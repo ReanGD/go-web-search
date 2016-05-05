@@ -224,10 +224,12 @@ func (m *minification1) openNode(node *html.Node, addSeparator bool) (*html.Node
 	return result, nil
 }
 
-func (m *minification1) toDiv(node *html.Node) {
+func (m *minification1) toDiv(node *html.Node) (*html.Node, error) {
 	node.DataAtom = atom.Div
 	node.Data = "div"
 	node.Attr = make([]html.Attribute, 0)
+
+	return m.parseChildren(node)
 }
 
 func (m *minification1) toRef(node *html.Node, ref string) (*html.Node, error) {
@@ -279,7 +281,7 @@ func (m *minification1) parseElements(node *html.Node) (*html.Node, error) {
 	// case atom.Bdo:
 	// case atom.Bgsound:
 	case atom.Blockquote:
-		m.toDiv(node)
+		return m.toDiv(node)
 	// case atom.Big:
 	// case atom.Body:
 	// case atom.Blink:
@@ -292,7 +294,7 @@ func (m *minification1) parseElements(node *html.Node) (*html.Node, error) {
 	case atom.Caption:
 		return m.openNode(node, true)
 	case atom.Center:
-		m.toDiv(node)
+		return m.toDiv(node)
 	case atom.Cite:
 		return m.openNode(node, false)
 	case atom.Code:
@@ -313,7 +315,7 @@ func (m *minification1) parseElements(node *html.Node) (*html.Node, error) {
 	// case atom.Dir:
 	// case atom.Div:
 	case atom.Dl:
-		m.toDiv(node)
+		return m.toDiv(node)
 	case atom.Dt:
 		return m.openNode(node, true)
 	case atom.Em:
@@ -324,7 +326,7 @@ func (m *minification1) parseElements(node *html.Node) (*html.Node, error) {
 	case atom.Figcaption:
 		return m.openNode(node, true)
 	case atom.Figure:
-		m.toDiv(node)
+		return m.toDiv(node)
 	case atom.Font:
 		return m.openNode(node, false)
 	// case atom.Footer:
@@ -387,7 +389,7 @@ func (m *minification1) parseElements(node *html.Node) (*html.Node, error) {
 	// case atom.Meter:
 	// case atom.Multicol:
 	case atom.Nav:
-		m.toDiv(node)
+		return m.toDiv(node)
 	case atom.Nobr:
 		return m.openNode(node, false)
 		// case atom.Noembed:
@@ -397,7 +399,7 @@ func (m *minification1) parseElements(node *html.Node) (*html.Node, error) {
 	case atom.Object:
 		return m.removeNode(node, true)
 	case atom.Ol:
-		m.toDiv(node)
+		return m.toDiv(node)
 		// case atom.Optgroup:
 		// case atom.Option:
 		// case atom.Output:
@@ -407,7 +409,7 @@ func (m *minification1) parseElements(node *html.Node) (*html.Node, error) {
 	// case atom.Picture:
 	// case atom.Plaintext:
 	case atom.Pre:
-		m.toDiv(node)
+		return m.toDiv(node)
 		// case atom.Progress:
 	case atom.Q:
 		return m.openNode(node, false)
@@ -421,7 +423,7 @@ func (m *minification1) parseElements(node *html.Node) (*html.Node, error) {
 	case atom.Script:
 		return m.removeNode(node, true)
 	case atom.Section:
-		m.toDiv(node)
+		return m.toDiv(node)
 	case atom.Select:
 		return m.removeNode(node, true)
 	case atom.Small:
@@ -444,17 +446,17 @@ func (m *minification1) parseElements(node *html.Node) (*html.Node, error) {
 	case atom.Svg:
 		return m.removeNode(node, true)
 	case atom.Table:
-		m.toDiv(node)
+		return m.toDiv(node)
 	case atom.Tbody:
 		return m.openNode(node, true)
 	case atom.Td:
-		m.toDiv(node)
+		return m.toDiv(node)
 	case atom.Textarea:
 		return m.removeNode(node, true)
 	case atom.Tfoot:
 		return m.openNode(node, true)
 	case atom.Th:
-		m.toDiv(node)
+		return m.toDiv(node)
 	case atom.Thead:
 		return m.openNode(node, true)
 	case atom.Time:
@@ -468,7 +470,7 @@ func (m *minification1) parseElements(node *html.Node) (*html.Node, error) {
 	case atom.U:
 		return m.openNode(node, false)
 	case atom.Ul:
-		m.toDiv(node)
+		return m.toDiv(node)
 	case atom.Var:
 		return m.openNode(node, false)
 	case atom.Video:
