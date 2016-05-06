@@ -204,6 +204,8 @@ func TestRemoveTags(t *testing.T) {
 		"<canvas>text</canvas>",
 		"<video>text</video>",
 		"<textarea>text</textarea>",
+		"<noscript>text</noscript>",
+		`<input type="hidden"/>`,
 		"<br/>",
 		"<hr/>",
 	}
@@ -212,18 +214,6 @@ func TestRemoveTags(t *testing.T) {
 			fmt.Sprintf("pre%spost", tagName),
 			"pre post")
 	}
-
-	HelperBody("Removing tag hidden input", t,
-		`pre<input type="hidden" />post`,
-		"pre post")
-
-	HelperBody("Not Removing no hidden tag input", t,
-		`pre<input type="hidden1"/>post`,
-		`pre<input type="hidden1"/>post`)
-
-	HelperBody("Not Removing tag input without type", t,
-		`pre<input v="val"/>post`,
-		`pre<input v="val"/>post`)
 
 	HelperBody("Removing tag wdr", t,
 		"pre<wbr>post",
@@ -364,6 +354,7 @@ func TestConvertTagToDiv(t *testing.T) {
 		"center",
 		"figure",
 		"section",
+		"label",
 		"nav",
 		"pre",
 		"h1",

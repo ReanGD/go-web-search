@@ -365,23 +365,14 @@ func (m *minification1) parseElements(node *html.Node) (*html.Node, error) {
 	case atom.Img:
 		return m.removeNode(node, true)
 	case atom.Input:
-		typeInput := m.getAttrValLower(node, "type")
-		if typeInput == "radio" ||
-			typeInput == "checkbox" ||
-			typeInput == "hidden" ||
-			typeInput == "button" ||
-			typeInput == "submit" ||
-			typeInput == "reset" ||
-			typeInput == "file" ||
-			typeInput == "image" {
-			return m.removeNode(node, true)
-		}
+		return m.removeNode(node, true)
 	case atom.Ins:
 		return m.openNode(node, false)
 	// case atom.Isindex:
 	// case atom.Kbd:
 	// case atom.Keygen:
-	// case atom.Label:
+	case atom.Label:
+		return m.toDiv(node)
 	// case atom.Legend:
 	case atom.Li:
 		return m.openNode(node, true)
@@ -400,10 +391,11 @@ func (m *minification1) parseElements(node *html.Node) (*html.Node, error) {
 		return m.toDiv(node)
 	case atom.Nobr:
 		return m.openNode(node, false)
-		// case atom.Noembed:
-		// case atom.Noindex:
-		// case atom.Noframes:
-		// case atom.Noscript:
+	// case atom.Noembed:
+	// case atom.Noindex:
+	// case atom.Noframes:
+	case atom.Noscript:
+		return m.removeNode(node, true)
 	case atom.Object:
 		return m.removeNode(node, true)
 	case atom.Ol:
