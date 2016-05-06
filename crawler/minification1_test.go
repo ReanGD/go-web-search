@@ -15,12 +15,14 @@ const (
 	emptyHead = "<html><head> </head><body></body></html>"
 )
 
-func minificationCheck(in string, out string) {
+func minificationCheck(in string, out string) *Minification1 {
 	var buf bytes.Buffer
+	var m *Minification1
 	w := bufio.NewWriter(&buf)
 	node, err := html.Parse(bytes.NewReader([]byte(in)))
 	if err == nil {
-		So(RunMinification1(node), ShouldEqual, nil)
+		m, err = RunMinification1(node)
+		So(err, ShouldEqual, nil)
 		err = html.Render(w, node)
 		if err == nil {
 			err = w.Flush()
@@ -30,6 +32,8 @@ func minificationCheck(in string, out string) {
 		}
 	}
 	So(err, ShouldEqual, nil)
+
+	return m
 }
 
 func HelperHead(name string, t *testing.T, in, out string) {
@@ -63,7 +67,8 @@ func TestErrorTag(t *testing.T) {
 		So(err, ShouldEqual, nil)
 
 		node.FirstChild.Type = html.ErrorNode
-		So(RunMinification1(node).Error(), ShouldEqual, ErrMinificationUnexpectedNodeType.Error())
+		_, err = RunMinification1(node)
+		So(err.Error(), ShouldEqual, ErrMinificationUnexpectedNodeType.Error())
 	})
 }
 
@@ -519,12 +524,10 @@ func TestTable(t *testing.T) {
 
 func TestLink(t *testing.T) {
 	HelperHead("Remove", t,
-		`<link rel="stylesheet" href="ie.css">`,
-		``)
+		`<link rel="stylesheet" href="ie.css">`, ``)
 
 	HelperHead("Next without href", t,
-		`<link rel="next">`,
-		``)
+		`<link rel="next">`, ``)
 
 	HelperHead("Convert prev and next", t,
 		`<link rel="next" href="next.html">
@@ -533,4 +536,41 @@ func TestLink(t *testing.T) {
 		`<a href="next.html"></a>
 <a href="prev.html"></a>
 <a href="previous.html"></a>`)
+}
+
+func TestMetaAndTitle(t *testing.T) {
+	HelperHead("Remove (one attribute)", t,
+		`<meta content="text">`, ``)
+
+	HelperHead("Remove (two attributes)", t,
+		`<meta name="id" content="text">`, ``)
+
+	Convey("Title in meta", t, func() {
+		in := `<html><head><meta name="title" content="title text"></head><body><div>text</div></body></html>`
+		out := "<html><head></head><body><div>text</div></body></html>"
+		m := minificationCheck(in, out)
+		So(m.Title, ShouldEqual, "title text")
+	})
+
+	Convey("Empty title in meta", t, func() {
+		in := `<html><head><meta name="title" content="   "></head><body><div>text</div></body></html>`
+		out := "<html><head></head><body><div>text</div></body></html>"
+		m := minificationCheck(in, out)
+		So(m.Title, ShouldEqual, "")
+	})
+
+	Convey("Title in tag and meta", t, func() {
+		in := `<html><head><meta name="title" content="title meta"><title>title title</title></head><body><div>text</div></body></html>`
+		out := "<html><head></head><body><div>text</div></body></html>"
+		m := minificationCheck(in, out)
+		So(m.Title, ShouldEqual, "title title")
+	})
+
+	Convey("Title in tag and meta 2", t, func() {
+		in := `<html><head><title>title title</title><meta name="title" content="title meta"></head><body><div>text</div></body></html>`
+		out := "<html><head></head><body><div>text</div></body></html>"
+		m := minificationCheck(in, out)
+		So(m.Title, ShouldEqual, "title title")
+	})
+
 }
