@@ -32,6 +32,14 @@ func minificationCheck(in string, out string) {
 	So(err, ShouldEqual, nil)
 }
 
+func HelperHead(name string, t *testing.T, in, out string) {
+	Convey(name, t, func() {
+		fin := fmt.Sprintf("<html><head>%s</head><body><div>text</div></body></html>", in)
+		fout := fmt.Sprintf("<html><head>%s</head><body><div>text</div></body></html>", out)
+		minificationCheck(fin, fout)
+	})
+}
+
 func HelperBody(name string, t *testing.T, in, out string) {
 	Convey(name, t, func() {
 		fin := fmt.Sprintf("<html><head></head><body>\n%s\n</body></html>", in)
@@ -68,21 +76,9 @@ func TestDoctype(t *testing.T) {
 }
 
 func TestRemoveComments(t *testing.T) {
-	Convey("Remove comment", t, func() {
-		in := `<html><head>
-<!-- Comment1 -->
-</head><body></body></html>`
-
-		minificationCheck(in, emptyHead)
-	})
-
-	Convey("Remove double comment", t, func() {
-		in := `<html><head>
-	<!-- Comment1 --><!-- Comment2 -->
-	</head><body></body></html>`
-
-		minificationCheck(in, emptyHead)
-	})
+	HelperHead("Remove comment in head", t, "<!-- Comment1 -->", "")
+	HelperBody("Remove comment in body", t, "pre<!-- Comment1 -->post", "prepost")
+	HelperHead("Remove double comment in head", t, "<!-- Comment1 --><!-- Comment2 -->", "")
 }
 
 func TestFuncRemoveAttr(t *testing.T) {
@@ -519,4 +515,22 @@ func TestTable(t *testing.T) {
   <div>Text th2</div> <div>Text td1</div>
   <div>Text td2</div> <div>Text td3</div>
   <div>Text td4</div> </div>`)
+}
+
+func TestLink(t *testing.T) {
+	HelperHead("Remove", t,
+		`<link rel="stylesheet" href="ie.css">`,
+		``)
+
+	HelperHead("Next without href", t,
+		`<link rel="next">`,
+		``)
+
+	HelperHead("Convert prev and next", t,
+		`<link rel="next" href="next.html">
+<link rel="prev" href="prev.html">
+<link rel="previous" href="previous.html">`,
+		`<a href="next.html"></a>
+<a href="prev.html"></a>
+<a href="previous.html"></a>`)
 }

@@ -21,15 +21,11 @@ type minification1 struct {
 func (m *minification1) getAttrVal(node *html.Node, attrName string) string {
 	for _, attr := range node.Attr {
 		if attr.Key == attrName {
-			return attr.Val
+			return strings.ToLower(attr.Val)
 		}
 	}
 
 	return ""
-}
-
-func (m *minification1) getAttrValLower(node *html.Node, attrName string) string {
-	return strings.ToLower(m.getAttrVal(node, attrName))
 }
 
 func (m *minification1) removeAttr(node *html.Node) {
@@ -233,6 +229,7 @@ func (m *minification1) toDiv(node *html.Node) (*html.Node, error) {
 }
 
 func (m *minification1) toRef(node *html.Node, ref string) (*html.Node, error) {
+	addText := node.DataAtom != atom.Link
 	node.DataAtom = atom.A
 	node.Data = "a"
 	node.FirstChild = nil
@@ -240,9 +237,13 @@ func (m *minification1) toRef(node *html.Node, ref string) (*html.Node, error) {
 	node.Attr = make([]html.Attribute, 1)
 	node.Attr[0] = html.Attribute{Key: "href", Val: ref}
 
-	prev, next := node.PrevSibling, node.NextSibling
-	_ = m.mergeNodes(node.Parent, prev, node, true)
-	return m.mergeNodes(node.Parent, node, next, true), nil
+	if addText {
+		prev, next := node.PrevSibling, node.NextSibling
+		_ = m.mergeNodes(node.Parent, prev, node, true)
+		return m.mergeNodes(node.Parent, node, next, true), nil
+	}
+
+	return node.NextSibling, nil
 }
 
 func (m *minification1) parseChildren(node *html.Node) (*html.Node, error) {
@@ -261,7 +262,7 @@ func (m *minification1) parseElements(node *html.Node) (*html.Node, error) {
 	switch node.DataAtom {
 	// case atom.A:
 	case atom.Abbr:
-		title := m.getAttrValLower(node, "title")
+		title := m.getAttrVal(node, "title")
 		if title != "" {
 			m.AddChildTextNodeToBegining(node, " "+title+" ")
 		}
@@ -357,7 +358,7 @@ func (m *minification1) parseElements(node *html.Node) (*html.Node, error) {
 	case atom.I:
 		return m.openNode(node, false)
 	case atom.Iframe:
-		ref := m.getAttrValLower(node, "src")
+		ref := m.getAttrVal(node, "src")
 		if ref == "" {
 			return m.removeNode(node, true)
 		}
@@ -376,7 +377,16 @@ func (m *minification1) parseElements(node *html.Node) (*html.Node, error) {
 	// case atom.Legend:
 	case atom.Li:
 		return m.openNode(node, true)
-	// case atom.Link:
+	case atom.Link:
+		rel := m.getAttrVal(node, "rel")
+		if rel != "next" && rel != "prev" && rel != "previous" {
+			return m.removeNode(node, false)
+		}
+		href := m.getAttrVal(node, "href")
+		if href == "" {
+			return m.removeNode(node, false)
+		}
+		return m.toRef(node, href)
 	// case atom.Listing:
 	// case atom.Main:
 	// case atom.Map:
@@ -497,7 +507,7 @@ func (m *minification1) parseNode(node *html.Node) (*html.Node, error) {
 	case html.DoctypeNode: // ignore
 		return node.NextSibling, nil
 	case html.CommentNode: // remove
-		return m.removeNode(node, true)
+		return m.removeNode(node, false)
 	default:
 		return nil, ErrMinificationUnexpectedNodeType
 	}
