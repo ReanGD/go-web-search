@@ -235,44 +235,44 @@ func TestFuncOpenNodeWithoutSeparator(t *testing.T) {
 		"itext")
 
 	HelperDiv("One tag inside", t,
-		"<b><a>itext</a></b>",
-		"<a>itext</a>")
+		`<b><a href="1">itext</a></b>`,
+		`<a r="1">itext</a>`)
 
 	HelperDiv("Left text, right tag inside", t,
-		"<b>ipre<a>itext</a></b>",
-		"ipre<a>itext</a>")
+		`<b>ipre<a href="1">itext</a></b>`,
+		`ipre<a r="1">itext</a>`)
 
 	HelperDiv("Left tag, right text inside", t,
-		"<b><a>itext</a>ipost</b>",
-		"<a>itext</a>ipost")
+		`<b><a href="1">itext</a>ipost</b>`,
+		`<a r="1">itext</a>ipost`)
 
 	HelperDiv("Left text, right text inside", t,
-		"<b>ipre<a>itext</a>ipost</b>",
-		"ipre<a>itext</a>ipost")
+		`<b>ipre<a href="1">itext</a>ipost</b>`,
+		`ipre<a r="1">itext</a>ipost`)
 
 	HelperDiv("Text {text text} text", t,
-		"pre<b>ipre<a>itext</a>ipost</b>post",
-		"preipre<a>itext</a>ipostpost")
+		`pre<b>ipre<a href="1">itext</a>ipost</b>post`,
+		`preipre<a r="1">itext</a>ipostpost`)
 
 	HelperDiv("Text {tag tag} text", t,
-		"pre<b><a>itext1</a><a>itext2</a></b>post",
-		"pre<a>itext1</a><a>itext2</a>post")
+		`pre<b><a href="1">itext1</a><a href="1">itext2</a></b>post`,
+		`pre<a r="1">itext1</a><a r="1">itext2</a>post`)
 
 	HelperDiv("Tag {text text} tag", t,
-		"<div>pre</div><b>ipre<a>itext</a>ipost</b><div>post</div>",
-		"<div>pre</div>ipre<a>itext</a>ipost<div>post</div>")
+		`<div>pre</div><b>ipre<a href="1">itext</a>ipost</b><div>post</div>`,
+		`<div>pre</div>ipre<a r="1">itext</a>ipost<div>post</div>`)
 
 	HelperDiv("Tag {tag tag} tag", t,
-		"<div>pre</div><b><a>itext1</a><a>itext2</a></b><div>post</div>",
-		"<div>pre</div><a>itext1</a><a>itext2</a><div>post</div>")
+		`<div>pre</div><b><a href="1">itext1</a><a href="1">itext2</a></b><div>post</div>`,
+		`<div>pre</div><a r="1">itext1</a><a r="1">itext2</a><div>post</div>`)
 
 	HelperDiv("Tag {text} tag", t,
 		"<div>pre</div><b>itext</b><div>post</div>",
 		"<div>pre</div>itext<div>post</div>")
 
 	HelperDiv("Tag {tag} tag", t,
-		"<div>pre</div><b><a>itext</a></b><div>post</div>",
-		"<div>pre</div><a>itext</a><div>post</div>")
+		`<div>pre</div><b><a href="1">itext</a></b><div>post</div>`,
+		`<div>pre</div><a r="1">itext</a><div>post</div>`)
 
 	HelperDiv("One child", t,
 		" <b>text</b> <script>s</script>",
@@ -289,12 +289,12 @@ func TestFuncOpenNodeWithSpaces(t *testing.T) {
 		" text ")
 
 	HelperDiv("{tag} space text", t,
-		"<b><a>text</a></b> post",
-		"<a>text</a> post")
+		`<b><a href="1">text</a></b> post`,
+		`<a r="1">text</a> post`)
 
 	HelperDiv("text space {tag}", t,
-		"pre <b><a>text</a></b>",
-		"pre <a>text</a>")
+		`pre <b><a href="1">text</a></b>`,
+		`pre <a r="1">text</a>`)
 }
 
 func TestFuncOpenNodeWithSeparator(t *testing.T) {
@@ -307,44 +307,44 @@ func TestFuncOpenNodeWithSeparator(t *testing.T) {
 		" itext ")
 
 	HelperDiv("One tag inside", t,
-		"<abbr><a>itext</a></abbr>",
-		" <a>itext</a> ")
+		`<abbr><a href="1">itext</a></abbr>`,
+		` <a r="1">itext</a> `)
 
 	HelperDiv("Left text, right tag inside", t,
-		"<abbr>ipre<a>itext</a></abbr>",
-		" ipre<a>itext</a> ")
+		`<abbr>ipre<a href="1">itext</a></abbr>`,
+		` ipre<a r="1">itext</a> `)
 
 	HelperDiv("Left tag, right text inside", t,
-		"<abbr><a>itext</a>ipost</abbr>",
-		" <a>itext</a>ipost ")
+		`<abbr><a href="1">itext</a>ipost</abbr>`,
+		` <a r="1">itext</a>ipost `)
 
 	HelperDiv("Left text, right text inside", t,
-		"<abbr>ipre<a>itext</a>ipost</abbr>",
-		" ipre<a>itext</a>ipost ")
+		`<abbr>ipre<a href="1">itext</a>ipost</abbr>`,
+		` ipre<a r="1">itext</a>ipost `)
 
 	HelperDiv("Text {text text} text", t,
-		"pre<abbr>ipre<a>itext</a>ipost</abbr>post",
-		"pre ipre<a>itext</a>ipost post")
+		`pre<abbr>ipre<a href="1">itext</a>ipost</abbr>post`,
+		`pre ipre<a r="1">itext</a>ipost post`)
 
 	HelperDiv("Text {tag tag} text", t,
-		"pre<abbr><a>itext1</a><a>itext2</a></abbr>post",
-		"pre <a>itext1</a><a>itext2</a> post")
+		`pre<abbr><a href="1">itext1</a><a href="1">itext2</a></abbr>post`,
+		`pre <a r="1">itext1</a><a r="1">itext2</a> post`)
 
 	HelperDiv("Tag {text text} tag", t,
-		"<div>pre</div><abbr>ipre<a>itext</a>ipost</abbr><div>post</div>",
-		"<div>pre</div> ipre<a>itext</a>ipost <div>post</div>")
+		`<div>pre</div><abbr>ipre<a href="1">itext</a>ipost</abbr><div>post</div>`,
+		`<div>pre</div> ipre<a r="1">itext</a>ipost <div>post</div>`)
 
 	HelperDiv("Tag {tag tag} tag", t,
-		"<div>pre</div><abbr><a>itext1</a><a>itext2</a></abbr><div>post</div>",
-		"<div>pre</div> <a>itext1</a><a>itext2</a> <div>post</div>")
+		`<div>pre</div><abbr><a href="1">itext1</a><a href="1">itext2</a></abbr><div>post</div>`,
+		`<div>pre</div> <a r="1">itext1</a><a r="1">itext2</a> <div>post</div>`)
 
 	HelperDiv("Tag {text} tag", t,
 		"<div>pre</div><abbr>itext</abbr><div>post</div>",
 		"<div>pre</div> itext <div>post</div>")
 
 	HelperDiv("Tag {tag} tag", t,
-		"<div>pre</div><abbr><a>itext</a></abbr><div>post</div>",
-		"<div>pre</div> <a>itext</a> <div>post</div>")
+		`<div>pre</div><abbr><a href="1">itext</a></abbr><div>post</div>`,
+		`<div>pre</div> <a r="1">itext</a> <div>post</div>`)
 }
 
 func TestConvertTagToDiv(t *testing.T) {
@@ -378,11 +378,11 @@ func TestConvertTagToRef(t *testing.T) {
 		`<iframe src="page/banner.html" width="468" height="60" align="left">
 	    Ваш браузер не поддерживает встроенные фреймы!
 	</iframe>`,
-		` <a href="page/banner.html"></a> `)
+		` <a r="page/banner.html"></a> `)
 
 	HelperDiv("Convert tag iframe between text", t,
 		`pre<iframe src="page/banner.html"></iframe>post`,
-		`pre <a href="page/banner.html"></a> post`)
+		`pre <a r="page/banner.html"></a> post`)
 
 	HelperDiv("Convert tag iframe without src", t,
 		`pre<iframe width="468" height="60" align="left">text</iframe><div>post</div>`,
@@ -533,9 +533,9 @@ func TestLink(t *testing.T) {
 		`<link rel="next" href="next.html">
 <link rel="prev" href="prev.html">
 <link rel="previous" href="previous.html">`,
-		`<a href="next.html"></a>
-<a href="prev.html"></a>
-<a href="previous.html"></a>`)
+		`<a r="next.html"></a>
+<a r="prev.html"></a>
+<a r="previous.html"></a>`)
 }
 
 func TestMetaAndTitle(t *testing.T) {
@@ -572,5 +572,26 @@ func TestMetaAndTitle(t *testing.T) {
 		m := minificationCheck(in, out)
 		So(m.Title, ShouldEqual, "title title")
 	})
+}
 
+func TestTagA(t *testing.T) {
+	HelperBody("Convert with text", t,
+		`pre<a href="1">text</a>post`,
+		`pre<a r="1">text</a>post`)
+
+	HelperBody("Convert without text", t,
+		`pre<a href="1"></a>post`,
+		`pre<a r="1"></a>post`)
+
+	HelperBody("Withrout href", t,
+		`pre<a p="1">text</a>post`,
+		`pretextpost`)
+
+	HelperBody("Withrout href and without text", t,
+		`pre<a p="1"></a>post`,
+		`prepost`)
+
+	HelperBody("With tag inside", t,
+		`pre<a href="1">atext<b>text</b>apost</a>post`,
+		`pre<a r="1">atexttextapost</a>post`)
 }

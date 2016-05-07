@@ -231,13 +231,19 @@ func (m *Minification1) toDiv(node *html.Node) (*html.Node, error) {
 }
 
 func (m *Minification1) toRef(node *html.Node, ref string) (*html.Node, error) {
-	addText := node.DataAtom != atom.Link
+	addText := node.DataAtom != atom.Link && node.DataAtom != atom.A
+	removeChild := node.DataAtom != atom.A
 	node.DataAtom = atom.A
 	node.Data = "a"
-	node.FirstChild = nil
-	node.LastChild = nil
 	node.Attr = make([]html.Attribute, 1)
-	node.Attr[0] = html.Attribute{Key: "href", Val: ref}
+	node.Attr[0] = html.Attribute{Key: "r", Val: ref}
+
+	if removeChild {
+		node.FirstChild = nil
+		node.LastChild = nil
+	} else {
+		return m.parseChildren(node)
+	}
 
 	if addText {
 		prev, next := node.PrevSibling, node.NextSibling
@@ -262,7 +268,12 @@ func (m *Minification1) parseChildren(node *html.Node) (*html.Node, error) {
 
 func (m *Minification1) parseElements(node *html.Node) (*html.Node, error) {
 	switch node.DataAtom {
-	// case atom.A:
+	case atom.A:
+		href := m.getAttrVal(node, "href")
+		if href != "" {
+			return m.toRef(node, href)
+		}
+		return m.openNode(node, false)
 	case atom.Abbr:
 		title := m.getAttrVal(node, "title")
 		if title != "" {
