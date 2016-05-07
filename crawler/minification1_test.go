@@ -536,6 +536,12 @@ func TestLink(t *testing.T) {
 		`<a r="next.html"></a>
 <a r="prev.html"></a>
 <a r="previous.html"></a>`)
+
+	Convey("Move tags a to body", t, func() {
+		in := `<html><head><a href="1">text</a></head><body><div>text</div></body></html>`
+		out := `<html><head></head><body><a r="1">text</a><div>text</div></body></html>`
+		minificationCheck(in, out)
+	})
 }
 
 func TestMetaAndTitle(t *testing.T) {
