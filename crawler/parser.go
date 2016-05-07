@@ -11,27 +11,33 @@ import (
 	"golang.org/x/net/html/atom"
 )
 
+var (
+	// ErrParserUnexpectedNodeType - found unexpected node type
+	ErrParserUnexpectedNodeType = errors.New("parser.HTMLParser.parseNode: unexpected node type")
+)
+
 // HTMLParser - find metatags and links on page
 type HTMLParser struct {
 	// [URL]hostname
 	URLs          map[string]string
 	baseURL       *url.URL
 	MetaTagIndex  bool
-	MetaTagFollow bool
+	metaTagFollow bool
+	noIndexLvl    int
 }
 
 func (result *HTMLParser) getAttrVal(node *html.Node, attrName string) string {
 	for _, attr := range node.Attr {
 		if attr.Key == attrName {
-			return attr.Val
+			return strings.ToLower(attr.Val)
 		}
 	}
 
 	return ""
 }
 
-func (result *HTMLParser) getAttrValLower(node *html.Node, attrName string) string {
-	return strings.ToLower(result.getAttrVal(node, attrName))
+func (result *HTMLParser) isEnableLinkParse() bool {
+	return result.metaTagFollow && result.noIndexLvl == 0
 }
 
 func (result *HTMLParser) processLink(link string) {
@@ -53,66 +59,74 @@ func (result *HTMLParser) processLink(link string) {
 	}
 }
 
-func (result *HTMLParser) parseChildren(node *html.Node) {
+func (result *HTMLParser) parseChildren(node *html.Node) error {
 	for it := node.FirstChild; it != nil; it = it.NextSibling {
-		result.parseNode(it)
+		err := result.parseNode(it)
+		if err != nil {
+			return err
+		}
 	}
+
+	return nil
 }
 
-func (result *HTMLParser) parseElements(node *html.Node) {
+func (result *HTMLParser) parseElements(node *html.Node) error {
 	switch node.DataAtom {
 	case atom.A, atom.Area:
-		if result.MetaTagFollow {
-			rel := result.getAttrValLower(node, "rel")
+		if result.isEnableLinkParse() {
+			rel := result.getAttrVal(node, "rel")
 			if rel != "nofollow" {
 				result.processLink(result.getAttrVal(node, "href"))
 			}
 		}
 	case atom.Link:
-		rel := result.getAttrValLower(node, "rel")
-		if rel == "next" || rel == "prev" || rel == "previous" {
-			result.processLink(result.getAttrVal(node, "href"))
+		if result.isEnableLinkParse() {
+			rel := result.getAttrVal(node, "rel")
+			if rel == "next" || rel == "prev" || rel == "previous" {
+				result.processLink(result.getAttrVal(node, "href"))
+			}
 		}
 	case atom.Frame, atom.Iframe:
-		if result.MetaTagFollow {
+		if result.isEnableLinkParse() {
 			result.processLink(result.getAttrVal(node, "src"))
 		}
 	case atom.Meta:
-		name := result.getAttrValLower(node, "name")
+		name := result.getAttrVal(node, "name")
 		if name == "robots" || name == "googlebot" {
-			content := result.getAttrValLower(node, "content")
+			content := result.getAttrVal(node, "content")
 			if strings.Contains(content, "noindex") {
 				result.MetaTagIndex = false
 			}
 			if strings.Contains(content, "nofollow") {
-				result.MetaTagFollow = false
+				result.metaTagFollow = false
 				result.URLs = make(map[string]string)
 			}
 			if strings.Contains(content, "none") {
 				result.MetaTagIndex = false
-				result.MetaTagFollow = false
+				result.metaTagFollow = false
 				result.URLs = make(map[string]string)
 			}
 		}
+	default:
+		if strings.ToLower(node.Data) == "noindex" {
+			result.noIndexLvl++
+			err := result.parseChildren(node)
+			result.noIndexLvl--
+			return err
+		}
 	}
 
-	result.parseChildren(node)
+	return result.parseChildren(node)
 }
 
 func (result *HTMLParser) parseNode(node *html.Node) error {
 	switch node.Type {
-	case html.ErrorNode:
-		return errors.New("ErrorNode in html")
-	case html.DocumentNode:
-		result.parseChildren(node)
-		return nil
 	case html.ElementNode:
-		result.parseElements(node)
-		return nil
-	case html.CommentNode, html.TextNode, html.DoctypeNode: // skip
+		return result.parseElements(node)
+	case html.DocumentNode, html.CommentNode, html.TextNode, html.DoctypeNode: // skip
 		return nil
 	default:
-		return errors.New("Unknown node type on html")
+		return ErrParserUnexpectedNodeType
 	}
 }
 
@@ -121,7 +135,8 @@ func (result *HTMLParser) Parse(body []byte, baseURL *url.URL) error {
 	result.URLs = make(map[string]string)
 	result.baseURL = baseURL
 	result.MetaTagIndex = true
-	result.MetaTagFollow = true
+	result.metaTagFollow = true
+	result.noIndexLvl = 0
 	node, err := html.Parse(bytes.NewReader(body))
 	if err != nil {
 		return err
