@@ -15,12 +15,11 @@ var (
 	ErrMinificationUnexpectedNodeType = errors.New("minification1.minification1.parseNode: unexpected node type")
 )
 
-// Minification1 - result html minification
-type Minification1 struct {
-	Title string
+// minification1 - result html minification
+type minification1 struct {
 }
 
-func (m *Minification1) getAttrVal(node *html.Node, attrName string) string {
+func (m *minification1) getAttrVal(node *html.Node, attrName string) string {
 	for _, attr := range node.Attr {
 		if attr.Key == attrName {
 			return strings.ToLower(attr.Val)
@@ -30,7 +29,7 @@ func (m *Minification1) getAttrVal(node *html.Node, attrName string) string {
 	return ""
 }
 
-func (m *Minification1) removeAttr(node *html.Node) {
+func (m *minification1) removeAttr(node *html.Node) {
 	lenAttr := len(node.Attr)
 	if lenAttr != 0 {
 		attr := node.Attr
@@ -80,7 +79,7 @@ func (m *Minification1) removeAttr(node *html.Node) {
 	}
 }
 
-func (m *Minification1) mergeNodes(parent, prev, next *html.Node, addSeparator bool) *html.Node {
+func (m *minification1) mergeNodes(parent, prev, next *html.Node, addSeparator bool) *html.Node {
 	var result *html.Node
 	prevText := prev != nil && prev.Type == html.TextNode
 	nextText := next != nil && next.Type == html.TextNode
@@ -154,7 +153,7 @@ func (m *Minification1) mergeNodes(parent, prev, next *html.Node, addSeparator b
 	return result
 }
 
-func (m *Minification1) AddChildTextNodeToBegining(node *html.Node, text string) {
+func (m *minification1) addChildTextNodeToBegining(node *html.Node, text string) {
 	newNode := &html.Node{
 		Parent:      nil,
 		FirstChild:  nil,
@@ -171,7 +170,7 @@ func (m *Minification1) AddChildTextNodeToBegining(node *html.Node, text string)
 	}
 }
 
-func (m *Minification1) removeNode(node *html.Node, addSeparator bool) (*html.Node, error) {
+func (m *minification1) removeNode(node *html.Node, addSeparator bool) (*html.Node, error) {
 	prev, next, parent := node.PrevSibling, node.NextSibling, node.Parent
 	parent.RemoveChild(node)
 	result := m.mergeNodes(parent, prev, next, addSeparator)
@@ -179,7 +178,7 @@ func (m *Minification1) removeNode(node *html.Node, addSeparator bool) (*html.No
 	return result, nil
 }
 
-func (m *Minification1) openNode(node *html.Node, addSeparator bool) (*html.Node, error) {
+func (m *minification1) openNode(node *html.Node, addSeparator bool) (*html.Node, error) {
 	parent := node.Parent
 	first, last := node.FirstChild, node.LastChild
 	prev, next := node.PrevSibling, node.NextSibling
@@ -222,7 +221,7 @@ func (m *Minification1) openNode(node *html.Node, addSeparator bool) (*html.Node
 	return result, nil
 }
 
-func (m *Minification1) toDiv(node *html.Node) (*html.Node, error) {
+func (m *minification1) toDiv(node *html.Node) (*html.Node, error) {
 	node.DataAtom = atom.Div
 	node.Data = "div"
 	node.Attr = make([]html.Attribute, 0)
@@ -230,7 +229,7 @@ func (m *Minification1) toDiv(node *html.Node) (*html.Node, error) {
 	return m.parseChildren(node)
 }
 
-func (m *Minification1) toRef(node *html.Node, ref string) (*html.Node, error) {
+func (m *minification1) toRef(node *html.Node, ref string) (*html.Node, error) {
 	addText := node.DataAtom != atom.Link && node.DataAtom != atom.A
 	removeChild := node.DataAtom != atom.A
 	node.DataAtom = atom.A
@@ -254,7 +253,7 @@ func (m *Minification1) toRef(node *html.Node, ref string) (*html.Node, error) {
 	return node.NextSibling, nil
 }
 
-func (m *Minification1) parseChildren(node *html.Node) (*html.Node, error) {
+func (m *minification1) parseChildren(node *html.Node) (*html.Node, error) {
 	var err error
 	for it := node.FirstChild; it != nil; {
 		it, err = m.parseNode(it)
@@ -266,7 +265,7 @@ func (m *Minification1) parseChildren(node *html.Node) (*html.Node, error) {
 	return node.NextSibling, nil
 }
 
-func (m *Minification1) parseElements(node *html.Node) (*html.Node, error) {
+func (m *minification1) parseElements(node *html.Node) (*html.Node, error) {
 	switch node.DataAtom {
 	case atom.A:
 		href := m.getAttrVal(node, "href")
@@ -277,7 +276,7 @@ func (m *Minification1) parseElements(node *html.Node) (*html.Node, error) {
 	case atom.Abbr:
 		title := m.getAttrVal(node, "title")
 		if title != "" {
-			m.AddChildTextNodeToBegining(node, " "+title+" ")
+			m.addChildTextNodeToBegining(node, " "+title+" ")
 		}
 		return m.openNode(node, true)
 	// case atom.Acronym:
@@ -408,13 +407,6 @@ func (m *Minification1) parseElements(node *html.Node) (*html.Node, error) {
 	// case atom.Menu:
 	// case atom.Menuitem:
 	case atom.Meta:
-		name := m.getAttrVal(node, "name")
-		if name == "title" {
-			content := strings.TrimSpace(m.getAttrVal(node, "content"))
-			if content != "" && m.Title == "" {
-				m.Title = content
-			}
-		}
 		return m.removeNode(node, false)
 	// case atom.Meter:
 	// case atom.Multicol:
@@ -494,13 +486,6 @@ func (m *Minification1) parseElements(node *html.Node) (*html.Node, error) {
 	case atom.Time:
 		return m.openNode(node, false)
 	case atom.Title:
-		child := node.FirstChild
-		if child != nil && child.Type == html.TextNode {
-			title := strings.TrimSpace(child.Data)
-			if title != "" {
-				m.Title = title
-			}
-		}
 		return m.removeNode(node, false)
 	case atom.Tr:
 		return m.openNode(node, true)
@@ -525,7 +510,7 @@ func (m *Minification1) parseElements(node *html.Node) (*html.Node, error) {
 	return m.parseChildren(node)
 }
 
-func (m *Minification1) parseNode(node *html.Node) (*html.Node, error) {
+func (m *minification1) parseNode(node *html.Node) (*html.Node, error) {
 	switch node.Type {
 	case html.DocumentNode: // +children -attr (first node)
 		return m.parseChildren(node)
@@ -543,8 +528,8 @@ func (m *Minification1) parseNode(node *html.Node) (*html.Node, error) {
 }
 
 // RunMinification1 - start minification node
-func RunMinification1(node *html.Node) (*Minification1, error) {
-	m := new(Minification1)
+func RunMinification1(node *html.Node) error {
+	m := minification1{}
 	_, err := m.parseNode(node)
-	return m, err
+	return err
 }
