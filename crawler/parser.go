@@ -21,6 +21,7 @@ type HTMLParser struct {
 	// [URL]hostname
 	URLs          map[string]string
 	baseURL       *url.URL
+	Title         string
 	MetaTagIndex  bool
 	metaTagFollow bool
 	noIndexLvl    int
@@ -106,6 +107,20 @@ func (result *HTMLParser) parseElements(node *html.Node) error {
 				result.metaTagFollow = false
 				result.URLs = make(map[string]string)
 			}
+		} else if name == "title" {
+			content := strings.TrimSpace(result.getAttrVal(node, "content"))
+			if content != "" && result.Title == "" {
+				result.Title = content
+			}
+		}
+
+	case atom.Title:
+		child := node.FirstChild
+		if child != nil && child.Type == html.TextNode {
+			title := strings.TrimSpace(child.Data)
+			if title != "" {
+				result.Title = title
+			}
 		}
 	default:
 		if strings.ToLower(node.Data) == "noindex" {
@@ -120,6 +135,9 @@ func (result *HTMLParser) parseElements(node *html.Node) error {
 }
 
 func (result *HTMLParser) parseNode(node *html.Node) error {
+	if !result.MetaTagIndex {
+		return nil
+	}
 	switch node.Type {
 	case html.ElementNode:
 		return result.parseElements(node)
@@ -134,6 +152,7 @@ func (result *HTMLParser) parseNode(node *html.Node) error {
 func (result *HTMLParser) Parse(body []byte, baseURL *url.URL) error {
 	result.URLs = make(map[string]string)
 	result.baseURL = baseURL
+	result.Title = ""
 	result.MetaTagIndex = true
 	result.metaTagFollow = true
 	result.noIndexLvl = 0
@@ -142,7 +161,20 @@ func (result *HTMLParser) Parse(body []byte, baseURL *url.URL) error {
 		return err
 	}
 
-	return result.parseNode(node)
+	err = result.parseNode(node)
+	if err != nil {
+		return err
+	}
+
+	if result.Title == "" {
+		result.Title = baseURL.String()
+	}
+	runeTitle := []rune(result.Title)
+	if len(runeTitle) > 100 {
+		result.Title = string(runeTitle[0:97]) + "..."
+	}
+
+	return nil
 }
 
 // IsHTML - check is content has html tag

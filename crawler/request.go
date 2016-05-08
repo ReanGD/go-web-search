@@ -145,8 +145,9 @@ func (r *request) get(u *url.URL) error {
 	r.urls = parser.URLs
 	r.meta.State = content.StateSuccess
 	r.meta.Content = content.Content{
-		Hash: string(hash[:]),
-		Body: content.Compressed{Data: body}}
+		Hash:  string(hash[:]),
+		Body:  content.Compressed{Data: body},
+		Title: parser.Title}
 
 	return nil
 }
