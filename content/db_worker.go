@@ -13,7 +13,8 @@ import (
 type PageData struct {
 	MetaItem *Meta
 	// map[URL]HostName
-	URLs map[string]string
+	URLs      map[string]string
+	ParentURL int64
 }
 
 // DBWorker - worker for save data to db
@@ -22,44 +23,89 @@ type DBWorker struct {
 	ChDB <-chan *PageData
 }
 
-func (w *DBWorker) markURLLoaded(tr *DBrw, urlStr string, hostID sql.NullInt64) (sql.NullInt64, error) {
+func (w *DBWorker) getURLIDByStr(tr *DBrw, urlStr string) (sql.NullInt64, error) {
 	var urlRec URL
-	parent := sql.NullInt64{Valid: false}
-	err := tr.Where("id = ?", urlStr).First(&urlRec).Error
+	err := tr.Where("url = ?", urlStr).First(&urlRec).Error
 	if err == gorm.ErrRecordNotFound {
-		newItem := URL{
-			ID:     urlStr,
-			Parent: parent,
+		return sql.NullInt64{Valid: false}, nil
+	} else if err != nil {
+		return sql.NullInt64{Valid: false}, fmt.Errorf("find in 'URL' table for URL %s, message: %s", urlStr, err)
+	} else {
+		return sql.NullInt64{Int64: urlRec.ID, Valid: true}, nil
+	}
+}
+
+func (w *DBWorker) markURLLoaded(tr *DBrw, id sql.NullInt64, urlStr string, hostID sql.NullInt64) (int64, error) {
+	var errID int64
+	var urlRec URL
+	if !id.Valid {
+		urlRec = URL{
+			URL:    urlStr,
 			HostID: hostID,
 			Loaded: true}
-		err = tr.Create(&newItem).Error
+		err := tr.Create(&urlRec).Error
 		if err != nil {
-			return parent, fmt.Errorf("add new 'URL' record for URL %s, message: %s", urlStr, err)
+			return errID, fmt.Errorf("add new 'URL' record for URL %s, message: %s", urlStr, err)
+		}
+		return urlRec.ID, nil
+	}
+	err := tr.Model(&urlRec).Where("id = ?", id.Int64).Update("Loaded", true).Error
+	if err != nil {
+		return errID, fmt.Errorf("update 'URL' table with URL %s, message: %s", urlStr, err)
+	}
+	return id.Int64, nil
+}
+
+func (w *DBWorker) insertURLIfNotExists(tr *DBrw, urlStr string, hostName string) (int64, error) {
+	var rec URL
+	err := tr.Where("url = ?", urlStr).First(&rec).Error
+	if err == gorm.ErrRecordNotFound {
+		rec = URL{URL: urlStr, HostID: tr.GetHostID(hostName), Loaded: false}
+		err = tr.Create(&rec).Error
+		if err != nil {
+			return rec.ID, fmt.Errorf("add new 'URL' record for URL %s, message: %s", urlStr, err)
 		}
 	} else if err != nil {
-		return parent, fmt.Errorf("find in 'URL' table for URL %s, message: %s", urlStr, err)
-	} else if urlRec.Loaded == false {
-		err = tr.Model(&urlRec).Update("Loaded", true).Error
-		if err != nil {
-			return parent, fmt.Errorf("update 'URL' table with URL %s, message: %s", urlStr, err)
-		}
-	} else {
-		// nothing to update
+		return rec.ID, fmt.Errorf("find in 'URL' table for URL %s, message: %s", urlStr, err)
 	}
 
-	return urlRec.Parent, nil
+	return rec.ID, nil
+}
+
+func (w *DBWorker) insertLinkIfNotExists(tr *DBrw, master int64, slave int64) error {
+	var rec Link
+	err := tr.Where("master = ? and slave = ?", master, slave).First(&rec).Error
+	if err == gorm.ErrRecordNotFound {
+		rec = Link{Master: master, Slave: slave}
+		err = tr.Create(&rec).Error
+		if err != nil {
+			return fmt.Errorf("add new 'Link' record for master %d and slave %d, message: %s",
+				uint64(master), uint64(slave), err)
+		}
+	} else if err != nil {
+		return fmt.Errorf("find in 'Link' table for master %d and slave %d, message: %s",
+			uint64(master), uint64(slave), err)
+	}
+
+	return nil
 }
 
 func (w *DBWorker) saveMeta(tr *DBrw, meta *Meta, origin sql.NullInt64) error {
 	hostID := tr.GetHostID(meta.HostName)
-	urlStr := meta.URL
+	urlStr := meta.URLForResolve
+	urlNullID, err := w.getURLIDByStr(tr, urlStr)
+	if err != nil {
+		return err
+	}
+	urlID, err := w.markURLLoaded(tr, urlNullID, urlStr, hostID)
+	if err != nil {
+		return err
+	}
+
 	var metaRec Meta
-	err := tr.Where("url = ?", urlStr).First(&metaRec).Error
+	err = tr.Where("url = ?", urlID).First(&metaRec).Error
 	if err == gorm.ErrRecordNotFound {
-		meta.Parent, err = w.markURLLoaded(tr, urlStr, hostID)
-		if err != nil {
-			return err
-		}
+		meta.URL = urlID
 		if !hostID.Valid {
 			if origin.Valid {
 				meta.State = StateDublicate
@@ -71,7 +117,7 @@ func (w *DBWorker) saveMeta(tr *DBrw, meta *Meta, origin sql.NullInt64) error {
 		if origin.Valid {
 			meta.Origin = origin
 		} else {
-			meta.Origin, err = tr.GetOrigin(meta)
+			meta.Origin, err = tr.FindOrigin(meta)
 			if err != nil {
 				return err
 			}
@@ -97,7 +143,6 @@ func (w *DBWorker) saveMeta(tr *DBrw, meta *Meta, origin sql.NullInt64) error {
 	} else if err != nil {
 		return fmt.Errorf("find in 'Meta' table for URL %s, message: %s", urlStr, err)
 	} else {
-		_, err = w.markURLLoaded(tr, urlStr, hostID)
 		if meta.RedirectReferer != nil {
 			err = w.saveMeta(tr, meta.RedirectReferer, sql.NullInt64{Int64: metaRec.ID, Valid: true})
 			if err != nil {
@@ -115,20 +160,15 @@ func (w *DBWorker) savePageData(tr *DBrw, data *PageData) error {
 		return err
 	}
 
-	parent := sql.NullInt64{Int64: data.MetaItem.ID, Valid: true}
+	var id int64
 	for urlStr, hostName := range data.URLs {
-		var dbItem URL
-		err = tr.Where("id = ?", urlStr).First(&dbItem).Error
-		if err == gorm.ErrRecordNotFound {
-			newItem := &URL{ID: urlStr, Parent: parent, HostID: tr.GetHostID(hostName), Loaded: false}
-			err = tr.Create(&newItem).Error
-			if err != nil {
-				return fmt.Errorf("add new 'URL' record for URL %s, message: %s", urlStr, err)
-			}
-		} else if err != nil {
-			return fmt.Errorf("find in 'URL' table for URL %s, message: %s", urlStr, err)
-		} else {
-			// nothing to update
+		id, err = w.insertURLIfNotExists(tr, urlStr, hostName)
+		if err != nil {
+			return err
+		}
+		err = w.insertLinkIfNotExists(tr, data.ParentURL, id)
+		if err != nil {
+			return err
 		}
 	}
 

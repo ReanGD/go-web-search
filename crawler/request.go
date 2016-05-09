@@ -31,7 +31,7 @@ func (r *request) get(u *url.URL) error {
 	urlStr := u.String()
 	r.urls = make(map[string]string)
 	r.meta = &content.Meta{
-		URL:             urlStr,
+		URLForResolve:   urlStr,
 		RedirectReferer: nil,
 		RedirectCnt:     0,
 		HostName:        NormalizeHostName(u.Host),
@@ -66,8 +66,8 @@ func (r *request) get(u *url.URL) error {
 		return err
 	}
 	defer response.Body.Close()
-	if r.meta.URL != urlStr {
-		urlStr = urlStr + "->" + r.meta.URL
+	if r.meta.URLForResolve != urlStr {
+		urlStr = urlStr + "->" + r.meta.URLForResolve
 	}
 
 	r.meta.StatusCode = sql.NullInt64{Int64: int64(response.StatusCode), Valid: true}
@@ -179,7 +179,7 @@ func (r *request) Init() {
 
 		copyURL := *req.URL
 		r.meta = &content.Meta{
-			URL:             NormalizeURL(&copyURL),
+			URLForResolve:   NormalizeURL(&copyURL),
 			RedirectReferer: r.meta,
 			RedirectCnt:     0,
 			HostName:        NormalizeHostName(req.URL.Host),

@@ -52,27 +52,31 @@ type Content struct {
 }
 
 // Meta - meta information about processed URL
-// Parent - first parent URL
 // Origin - link to origin document (for State == CtStateDublicate)
 type Meta struct {
 	ID              int64         `gorm:"primary_key;not null"`
-	URL             string        `gorm:"size:2048;not null;unique_index"`
+	URL             int64         `gorm:"type:integer REFERENCES url(id);unique_index;not null"`
 	State           State         `gorm:"not null"`
-	Parent          sql.NullInt64 `gorm:"type:integer REFERENCES meta(id)"`
 	Origin          sql.NullInt64 `gorm:"type:integer REFERENCES meta(id)"`
 	ContentID       sql.NullInt64 `gorm:"type:integer REFERENCES content(id)"`
 	RedirectReferer *Meta         `sql:"-"`
 	HostName        string        `sql:"-"`
+	URLForResolve   string        `sql:"-"`
 	RedirectCnt     int
 	Content         Content
 	StatusCode      sql.NullInt64
 }
 
+// Link - links between pages
+type Link struct {
+	Master int64 `gorm:"type:integer REFERENCES url(id);index;not null"`
+	Slave  int64 `gorm:"type:integer REFERENCES url(id);index;not null"`
+}
+
 // URL - struct for save all URLs in db
-// Parent - first parent URL
 type URL struct {
-	ID     string        `gorm:"size:2048;primary_key;not null"`
-	Parent sql.NullInt64 `gorm:"type:integer REFERENCES meta(id)"`
+	ID     int64         `gorm:"primary_key;not null"`
+	URL    string        `gorm:"size:2048;not null;unique_index"`
 	HostID sql.NullInt64 `gorm:"type:integer REFERENCES host(id);index"`
 	Loaded bool          `gorm:"not null;index"`
 }

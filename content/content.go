@@ -50,7 +50,7 @@ func GetDBrw() (*DBrw, error) {
 	db.SetLogger(defaultLogger)
 	db.LogMode(false)
 
-	err = createTables(db, &Host{}, &Content{}, &Meta{}, &URL{})
+	err = createTables(db, &Host{}, &Content{}, &Meta{}, &Link{}, &URL{})
 	if err != nil {
 		errClose := db.Close()
 		if errClose != nil {

@@ -59,8 +59,7 @@ func (db *DBrw) AddHost(host *Host, baseURL string) error {
 		err = tr.Where("id = ?", baseURL).First(&dbItem).Error
 		if err == gorm.ErrRecordNotFound {
 			newItem := &URL{
-				ID:     baseURL,
-				Parent: sql.NullInt64{Valid: false},
+				URL:    baseURL,
 				HostID: sql.NullInt64{Int64: host.ID, Valid: true},
 				Loaded: false}
 			err = tr.Create(newItem).Error
@@ -79,29 +78,23 @@ func (db *DBrw) AddHost(host *Host, baseURL string) error {
 }
 
 // GetNewURLs - get URLs for downloads for host
-func (db *DBrw) GetNewURLs(hostName string, cnt int) ([]string, error) {
-	var result []string
+func (db *DBrw) GetNewURLs(hostName string, cnt int) ([]URL, error) {
+	var urls []URL
 	host, exists := db.hosts[hostName]
 	if !exists {
-		return result, fmt.Errorf("host name %s not found in db", hostName)
+		return urls, fmt.Errorf("host name %s not found in db", hostName)
 	}
 
-	var urls []URL
 	err := db.Where("host_id = ? and loaded = ?", host.ID, false).Limit(cnt).Find(&urls).Error
 	if err != nil {
-		return result, fmt.Errorf("find not loaded pages in 'URL' table for host %s, message: %s", hostName, err)
+		return urls, fmt.Errorf("find not loaded pages in 'URL' table for host %s, message: %s", hostName, err)
 	}
 
-	result = make([]string, len(urls))
-	for i := 0; i != len(urls); i++ {
-		result[i] = urls[i].ID
-	}
-
-	return result, nil
+	return urls, nil
 }
 
-// GetOrigin - get origin row id in table 'Meta'
-func (db *DBrw) GetOrigin(meta *Meta) (sql.NullInt64, error) {
+// FindOrigin - get origin row id in table 'Meta'
+func (db *DBrw) FindOrigin(meta *Meta) (sql.NullInt64, error) {
 	null := sql.NullInt64{Valid: false}
 	if meta.Content.Body.IsNull() {
 		return null, nil

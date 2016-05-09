@@ -79,6 +79,26 @@ func (m *Minification) parseChildren(node *html.Node) error {
 	return nil
 }
 
+func (m *Minification) show(node *html.Node) {
+	if !m.ShowEnable {
+		return
+	}
+	switch node.Type {
+	case html.DocumentNode: // +children -attr (first node)
+		fmt.Println(strings.Repeat(" ", m.lvl), "DocumentNode:", node.Data)
+	case html.ElementNode: // +children +attr
+		fmt.Println(strings.Repeat(" ", m.lvl), "ElementNode:", node.Data)
+	case html.TextNode: // -children -attr
+		fmt.Println(strings.Repeat(" ", m.lvl), "TextNode:\"", node.Data, "\"")
+	case html.DoctypeNode: // ignore
+		fmt.Println(strings.Repeat(" ", m.lvl), "DoctypeNode:", node.Data)
+	case html.CommentNode: // remove
+		fmt.Println(strings.Repeat(" ", m.lvl), "CommentNode:", node.Data)
+	default:
+		fmt.Println(strings.Repeat(" ", m.lvl), "UnexpectedNode:", node.Data)
+	}
+}
+
 func (m *Minification) parseElements(node *html.Node) error {
 	// if node.DataAtom == atom.Image {
 	// ln := len(node.Attr)
@@ -146,6 +166,7 @@ func (m *Minification) parseElements(node *html.Node) error {
 		}
 	}
 
+	// if node.Data == "noindex" {
 	if node.DataAtom == m.RenderTag {
 		buf, err := renderNode(node)
 		// buf, err := renderNode(node.Parent)
@@ -167,26 +188,6 @@ func (m *Minification) parseElements(node *html.Node) error {
 	// }
 
 	return m.parseChildren(node)
-}
-
-func (m *Minification) show(node *html.Node) {
-	if !m.ShowEnable {
-		return
-	}
-	switch node.Type {
-	case html.DocumentNode: // +children -attr (first node)
-		fmt.Println(strings.Repeat(" ", m.lvl), "DocumentNode:", node.Data)
-	case html.ElementNode: // +children +attr
-		fmt.Println(strings.Repeat(" ", m.lvl), "ElementNode:", node.Data)
-	case html.TextNode: // -children -attr
-		fmt.Println(strings.Repeat(" ", m.lvl), "TextNode:\"", node.Data, "\"")
-	case html.DoctypeNode: // ignore
-		fmt.Println(strings.Repeat(" ", m.lvl), "DoctypeNode:", node.Data)
-	case html.CommentNode: // remove
-		fmt.Println(strings.Repeat(" ", m.lvl), "CommentNode:", node.Data)
-	default:
-		fmt.Println(strings.Repeat(" ", m.lvl), "UnexpectedNode:", node.Data)
-	}
 }
 
 // Run - start minification node
@@ -249,21 +250,21 @@ func test() error {
 	}
 	defer ClearClose(db)
 	var contents []content.Content
-	// err = db.Limit(200).Find(&contents).Error
-	// err = db.Find(&contents).Error
-	err = db.Where("id = 169", 7).Find(&contents).Error
+	// err = db.Limit(500).Find(&contents).Error
+	err = db.Find(&contents).Error
+	// err = db.Where("id = 169", 7).Find(&contents).Error
 	if err != nil {
 		return err
 	}
 	CountCompressStatistic := false
 	newLength := false
 	statisticAttr := false
-	statisticTag := false
+	statisticTag := true
 	localMinification := Minification{
 		ShowEnable: false,
 		Tags:       make(map[string]int),
 		Attrs:      make(map[string]int),
-		RenderTag:  atom.Style}
+		RenderTag:  atom.B}
 
 	var oldLen uint64
 	var oldLenCompress uint64
@@ -272,10 +273,10 @@ func test() error {
 	for _, rec := range contents {
 		gID = rec.ID
 		body := rec.Body.Data
-		body = []byte(`<html><head></head><body>
-<b>М</b>
-<script>S</script>
-</body></html>`)
+		// body = []byte(`<html><head><a href="https://xakep.ru"/></head><body>
+		// <b>М</b>
+		// <script>S</script>
+		// </body></html>`)
 		oldLen += uint64(len(body))
 		if CountCompressStatistic {
 			bodyCompress, err := rec.Body.Compress()
@@ -294,11 +295,11 @@ func test() error {
 			return err
 		}
 
-		buf, err := renderNode(node)
-		if err != nil {
-			return err
-		}
-		fmt.Println(string(buf))
+		// buf, err := renderNode(node)
+		// if err != nil {
+		// 	return err
+		// }
+		// fmt.Println(string(buf))
 
 		err = localMinification.Run(node)
 		if err != nil {
@@ -368,8 +369,8 @@ func main() {
 
 	// runtime.GOMAXPROCS(runtime.NumCPU())
 
-	// err = run()
-	err = test()
+	err = run()
+	// err = test()
 	if err != nil {
 		fmt.Printf("%s", err)
 	}

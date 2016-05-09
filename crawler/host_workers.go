@@ -12,7 +12,7 @@ import (
 
 type hostWorker struct {
 	Request *request
-	Tasks   []string
+	Tasks   []content.URL
 	ChDB    chan<- *content.PageData
 }
 
@@ -22,12 +22,13 @@ func (w *hostWorker) Start(wgParent *sync.WaitGroup) {
 
 	cnt := len(w.Tasks)
 	for i := 0; i != cnt; i++ {
-		parsed, err := url.Parse(w.Tasks[i])
+		parsed, err := url.Parse(w.Tasks[i].URL)
 		if err != nil {
-			log.Printf("ERROR: Worker query. Parse URL %s, message: %s", w.Tasks[i], err)
+			log.Printf("ERROR: Worker query. Parse URL %s, message: %s", w.Tasks[i].URL, err)
 			continue
 		}
 		result := w.Request.Process(parsed)
+		result.ParentURL = w.Tasks[i].ID
 		w.ChDB <- result
 		fmt.Printf(".")
 		if result.MetaItem.NeedWaitAfterRequest() && i != cnt-1 {
