@@ -54,10 +54,9 @@ type Content struct {
 // Meta - meta information about processed URL
 // Origin - link to origin document (for State == CtStateDublicate)
 type Meta struct {
-	ID              int64         `gorm:"primary_key;not null"`
 	URL             int64         `gorm:"type:integer REFERENCES url(id);unique_index;not null"`
 	State           State         `gorm:"not null"`
-	Origin          sql.NullInt64 `gorm:"type:integer REFERENCES meta(id)"`
+	Origin          sql.NullInt64 `gorm:"type:integer REFERENCES url(id)"`
 	ContentID       sql.NullInt64 `gorm:"type:integer REFERENCES content(id)"`
 	RedirectReferer *Meta         `sql:"-"`
 	HostName        string        `sql:"-"`

@@ -23,7 +23,7 @@ func createTables(db *gorm.DB, values ...interface{}) error {
 }
 
 type hashVal struct {
-	MetaID    int64
+	BaseID    int64
 	ContentID int64
 }
 
@@ -70,13 +70,13 @@ func GetDBrw() (*DBrw, error) {
 	}
 
 	type hashResult struct {
-		MetaID    int64
+		BaseID    int64
 		ContentID int64
 		Hash      string
 	}
 
 	var hashResults []hashResult
-	sql := "SELECT meta.id as meta_id, content.id as content_id, content.hash as hash"
+	sql := "SELECT meta.url as base_id, content.id as content_id, content.hash as hash"
 	sql += " FROM meta JOIN content ON content.id == meta.content_id"
 	sql += " WHERE meta.content_id IS NOT NULL AND meta.state IN (?, ?)"
 	err = db.Raw(sql, StateSuccess, StateParseError).Scan(&hashResults).Error
@@ -99,7 +99,7 @@ func GetDBrw() (*DBrw, error) {
 
 	for _, item := range hashResults {
 		hash := item.Hash
-		item := hashVal{MetaID: item.MetaID, ContentID: item.ContentID}
+		item := hashVal{BaseID: item.BaseID, ContentID: item.ContentID}
 		_, exists := result.hashes[hash]
 		if exists {
 			result.hashes[hash] = append(result.hashes[hash], item)

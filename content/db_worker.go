@@ -90,7 +90,7 @@ func (w *DBWorker) insertLinkIfNotExists(tr *DBrw, master int64, slave int64) er
 	return nil
 }
 
-func (w *DBWorker) saveMeta(tr *DBrw, meta *Meta, origin sql.NullInt64, originURLID sql.NullInt64) error {
+func (w *DBWorker) saveMeta(tr *DBrw, meta *Meta, origin sql.NullInt64) error {
 	hostID := tr.GetHostID(meta.HostName)
 	urlStr := meta.URLForResolve
 	urlNullID, err := w.getURLIDByStr(tr, urlStr)
@@ -101,8 +101,8 @@ func (w *DBWorker) saveMeta(tr *DBrw, meta *Meta, origin sql.NullInt64, originUR
 	if err != nil {
 		return err
 	}
-	if originURLID.Valid {
-		err = w.insertLinkIfNotExists(tr, urlID, originURLID.Int64)
+	if origin.Valid {
+		err = w.insertLinkIfNotExists(tr, urlID, origin.Int64)
 		if err != nil {
 			return err
 		}
@@ -141,9 +141,7 @@ func (w *DBWorker) saveMeta(tr *DBrw, meta *Meta, origin sql.NullInt64, originUR
 			return err
 		}
 		if meta.RedirectReferer != nil {
-			paramOrigin := sql.NullInt64{Int64: meta.ID, Valid: true}
-			paramOriginURLID := sql.NullInt64{Int64: meta.URL, Valid: true}
-			err = w.saveMeta(tr, meta.RedirectReferer, paramOrigin, paramOriginURLID)
+			err = w.saveMeta(tr, meta.RedirectReferer, sql.NullInt64{Int64: meta.URL, Valid: true})
 			if err != nil {
 				return err
 			}
@@ -152,9 +150,7 @@ func (w *DBWorker) saveMeta(tr *DBrw, meta *Meta, origin sql.NullInt64, originUR
 		return fmt.Errorf("find in 'Meta' table for URL %s, message: %s", urlStr, err)
 	} else {
 		if meta.RedirectReferer != nil {
-			paramOrigin := sql.NullInt64{Int64: metaRec.ID, Valid: true}
-			paramOriginURLID := sql.NullInt64{Int64: metaRec.URL, Valid: true}
-			err = w.saveMeta(tr, meta.RedirectReferer, paramOrigin, paramOriginURLID)
+			err = w.saveMeta(tr, meta.RedirectReferer, sql.NullInt64{Int64: metaRec.URL, Valid: true})
 			if err != nil {
 				return err
 			}
@@ -165,7 +161,7 @@ func (w *DBWorker) saveMeta(tr *DBrw, meta *Meta, origin sql.NullInt64, originUR
 }
 
 func (w *DBWorker) savePageData(tr *DBrw, data *PageData) error {
-	err := w.saveMeta(tr, data.MetaItem, sql.NullInt64{Valid: false}, sql.NullInt64{Valid: false})
+	err := w.saveMeta(tr, data.MetaItem, sql.NullInt64{Valid: false})
 	if err != nil {
 		return err
 	}

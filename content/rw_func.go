@@ -93,7 +93,7 @@ func (db *DBrw) GetNewURLs(hostName string, cnt int) ([]URL, error) {
 	return urls, nil
 }
 
-// FindOrigin - get origin row id in table 'Meta'
+// FindOrigin - find origin url id in table 'URL'
 func (db *DBrw) FindOrigin(meta *Meta) (sql.NullInt64, error) {
 	null := sql.NullInt64{Valid: false}
 	if meta.Content.Body.IsNull() {
@@ -112,7 +112,7 @@ func (db *DBrw) FindOrigin(meta *Meta) (sql.NullInt64, error) {
 			return null, fmt.Errorf("find in 'Content' with id %d, message: %s", id.ContentID, err)
 		}
 		if meta.Content.Body.Equals(content.Body) {
-			return sql.NullInt64{Int64: id.MetaID, Valid: true}, nil
+			return sql.NullInt64{Int64: id.BaseID, Valid: true}, nil
 		}
 	}
 	return null, nil
@@ -128,7 +128,7 @@ func (db *DBrw) AddHash(meta *Meta) error {
 	}
 
 	hash := meta.Content.Hash
-	item := hashVal{MetaID: meta.ID, ContentID: meta.ContentID.Int64}
+	item := hashVal{BaseID: meta.URL, ContentID: meta.ContentID.Int64}
 	_, exists := db.hashes[hash]
 	if exists {
 		db.hashes[hash] = append(db.hashes[hash], item)
