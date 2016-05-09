@@ -113,7 +113,6 @@ func (result *HTMLParser) parseElements(node *html.Node) error {
 				result.Title = content
 			}
 		}
-
 	case atom.Title:
 		child := node.FirstChild
 		if child != nil && child.Type == html.TextNode {
@@ -139,9 +138,11 @@ func (result *HTMLParser) parseNode(node *html.Node) error {
 		return nil
 	}
 	switch node.Type {
+	case html.DocumentNode:
+		return result.parseChildren(node)
 	case html.ElementNode:
 		return result.parseElements(node)
-	case html.DocumentNode, html.CommentNode, html.TextNode, html.DoctypeNode: // skip
+	case html.CommentNode, html.TextNode, html.DoctypeNode: // skip
 		return nil
 	default:
 		return ErrParserUnexpectedNodeType
