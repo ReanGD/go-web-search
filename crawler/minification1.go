@@ -229,30 +229,6 @@ func (m *minification1) toDiv(node *html.Node) (*html.Node, error) {
 	return m.parseChildren(node)
 }
 
-func (m *minification1) toRef(node *html.Node, ref string) (*html.Node, error) {
-	addText := node.DataAtom != atom.Link && node.DataAtom != atom.A
-	removeChild := node.DataAtom != atom.A
-	node.DataAtom = atom.A
-	node.Data = "a"
-	node.Attr = make([]html.Attribute, 1)
-	node.Attr[0] = html.Attribute{Key: "r", Val: ref}
-
-	if removeChild {
-		node.FirstChild = nil
-		node.LastChild = nil
-	} else {
-		return m.parseChildren(node)
-	}
-
-	if addText {
-		prev, next := node.PrevSibling, node.NextSibling
-		_ = m.mergeNodes(node.Parent, prev, node, true)
-		return m.mergeNodes(node.Parent, node, next, true), nil
-	}
-
-	return node.NextSibling, nil
-}
-
 func (m *minification1) parseChildren(node *html.Node) (*html.Node, error) {
 	var err error
 	for it := node.FirstChild; it != nil; {
@@ -268,10 +244,6 @@ func (m *minification1) parseChildren(node *html.Node) (*html.Node, error) {
 func (m *minification1) parseElements(node *html.Node) (*html.Node, error) {
 	switch node.DataAtom {
 	case atom.A:
-		href := m.getAttrVal(node, "href")
-		if href != "" {
-			return m.toRef(node, href)
-		}
 		return m.openNode(node, false)
 	case atom.Abbr:
 		title := m.getAttrVal(node, "title")
@@ -370,11 +342,7 @@ func (m *minification1) parseElements(node *html.Node) (*html.Node, error) {
 	case atom.I:
 		return m.openNode(node, false)
 	case atom.Iframe:
-		ref := m.getAttrVal(node, "src")
-		if ref == "" {
-			return m.removeNode(node, true)
-		}
-		return m.toRef(node, ref)
+		return m.removeNode(node, true)
 	case atom.Img:
 		return m.removeNode(node, true)
 	case atom.Input:
@@ -390,15 +358,7 @@ func (m *minification1) parseElements(node *html.Node) (*html.Node, error) {
 	case atom.Li:
 		return m.openNode(node, true)
 	case atom.Link:
-		rel := m.getAttrVal(node, "rel")
-		if rel != "next" && rel != "prev" && rel != "previous" {
-			return m.removeNode(node, false)
-		}
-		href := m.getAttrVal(node, "href")
-		if href == "" {
-			return m.removeNode(node, false)
-		}
-		return m.toRef(node, href)
+		return m.removeNode(node, false)
 	// case atom.Listing:
 	// case atom.Main:
 	// case atom.Map:
