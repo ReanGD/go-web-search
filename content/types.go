@@ -45,7 +45,7 @@ type Host struct {
 // Content - store page content
 // Hash - hash of uncompressed content
 type Content struct {
-	ID    int64      `gorm:"primary_key;not null"`
+	URL   int64      `gorm:"type:integer REFERENCES url(id);unique_index;not null"`
 	Hash  string     `gorm:"size:16;not null"`
 	Body  Compressed `gorm:"not null"`
 	Title string     `gorm:"size:100;not null"`
@@ -57,12 +57,11 @@ type Meta struct {
 	URL             int64         `gorm:"type:integer REFERENCES url(id);unique_index;not null"`
 	State           State         `gorm:"not null"`
 	Origin          sql.NullInt64 `gorm:"type:integer REFERENCES url(id)"`
-	ContentID       sql.NullInt64 `gorm:"type:integer REFERENCES content(id)"`
 	RedirectReferer *Meta         `sql:"-"`
 	HostName        string        `sql:"-"`
 	URLForResolve   string        `sql:"-"`
+	Content         *Content      `sql:"-"`
 	RedirectCnt     int
-	Content         Content
 	StatusCode      sql.NullInt64
 }
 

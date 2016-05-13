@@ -118,7 +118,7 @@ func (w *DBWorker) saveMeta(tr *DBrw, meta *Meta, origin sql.NullInt64) error {
 			} else {
 				meta.State = StateExternal
 			}
-			meta.Content = Content{}
+			meta.Content = nil
 		}
 		if origin.Valid {
 			meta.Origin = origin
@@ -130,7 +130,14 @@ func (w *DBWorker) saveMeta(tr *DBrw, meta *Meta, origin sql.NullInt64) error {
 		}
 		if meta.Origin.Valid {
 			meta.State = StateDublicate
-			meta.Content = Content{}
+			meta.Content = nil
+		}
+		if meta.Content != nil {
+			meta.Content.URL = urlID
+			err = tr.Create(meta.Content).Error
+			if err != nil {
+				return fmt.Errorf("add new 'Content' record for URL %s, message: %s", urlStr, err)
+			}
 		}
 		err = tr.Create(meta).Error
 		if err != nil {

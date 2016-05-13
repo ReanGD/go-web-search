@@ -22,18 +22,13 @@ func createTables(db *gorm.DB, values ...interface{}) error {
 	return nil
 }
 
-type hashVal struct {
-	BaseID    int64
-	ContentID int64
-}
-
 // DBrw - content database (enable read/write operations)
 type DBrw struct {
 	*gorm.DB
 	// map[Host.Name]Host
 	hosts map[string]*Host
-	// map[Content.Hash][]hashVal
-	hashes map[string][]hashVal
+	// map[Content.Hash][]Content.URL
+	hashes map[string][]int64
 }
 
 // GetDBrw - create/open content.db
@@ -69,42 +64,32 @@ func GetDBrw() (*DBrw, error) {
 		return nil, fmt.Errorf("Get hosts list from db, message: %s", err)
 	}
 
-	type hashResult struct {
-		BaseID    int64
-		ContentID int64
-		Hash      string
-	}
-
-	var hashResults []hashResult
-	sql := "SELECT meta.url as base_id, content.id as content_id, content.hash as hash"
-	sql += " FROM meta JOIN content ON content.id == meta.content_id"
-	sql += " WHERE meta.content_id IS NOT NULL AND meta.state IN (?, ?)"
-	err = db.Raw(sql, StateSuccess, StateParseError).Scan(&hashResults).Error
+	var hashes []Content
+	err = db.Select("url, hash").Find(&hashes).Error
 	if err != nil {
 		errClose := db.Close()
 		if errClose != nil {
 			fmt.Printf("%s", errClose)
 		}
-		return nil, fmt.Errorf("Get content list from db, message: %s", err)
+		return nil, fmt.Errorf("Get content list from db, message: \"%s\"", err)
 	}
 
 	result := &DBrw{
 		DB:     db,
 		hosts:  make(map[string]*Host, len(hosts)),
-		hashes: make(map[string][]hashVal, len(hashResults))}
+		hashes: make(map[string][]int64, len(hashes))}
 
 	for i := 0; i != len(hosts); i++ {
 		result.hosts[hosts[i].Name] = &hosts[i]
 	}
 
-	for _, item := range hashResults {
+	for _, item := range hashes {
 		hash := item.Hash
-		item := hashVal{BaseID: item.BaseID, ContentID: item.ContentID}
 		_, exists := result.hashes[hash]
 		if exists {
-			result.hashes[hash] = append(result.hashes[hash], item)
+			result.hashes[hash] = append(result.hashes[hash], item.URL)
 		} else {
-			result.hashes[hash] = []hashVal{item}
+			result.hashes[hash] = []int64{item.URL}
 		}
 	}
 
