@@ -262,10 +262,12 @@ func (m *minification1) parseElements(node *html.Node) (*html.Node, error) {
 		return m.openNode(node, true)
 	case atom.Del:
 		return m.openNode(node, false)
-	// case atom.Details:
-	// case atom.Dfn:
-	// case atom.Dialog:
-	// case atom.Dir:
+	case atom.Details:
+		return m.toDiv(node)
+	case atom.Dfn:
+		return m.openNode(node, false)
+	case atom.Dialog:
+		return m.toDiv(node)
 	case atom.Div:
 		return m.toDiv(node)
 	case atom.Dl:
@@ -276,7 +278,6 @@ func (m *minification1) parseElements(node *html.Node) (*html.Node, error) {
 		return m.openNode(node, false)
 	case atom.Embed:
 		return m.removeNode(node, true)
-	// case atom.Fieldset:
 	case atom.Figcaption:
 		return m.openNode(node, true)
 	case atom.Figure:
@@ -304,8 +305,8 @@ func (m *minification1) parseElements(node *html.Node) (*html.Node, error) {
 	case atom.Head:
 		node.Attr = nil
 		return m.parseChildren(node)
-	// case atom.Header:
-	// case atom.Hgroup:
+	case atom.Header:
+		return m.toDiv(node)
 	case atom.Hr:
 		return m.removeNode(node, true)
 	case atom.Html:
@@ -321,63 +322,40 @@ func (m *minification1) parseElements(node *html.Node) (*html.Node, error) {
 		return m.removeNode(node, true)
 	case atom.Ins:
 		return m.openNode(node, false)
-	// case atom.Isindex:
-	// case atom.Kbd:
-	// case atom.Keygen:
 	case atom.Label:
 		return m.toDiv(node)
-	// case atom.Legend:
 	case atom.Li:
 		return m.openNode(node, true)
 	case atom.Link:
 		return m.removeNode(node, false)
-	// case atom.Listing:
-	// case atom.Main:
-	// case atom.Map:
+	case atom.Listing:
+		return m.toDiv(node)
 	case atom.Marquee:
 		return m.openNode(node, true)
-	// case atom.Mark:
-	// case atom.Menu:
-	// case atom.Menuitem:
 	case atom.Meta:
 		return m.removeNode(node, false)
-	// case atom.Meter:
-	// case atom.Multicol:
 	case atom.Name:
 		return m.openNode(node, false)
 	case atom.Nav:
 		return m.toDiv(node)
 	case atom.Nobr:
 		return m.openNode(node, false)
-	// case atom.Noembed:
-	// case atom.Noframes:
 	case atom.Noscript:
 		return m.removeNode(node, true)
 	case atom.Object:
 		return m.removeNode(node, true)
 	case atom.Ol:
 		return m.toDiv(node)
-		// case atom.Optgroup:
-		// case atom.Option:
-		// case atom.Output:
 	case atom.P:
 		return m.toDiv(node)
 	case atom.Param:
 		return m.removeNode(node, true)
-	// case atom.Picture:
-	// case atom.Plaintext:
 	case atom.Pre:
 		return m.toDiv(node)
-		// case atom.Progress:
 	case atom.Q:
 		return m.openNode(node, false)
-		// case atom.Rp:
-		// case atom.Rt:
-		// case atom.Rtc:
-		// case atom.Ruby:
 	case atom.S:
 		return m.openNode(node, false)
-	// case atom.Samp:
 	case atom.Script:
 		return m.removeNode(node, true)
 	case atom.Section:
@@ -386,8 +364,6 @@ func (m *minification1) parseElements(node *html.Node) (*html.Node, error) {
 		return m.removeNode(node, true)
 	case atom.Small:
 		return m.openNode(node, false)
-	// case atom.Source:
-	// case atom.Spacer:
 	case atom.Span:
 		return m.openNode(node, false)
 	case atom.Strike:
@@ -398,7 +374,6 @@ func (m *minification1) parseElements(node *html.Node) (*html.Node, error) {
 		return m.removeNode(node, true)
 	case atom.Sub:
 		return m.openNode(node, false)
-		// case atom.Summary:
 	case atom.Sup:
 		return m.openNode(node, false)
 	case atom.Svg:
@@ -423,7 +398,6 @@ func (m *minification1) parseElements(node *html.Node) (*html.Node, error) {
 		return m.removeNode(node, false)
 	case atom.Tr:
 		return m.openNode(node, true)
-	// case atom.Track:
 	case atom.Tt:
 		return m.openNode(node, false)
 	case atom.U:
@@ -436,13 +410,15 @@ func (m *minification1) parseElements(node *html.Node) (*html.Node, error) {
 		return m.removeNode(node, true)
 	case atom.Wbr:
 		return m.removeNode(node, false)
-		// case atom.Xmp:
 	default:
 		if node.Data == "noindex" {
 			return m.removeNode(node, true)
+		} else if node.Data == "test_tag" {
+			return m.parseChildren(node)
+		} else {
+			return m.toDiv(node)
 		}
 	}
-	return m.parseChildren(node)
 }
 
 func (m *minification1) parseNode(node *html.Node) (*html.Node, error) {

@@ -318,6 +318,10 @@ func TestFuncOpenNodeWithSeparator(t *testing.T) {
 func TestConvertTagToDiv(t *testing.T) {
 	tags := []string{
 		"article",
+		"header",
+		"details",
+		"dialog",
+		"listing",
 		"aside",
 		"footer",
 		"blockquote",
@@ -334,6 +338,7 @@ func TestConvertTagToDiv(t *testing.T) {
 		"h5",
 		"h6",
 		"p",
+		"undef_tag",
 	}
 	for _, tagName := range tags {
 		HelperDiv("Convert tag "+tagName, t,
@@ -360,6 +365,7 @@ func TestOpenTags(t *testing.T) {
 		"b",
 		"i",
 		"del",
+		"dfn",
 		"em",
 		"font",
 		"ins",
@@ -489,5 +495,4 @@ func TestRemoveAttr(t *testing.T) {
 		out := `<html><head></head><body><div>text</div></body></html>`
 		minificationCheck(in, out)
 	})
-
 }
