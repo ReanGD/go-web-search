@@ -70,8 +70,9 @@ func TestErrorTag(t *testing.T) {
 func TestDoctype(t *testing.T) {
 	Convey("Test doctype", t, func() {
 		in := "<!DOCTYPE html><html><head></head><body></body></html>"
+		out := "<html><head></head><body></body></html>"
 
-		minificationCheck(in, in)
+		minificationCheck(in, out)
 	})
 }
 

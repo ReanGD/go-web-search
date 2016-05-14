@@ -430,7 +430,8 @@ func (m *minification1) parseNode(node *html.Node) (*html.Node, error) {
 	case html.TextNode: // -children -attr
 		return node.NextSibling, nil
 	case html.DoctypeNode: // ignore
-		return node.NextSibling, nil
+		return m.removeNode(node, false)
+		// return node.NextSibling, nil
 	case html.CommentNode: // remove
 		return m.removeNode(node, false)
 	default:
