@@ -251,26 +251,37 @@ func (m *minification1) parseElements(node *html.Node) (*html.Node, error) {
 			m.addChildTextNodeToBegining(node, " "+title+" ")
 		}
 		return m.openNode(node, true)
-	// case atom.Acronym:
-	// case atom.Address:
-	// case atom.Applet:
-	// case atom.Area:
+	case atom.Address:
+		return m.openNode(node, true)
+	case atom.Applet:
+		return m.removeNode(node, true)
+	case atom.Area:
+		return m.removeNode(node, true)
 	case atom.Article:
 		return m.toDiv(node)
-	// case atom.Aside:
-	// case atom.Audio:
+	case atom.Aside:
+		return m.toDiv(node)
+	case atom.Audio:
+		return m.removeNode(node, true)
 	case atom.B:
 		return m.openNode(node, false)
-	// case atom.Base:
-	// case atom.Basefont:
-	// case atom.Bdi:
-	// case atom.Bdo:
-	// case atom.Bgsound:
+	case atom.Base:
+		return m.removeNode(node, false)
+	case atom.Basefont:
+		return m.removeNode(node, false)
+	case atom.Bdi:
+		return m.openNode(node, false)
+	case atom.Bdo:
+		return m.openNode(node, false)
+	case atom.Bgsound:
+		return m.removeNode(node, false)
 	case atom.Blockquote:
 		return m.toDiv(node)
-	// case atom.Big:
+	case atom.Big:
+		return m.openNode(node, false)
 	// case atom.Body:
-	// case atom.Blink:
+	case atom.Blink:
+		return m.openNode(node, false)
 	case atom.Br:
 		return m.removeNode(node, true)
 	case atom.Button:
@@ -287,10 +298,12 @@ func (m *minification1) parseElements(node *html.Node) (*html.Node, error) {
 		return m.openNode(node, false)
 	case atom.Colgroup, atom.Col:
 		return m.removeNode(node, true)
-	// case atom.Command:
-	// case atom.Comment:
-	// case atom.Data:
-	// case atom.Datalist:
+	case atom.Command:
+		return m.removeNode(node, true)
+	case atom.Data:
+		return m.removeNode(node, false)
+	case atom.Datalist:
+		return m.removeNode(node, false)
 	case atom.Dd:
 		return m.openNode(node, true)
 	case atom.Del:
@@ -319,8 +332,8 @@ func (m *minification1) parseElements(node *html.Node) (*html.Node, error) {
 		return m.toDiv(node)
 	case atom.Form:
 		return m.removeNode(node, true)
-	// case atom.Frame:
-	// case atom.Frameset:
+	case atom.Frame, atom.Frameset, atom.Noframes:
+		return m.removeNode(node, false)
 	case atom.H1:
 		return m.toDiv(node)
 	case atom.H2:
@@ -362,7 +375,8 @@ func (m *minification1) parseElements(node *html.Node) (*html.Node, error) {
 	// case atom.Listing:
 	// case atom.Main:
 	// case atom.Map:
-	// case atom.Marquee:
+	case atom.Marquee:
+		return m.openNode(node, true)
 	// case atom.Mark:
 	// case atom.Menu:
 	// case atom.Menuitem:
@@ -370,12 +384,13 @@ func (m *minification1) parseElements(node *html.Node) (*html.Node, error) {
 		return m.removeNode(node, false)
 	// case atom.Meter:
 	// case atom.Multicol:
+	case atom.Name:
+		return m.openNode(node, false)
 	case atom.Nav:
 		return m.toDiv(node)
 	case atom.Nobr:
 		return m.openNode(node, false)
 	// case atom.Noembed:
-	// case atom.Noindex:
 	// case atom.Noframes:
 	case atom.Noscript:
 		return m.removeNode(node, true)
@@ -463,6 +478,10 @@ func (m *minification1) parseElements(node *html.Node) (*html.Node, error) {
 	case atom.Wbr:
 		return m.removeNode(node, false)
 		// case atom.Xmp:
+	default:
+		if node.Data == "noindex" {
+			return m.removeNode(node, true)
+		}
 	}
 
 	m.removeAttr(node)

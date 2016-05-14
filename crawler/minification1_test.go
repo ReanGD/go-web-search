@@ -201,9 +201,14 @@ func TestRemoveTags(t *testing.T) {
 		"<video>text</video>",
 		"<textarea>text</textarea>",
 		"<noscript>text</noscript>",
+		"<applet>text</applet>",
+		"<audio>text</audio>",
+		"<noindex>text<div>text</div>text</noindex>",
 		`<iframe src="page/banner.html" width="468" height="60" align="left">
 Ваш браузер не поддерживает встроенные фреймы!</iframe>`,
 		`<input type="hidden"/>`,
+		`<command onclick="alert">`,
+		"<area/>",
 		"<br/>",
 		"<hr/>",
 	}
@@ -217,9 +222,22 @@ func TestRemoveTags(t *testing.T) {
 		"<title>text</title>",
 		`<meta name="title" content="title meta">`,
 		`<link rel="stylesheet" href="ie.css">`,
+		`<base href="ie.css">`,
+		`<basefont face="Arial">`,
+		`<bgsound src="1.ogg">`,
 	}
 	for _, tagName := range tags {
 		HelperHead("Removing tag "+html.EscapeString(tagName), t, tagName, "")
+	}
+
+	tags = []string{
+		`<data value="1"></data>`,
+		`<datalist id="<идентификатор>"><option value="text1"></datalist>`,
+	}
+	for _, tagName := range tags {
+		HelperDiv("Removing tag "+html.EscapeString(tagName), t,
+			fmt.Sprintf("pre%spost", tagName),
+			"prepost")
 	}
 
 	HelperBody("Removing tag wdr", t,
@@ -229,6 +247,12 @@ func TestRemoveTags(t *testing.T) {
 	HelperDiv("Removing tag wdr between tags", t,
 		"pre</div><wbr><div>post",
 		"pre</div><div>post")
+
+	Convey("Removing tag frameset", t, func() {
+		in := `<html><head></head><frameset></frameset></html>`
+		out := "<html><head></head></html>"
+		minificationCheck(in, out)
+	})
 }
 
 func TestFuncOpenNodeWithoutSeparator(t *testing.T) {
@@ -356,6 +380,7 @@ func TestFuncOpenNodeWithSeparator(t *testing.T) {
 func TestConvertTagToDiv(t *testing.T) {
 	tags := []string{
 		"article",
+		"aside",
 		"footer",
 		"blockquote",
 		"center",
@@ -416,6 +441,11 @@ func TestOpenTags(t *testing.T) {
 		"cite",
 		"code",
 		"a",
+		"blink",
+		"big",
+		"bdi",
+		"bdo",
+		"name",
 	}
 	for _, tagName := range tags {
 		HelperDiv("Open tag "+tagName, t,
@@ -426,6 +456,8 @@ func TestOpenTags(t *testing.T) {
 	// with add space
 	tags = []string{
 		"figcaption",
+		"address",
+		"marquee",
 	}
 	for _, tagName := range tags {
 		HelperDiv("Open tag "+tagName, t,
