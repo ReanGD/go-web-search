@@ -81,68 +81,6 @@ func TestRemoveComments(t *testing.T) {
 	HelperHead("Remove double comment in head", t, "<!-- Comment1 --><!-- Comment2 -->", "")
 }
 
-func TestFuncRemoveAttr(t *testing.T) {
-	HelperBody("Attributes are not deleted", t,
-		`<div begin="begin" end="end">text</div>`,
-		`<div begin="begin" end="end">text</div>`)
-
-	HelperBody("Left and right attributes are not removed", t,
-		`<div begin="begin" id="remove" end="end">text</div>`,
-		`<div begin="begin" end="end">text</div>`)
-
-	HelperBody("Left attributes are not removed", t,
-		`<div begin="begin" alt="remove">text</div>`,
-		`<div begin="begin">text</div>`)
-
-	HelperBody("Right attributes are not removed", t,
-		`<div alt="remove" end="end">text</div>`,
-		`<div end="end">text</div>`)
-
-	HelperBody("One attribute for remove", t,
-		`<div cols="remove">text</div>`,
-		`<div>text</div>`)
-
-	HelperBody("All attributes for remove", t,
-		`<div class="remove" title="remove" width="remove" disabled>text</div>`,
-		`<div>text</div>`)
-}
-
-func TestRemoveAttrs(t *testing.T) {
-	attrs := []string{
-		"id",
-		"alt",
-		"cols",
-		"class",
-		"title",
-		"width",
-		"align",
-		"style",
-		"color",
-		"valign",
-		"target",
-		"height",
-		"border",
-		"hspace",
-		"vspace",
-		"bgcolor",
-		"onclick",
-		"colspan",
-		"itemprop",
-		"disabled",
-		"itemtype",
-		"itemscope",
-		"data-width",
-		"cellspacing",
-		"cellpadding",
-		"bordercolor",
-	}
-	for _, attr := range attrs {
-		HelperBody("Removing attribute "+attr, t,
-			fmt.Sprintf(`<div %s="remove">text</div>`, attr),
-			"<div>text</div>")
-	}
-}
-
 func TestFuncRemoveNode(t *testing.T) {
 	HelperDiv("One tag inside", t,
 		`<form attr="a"><div>aaa</div></form>`,
@@ -543,4 +481,13 @@ func TestTable(t *testing.T) {
   <div>Text th2</div> <div>Text td1</div>
   <div>Text td2</div> <div>Text td3</div>
   <div>Text td4</div> </div>`)
+}
+
+func TestRemoveAttr(t *testing.T) {
+	Convey("Remove attributes in special tags", t, func() {
+		in := `<html a="1"><head a="1"></head><body a="1"><div a="1">text</div></body></html>`
+		out := `<html><head></head><body><div>text</div></body></html>`
+		minificationCheck(in, out)
+	})
+
 }

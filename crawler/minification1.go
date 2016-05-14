@@ -20,63 +20,15 @@ type minification1 struct {
 }
 
 func (m *minification1) getAttrVal(node *html.Node, attrName string) string {
-	for _, attr := range node.Attr {
-		if attr.Key == attrName {
-			return strings.ToLower(attr.Val)
+	if node.Attr != nil {
+		for _, attr := range node.Attr {
+			if attr.Key == attrName {
+				return strings.ToLower(attr.Val)
+			}
 		}
 	}
 
 	return ""
-}
-
-func (m *minification1) removeAttr(node *html.Node) {
-	lenAttr := len(node.Attr)
-	if lenAttr != 0 {
-		attr := node.Attr
-		i := 0
-		j := 0
-		for ; i != lenAttr; i++ {
-			key := strings.ToLower(attr[i].Key)
-			if strings.HasPrefix(key, "data-") {
-				continue
-			}
-			switch key {
-			case "id":
-			case "alt":
-			case "cols":
-			case "class":
-			case "title":
-			case "width":
-			case "align":
-			case "style":
-			case "color":
-			case "valign":
-			case "target":
-			case "height":
-			case "border":
-			case "hspace":
-			case "vspace":
-			case "bgcolor":
-			case "onclick":
-			case "colspan":
-			case "itemprop":
-			case "disabled":
-			case "itemtype":
-			case "itemscope":
-			case "cellspacing":
-			case "cellpadding":
-			case "bordercolor":
-			default:
-				if i != j {
-					attr[j] = attr[i]
-				}
-				j++
-			}
-		}
-		if i != j {
-			node.Attr = attr[:j]
-		}
-	}
 }
 
 func (m *minification1) mergeNodes(parent, prev, next *html.Node, addSeparator bool) *html.Node {
@@ -224,7 +176,7 @@ func (m *minification1) openNode(node *html.Node, addSeparator bool) (*html.Node
 func (m *minification1) toDiv(node *html.Node) (*html.Node, error) {
 	node.DataAtom = atom.Div
 	node.Data = "div"
-	node.Attr = make([]html.Attribute, 0)
+	node.Attr = nil
 
 	return m.parseChildren(node)
 }
@@ -279,7 +231,9 @@ func (m *minification1) parseElements(node *html.Node) (*html.Node, error) {
 		return m.toDiv(node)
 	case atom.Big:
 		return m.openNode(node, false)
-	// case atom.Body:
+	case atom.Body:
+		node.Attr = nil
+		return m.parseChildren(node)
 	case atom.Blink:
 		return m.openNode(node, false)
 	case atom.Br:
@@ -312,7 +266,8 @@ func (m *minification1) parseElements(node *html.Node) (*html.Node, error) {
 	// case atom.Dfn:
 	// case atom.Dialog:
 	// case atom.Dir:
-	// case atom.Div:
+	case atom.Div:
+		return m.toDiv(node)
 	case atom.Dl:
 		return m.toDiv(node)
 	case atom.Dt:
@@ -346,12 +301,16 @@ func (m *minification1) parseElements(node *html.Node) (*html.Node, error) {
 		return m.toDiv(node)
 	case atom.H6:
 		return m.toDiv(node)
-	// case atom.Head:
+	case atom.Head:
+		node.Attr = nil
+		return m.parseChildren(node)
 	// case atom.Header:
 	// case atom.Hgroup:
 	case atom.Hr:
 		return m.removeNode(node, true)
-	// case atom.Html:
+	case atom.Html:
+		node.Attr = nil
+		return m.parseChildren(node)
 	case atom.I:
 		return m.openNode(node, false)
 	case atom.Iframe:
@@ -483,9 +442,6 @@ func (m *minification1) parseElements(node *html.Node) (*html.Node, error) {
 			return m.removeNode(node, true)
 		}
 	}
-
-	m.removeAttr(node)
-
 	return m.parseChildren(node)
 }
 
