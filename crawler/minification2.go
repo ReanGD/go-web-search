@@ -101,8 +101,20 @@ func (m *minification2) parseElements(node *html.Node) (*html.Node, error) {
 		return m.parseChildren(node)
 	case atom.Div:
 		next, err := m.parseChildren(node)
-		if err == nil && node.FirstChild == nil {
-			node.Parent.RemoveChild(node)
+		if err == nil {
+			child := node.FirstChild
+			if child == nil {
+				node.Parent.RemoveChild(node)
+			} else if child == node.LastChild && child.DataAtom == atom.Div {
+				for it := child.FirstChild; it != nil; it = it.NextSibling {
+					it.Parent = node
+				}
+				node.FirstChild = child.FirstChild
+				node.LastChild = child.LastChild
+				child.FirstChild = nil
+				child.LastChild = nil
+				child.Parent = nil
+			}
 		}
 		return next, err
 	default:
