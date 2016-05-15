@@ -13,7 +13,7 @@ import (
 
 func strEq(name string, t *testing.T, in, out string) {
 	Convey(name, t, func() {
-		m := minification2{}
+		m := minificationText{}
 		So(m.processText(in), ShouldEqual, out)
 	})
 }
@@ -105,7 +105,7 @@ func TestParseErrors(t *testing.T) {
 		node, err := html.Parse(bytes.NewReader([]byte(in)))
 		So(err, ShouldEqual, nil)
 
-		So(RunMinification2(node).Error(), ShouldEqual, ErrMinification2UnexpectedNodeType.Error())
+		So(RunMinification2(node).Error(), ShouldEqual, ErrMinificationTextUnexpectedNodeType.Error())
 	})
 
 	Convey("Test error node type", t, func() {
@@ -113,7 +113,7 @@ func TestParseErrors(t *testing.T) {
 		node, err := html.Parse(bytes.NewReader([]byte(in)))
 		So(err, ShouldEqual, nil)
 
-		So(RunMinification2(node).Error(), ShouldEqual, ErrMinification2UnexpectedTag.Error())
+		So(RunMinification2(node).Error(), ShouldEqual, ErrMinificationTextUnexpectedTag.Error())
 	})
 }
 

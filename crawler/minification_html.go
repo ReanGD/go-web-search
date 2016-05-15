@@ -11,14 +11,14 @@ import (
 )
 
 var (
-	// ErrMinification1UnexpectedNodeType - found unexpected node type
-	ErrMinification1UnexpectedNodeType = errors.New("minification1.minification1.parseNode: unexpected node type")
+	// ErrMinificationHTMLUnexpectedNodeType - found unexpected node type
+	ErrMinificationHTMLUnexpectedNodeType = errors.New("minification_html.minificationHTML.parseNode: unexpected node type")
 )
 
-type minification1 struct {
+type minificationHTML struct {
 }
 
-func (m *minification1) getAttrVal(node *html.Node, attrName string) string {
+func (m *minificationHTML) getAttrVal(node *html.Node, attrName string) string {
 	if node.Attr != nil {
 		for _, attr := range node.Attr {
 			if attr.Key == attrName {
@@ -30,7 +30,7 @@ func (m *minification1) getAttrVal(node *html.Node, attrName string) string {
 	return ""
 }
 
-func (m *minification1) mergeNodes(parent, prev, next *html.Node, addSeparator bool) *html.Node {
+func (m *minificationHTML) mergeNodes(parent, prev, next *html.Node, addSeparator bool) *html.Node {
 	var result *html.Node
 	prevText := prev != nil && prev.Type == html.TextNode
 	nextText := next != nil && next.Type == html.TextNode
@@ -104,7 +104,7 @@ func (m *minification1) mergeNodes(parent, prev, next *html.Node, addSeparator b
 	return result
 }
 
-func (m *minification1) addChildTextNodeToBegining(node *html.Node, text string) {
+func (m *minificationHTML) addChildTextNodeToBegining(node *html.Node, text string) {
 	newNode := &html.Node{
 		Parent:      nil,
 		FirstChild:  nil,
@@ -121,7 +121,7 @@ func (m *minification1) addChildTextNodeToBegining(node *html.Node, text string)
 	}
 }
 
-func (m *minification1) removeNode(node *html.Node, addSeparator bool) (*html.Node, error) {
+func (m *minificationHTML) removeNode(node *html.Node, addSeparator bool) (*html.Node, error) {
 	prev, next, parent := node.PrevSibling, node.NextSibling, node.Parent
 	parent.RemoveChild(node)
 	result := m.mergeNodes(parent, prev, next, addSeparator)
@@ -129,7 +129,7 @@ func (m *minification1) removeNode(node *html.Node, addSeparator bool) (*html.No
 	return result, nil
 }
 
-func (m *minification1) openNode(node *html.Node, addSeparator bool) (*html.Node, error) {
+func (m *minificationHTML) openNode(node *html.Node, addSeparator bool) (*html.Node, error) {
 	parent := node.Parent
 	first, last := node.FirstChild, node.LastChild
 	prev, next := node.PrevSibling, node.NextSibling
@@ -172,7 +172,7 @@ func (m *minification1) openNode(node *html.Node, addSeparator bool) (*html.Node
 	return result, nil
 }
 
-func (m *minification1) toDiv(node *html.Node) (*html.Node, error) {
+func (m *minificationHTML) toDiv(node *html.Node) (*html.Node, error) {
 	node.DataAtom = atom.Div
 	node.Data = "div"
 	node.Attr = nil
@@ -180,7 +180,7 @@ func (m *minification1) toDiv(node *html.Node) (*html.Node, error) {
 	return m.parseChildren(node)
 }
 
-func (m *minification1) parseChildren(node *html.Node) (*html.Node, error) {
+func (m *minificationHTML) parseChildren(node *html.Node) (*html.Node, error) {
 	var err error
 	for it := node.FirstChild; it != nil; {
 		it, err = m.parseNode(it)
@@ -192,7 +192,7 @@ func (m *minification1) parseChildren(node *html.Node) (*html.Node, error) {
 	return node.NextSibling, nil
 }
 
-func (m *minification1) parseElements(node *html.Node) (*html.Node, error) {
+func (m *minificationHTML) parseElements(node *html.Node) (*html.Node, error) {
 	switch node.DataAtom {
 	case atom.A:
 		return m.openNode(node, false)
@@ -420,7 +420,7 @@ func (m *minification1) parseElements(node *html.Node) (*html.Node, error) {
 	}
 }
 
-func (m *minification1) parseNode(node *html.Node) (*html.Node, error) {
+func (m *minificationHTML) parseNode(node *html.Node) (*html.Node, error) {
 	switch node.Type {
 	case html.DocumentNode: // +children -attr (first node)
 		return m.parseChildren(node)
@@ -433,13 +433,13 @@ func (m *minification1) parseNode(node *html.Node) (*html.Node, error) {
 	case html.CommentNode: // remove
 		return m.removeNode(node, false)
 	default:
-		return nil, ErrMinification1UnexpectedNodeType
+		return nil, ErrMinificationHTMLUnexpectedNodeType
 	}
 }
 
 // RunMinification1 - start minification node
 func RunMinification1(node *html.Node) error {
-	m := minification1{}
+	m := minificationHTML{}
 	_, err := m.parseNode(node)
 	return err
 }

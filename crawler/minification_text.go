@@ -12,10 +12,10 @@ import (
 )
 
 var (
-	// ErrMinification2UnexpectedNodeType - found unexpected node type
-	ErrMinification2UnexpectedNodeType = errors.New("minification2.minification2.parseNode: unexpected node type")
-	// ErrMinification2UnexpectedTag - found unexpected tag
-	ErrMinification2UnexpectedTag = errors.New("minification2.minification2.parseElements: unexpected tag")
+	// ErrMinificationTextUnexpectedNodeType - found unexpected node type
+	ErrMinificationTextUnexpectedNodeType = errors.New("minification_text.minificationText.parseNode: unexpected node type")
+	// ErrMinificationTextUnexpectedTag - found unexpected tag
+	ErrMinificationTextUnexpectedTag = errors.New("minification_text.minificationText.parseElements: unexpected tag")
 )
 
 var notSeparatorRT = rangetable.New(
@@ -28,10 +28,10 @@ var notSeparatorRT = rangetable.New(
 	'к', 'л', 'м', 'н', 'о', 'п', 'р', 'с', 'т', 'у', 'ф',
 	'х', 'ц', 'ч', 'ш', 'щ', 'ъ', 'ы', 'ь', 'э', 'ю', 'я')
 
-type minification2 struct {
+type minificationText struct {
 }
 
-func (m *minification2) processText(in string) string {
+func (m *minificationText) processText(in string) string {
 	var buffer bytes.Buffer
 	var rRaw, r rune
 	var size int
@@ -74,7 +74,7 @@ func (m *minification2) processText(in string) string {
 	return buffer.String()
 }
 
-func (m *minification2) parseText(node *html.Node) (*html.Node, error) {
+func (m *minificationText) parseText(node *html.Node) (*html.Node, error) {
 	next := node.NextSibling
 	text := m.processText(node.Data)
 	if len(text) != 0 {
@@ -85,7 +85,7 @@ func (m *minification2) parseText(node *html.Node) (*html.Node, error) {
 	return next, nil
 }
 
-func (m *minification2) parseChildren(node *html.Node) (*html.Node, error) {
+func (m *minificationText) parseChildren(node *html.Node) (*html.Node, error) {
 	var err error
 	for it := node.FirstChild; it != nil; {
 		it, err = m.parseNode(it)
@@ -97,7 +97,7 @@ func (m *minification2) parseChildren(node *html.Node) (*html.Node, error) {
 	return node.NextSibling, nil
 }
 
-func (m *minification2) parseElements(node *html.Node) (*html.Node, error) {
+func (m *minificationText) parseElements(node *html.Node) (*html.Node, error) {
 	switch node.DataAtom {
 	case atom.Head, atom.Html:
 		return m.parseChildren(node)
@@ -120,11 +120,11 @@ func (m *minification2) parseElements(node *html.Node) (*html.Node, error) {
 		}
 		return next, err
 	default:
-		return nil, ErrMinification2UnexpectedTag
+		return nil, ErrMinificationTextUnexpectedTag
 	}
 }
 
-func (m *minification2) parseNode(node *html.Node) (*html.Node, error) {
+func (m *minificationText) parseNode(node *html.Node) (*html.Node, error) {
 	switch node.Type {
 	case html.DocumentNode: // +children -attr (first node)
 		return m.parseChildren(node)
@@ -133,13 +133,13 @@ func (m *minification2) parseNode(node *html.Node) (*html.Node, error) {
 	case html.TextNode: // -children -attr
 		return m.parseText(node)
 	default: // ErrorNode, CommentNode, DoctypeNode
-		return nil, ErrMinification2UnexpectedNodeType
+		return nil, ErrMinificationTextUnexpectedNodeType
 	}
 }
 
 // RunMinification2 - start minification node
 func RunMinification2(node *html.Node) error {
-	m := minification2{}
+	m := minificationText{}
 	_, err := m.parseNode(node)
 	return err
 }
