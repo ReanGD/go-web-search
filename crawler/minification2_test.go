@@ -1,7 +1,12 @@
 package crawler
 
 import (
+	"bufio"
+	"bytes"
+	"fmt"
 	"testing"
+
+	"golang.org/x/net/html"
 
 	. "github.com/smartystreets/goconvey/convey"
 )
@@ -13,7 +18,32 @@ func strEq(name string, t *testing.T, in, out string) {
 	})
 }
 
-func TestSpaces(t *testing.T) {
+func minificationTextCheck(in string, out string) {
+	var buf bytes.Buffer
+	w := bufio.NewWriter(&buf)
+	node, err := html.Parse(bytes.NewReader([]byte(in)))
+	if err == nil {
+		So(RunMinification2(node), ShouldEqual, nil)
+		err := html.Render(w, node)
+		if err == nil {
+			err = w.Flush()
+			if err == nil {
+				So(string(buf.Bytes()), ShouldEqual, out)
+			}
+		}
+	}
+	So(err, ShouldEqual, nil)
+}
+
+func helperTextBody(name string, t *testing.T, in, out string) {
+	Convey(name, t, func() {
+		fin := fmt.Sprintf("<html><head></head><body>\n%s\n</body></html>", in)
+		fout := fmt.Sprintf("<html><head></head><body>%s</body></html>", out)
+		minificationTextCheck(fin, fout)
+	})
+}
+
+func TestMinimizeText(t *testing.T) {
 	strEq("Empty string", t,
 		"", "")
 
@@ -67,4 +97,32 @@ func TestSpaces(t *testing.T) {
 
 	strEq("Dot after digits",
 		t, "1239.", "1239")
+}
+
+func TestParseErrors(t *testing.T) {
+	Convey("Test error node type", t, func() {
+		in := "<html><head></head><body><!-- Comment1 --></body></html>"
+		node, err := html.Parse(bytes.NewReader([]byte(in)))
+		So(err, ShouldEqual, nil)
+
+		So(RunMinification2(node).Error(), ShouldEqual, ErrMinification2UnexpectedNodeType.Error())
+	})
+
+	Convey("Test error node type", t, func() {
+		in := "<html><head></head><body><b>123</b></body></html>"
+		node, err := html.Parse(bytes.NewReader([]byte(in)))
+		So(err, ShouldEqual, nil)
+
+		So(RunMinification2(node).Error(), ShouldEqual, ErrMinification2UnexpectedTag.Error())
+	})
+}
+
+func TestRemoveEmptyTags(t *testing.T) {
+	helperTextBody("Remove empty tag", t,
+		"<div>pre</div><div></div><div>post</div>",
+		"<div>pre</div><div>post</div>")
+
+	helperTextBody("Remove tag with spaces", t,
+		"<div>pre</div><div>.\n\t,</div><div>post</div>",
+		"<div>pre</div><div>post</div>")
 }

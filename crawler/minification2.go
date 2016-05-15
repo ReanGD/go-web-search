@@ -14,6 +14,8 @@ import (
 var (
 	// ErrMinification2UnexpectedNodeType - found unexpected node type
 	ErrMinification2UnexpectedNodeType = errors.New("minification2.minification2.parseNode: unexpected node type")
+	// ErrMinification2UnexpectedTag - found unexpected tag
+	ErrMinification2UnexpectedTag = errors.New("minification2.minification2.parseElements: unexpected tag")
 )
 
 var notSeparatorRT = rangetable.New(
@@ -97,9 +99,9 @@ func (m *minification2) parseChildren(node *html.Node) (*html.Node, error) {
 
 func (m *minification2) parseElements(node *html.Node) (*html.Node, error) {
 	switch node.DataAtom {
-	case atom.Body, atom.Head, atom.Html:
+	case atom.Head, atom.Html:
 		return m.parseChildren(node)
-	case atom.Div:
+	case atom.Body, atom.Div:
 		next, err := m.parseChildren(node)
 		if err == nil {
 			child := node.FirstChild
@@ -118,7 +120,7 @@ func (m *minification2) parseElements(node *html.Node) (*html.Node, error) {
 		}
 		return next, err
 	default:
-		return nil, ErrMinification2UnexpectedNodeType
+		return nil, ErrMinification2UnexpectedTag
 	}
 }
 
