@@ -63,7 +63,7 @@ func TestErrorTag(t *testing.T) {
 		So(err, ShouldEqual, nil)
 
 		node.FirstChild.Type = html.ErrorNode
-		So(RunMinification1(node).Error(), ShouldEqual, ErrMinificationUnexpectedNodeType.Error())
+		So(RunMinification1(node).Error(), ShouldEqual, ErrMinification1UnexpectedNodeType.Error())
 	})
 }
 

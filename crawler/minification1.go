@@ -11,11 +11,10 @@ import (
 )
 
 var (
-	// ErrMinificationUnexpectedNodeType - found unexpected node type
-	ErrMinificationUnexpectedNodeType = errors.New("minification1.minification1.parseNode: unexpected node type")
+	// ErrMinification1UnexpectedNodeType - found unexpected node type
+	ErrMinification1UnexpectedNodeType = errors.New("minification1.minification1.parseNode: unexpected node type")
 )
 
-// minification1 - result html minification
 type minification1 struct {
 }
 
@@ -431,11 +430,10 @@ func (m *minification1) parseNode(node *html.Node) (*html.Node, error) {
 		return node.NextSibling, nil
 	case html.DoctypeNode: // ignore
 		return m.removeNode(node, false)
-		// return node.NextSibling, nil
 	case html.CommentNode: // remove
 		return m.removeNode(node, false)
 	default:
-		return nil, ErrMinificationUnexpectedNodeType
+		return nil, ErrMinification1UnexpectedNodeType
 	}
 }
 
