@@ -105,19 +105,23 @@ func (m *minificationHTML) mergeNodes(parent, prev, next *html.Node, addSeparato
 }
 
 func (m *minificationHTML) addChildTextNodeToBegining(node *html.Node, text string) {
-	newNode := &html.Node{
-		Parent:      nil,
-		FirstChild:  nil,
-		LastChild:   nil,
-		PrevSibling: nil,
-		NextSibling: nil,
-		Type:        html.TextNode,
-		Data:        text,
-		Namespace:   node.Namespace}
-	if node.FirstChild == nil {
-		node.AppendChild(newNode)
+	if node.FirstChild != nil && node.FirstChild.Type == html.TextNode {
+		node.FirstChild.Data += text
 	} else {
-		node.InsertBefore(newNode, node.FirstChild)
+		newNode := &html.Node{
+			Parent:      nil,
+			FirstChild:  nil,
+			LastChild:   nil,
+			PrevSibling: nil,
+			NextSibling: nil,
+			Type:        html.TextNode,
+			Data:        text,
+			Namespace:   node.Namespace}
+		if node.FirstChild == nil {
+			node.AppendChild(newNode)
+		} else {
+			node.InsertBefore(newNode, node.FirstChild)
+		}
 	}
 }
 
