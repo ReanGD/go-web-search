@@ -106,7 +106,7 @@ func (m *minificationHTML) mergeNodes(parent, prev, next *html.Node, addSeparato
 
 func (m *minificationHTML) addChildTextNodeToBegining(node *html.Node, text string) {
 	if node.FirstChild != nil && node.FirstChild.Type == html.TextNode {
-		node.FirstChild.Data += text
+		node.FirstChild.Data = text + node.FirstChild.Data
 	} else {
 		newNode := &html.Node{
 			Parent:      nil,
