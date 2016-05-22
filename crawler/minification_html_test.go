@@ -353,6 +353,10 @@ func TestOpenTags(t *testing.T) {
 		"<abbr title=\"title value\">text</abbr>",
 		" title value text ")
 
+	helperDiv("Open tag abbr with title and tags inside", t,
+		"<abbr title=\"title value\"><b>text</b>post</abbr>",
+		" title value textpost ")
+
 	helperDiv("Open tag abbr without title", t,
 		"<abbr>text</abbr>",
 		" text ")
