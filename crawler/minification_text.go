@@ -74,6 +74,37 @@ func (m *minificationText) processText(in string) string {
 	return buffer.String()
 }
 
+func (m *minificationText) openTag(node *html.Node) {
+	parent := node.Parent
+	for it := node.FirstChild; it != nil; it = it.NextSibling {
+		it.Parent = parent
+	}
+	parent.FirstChild = node.FirstChild
+	parent.LastChild = node.LastChild
+	node.FirstChild = nil
+	node.LastChild = nil
+	node.Parent = nil
+}
+
+func (m *minificationText) removeTag(node *html.Node) *html.Node {
+	prev, next, parent := node.PrevSibling, node.NextSibling, node.Parent
+	prevText := prev != nil && prev.Type == html.TextNode
+	nextText := next != nil && next.Type == html.TextNode
+	result := next
+
+	if prevText && nextText {
+		text := m.processText(next.Data)
+		if len(text) != 0 {
+			prev.Data = prev.Data + " " + text
+		}
+		result = next.NextSibling
+		parent.RemoveChild(next)
+	}
+	parent.RemoveChild(node)
+
+	return result
+}
+
 func (m *minificationText) parseText(node *html.Node) (*html.Node, error) {
 	next := node.NextSibling
 	text := m.processText(node.Data)
@@ -106,16 +137,9 @@ func (m *minificationText) parseElements(node *html.Node) (*html.Node, error) {
 		if err == nil {
 			child := node.FirstChild
 			if child == nil {
-				node.Parent.RemoveChild(node)
+				next = m.removeTag(node)
 			} else if child == node.LastChild && child.DataAtom == atom.Div {
-				for it := child.FirstChild; it != nil; it = it.NextSibling {
-					it.Parent = node
-				}
-				node.FirstChild = child.FirstChild
-				node.LastChild = child.LastChild
-				child.FirstChild = nil
-				child.LastChild = nil
-				child.Parent = nil
+				m.openTag(child)
 			}
 		}
 		return next, err
