@@ -118,11 +118,29 @@ func TestParseErrors(t *testing.T) {
 }
 
 func TestRemoveEmptyTags(t *testing.T) {
-	helperTextBody("Remove empty tag", t,
+	helperTextBody("Remove empty tag between tags", t,
 		"<div>pre</div><div></div><div>post</div>",
 		"<div>pre</div><div>post</div>")
+
+	helperTextBody("Remove empty tag between text nodes", t,
+		"pre<div></div>post",
+		"pre post")
+
+	helperTextBody("Remove empty tag between tag and text node", t,
+		"<div>pre</div><div></div>post",
+		"<div>pre</div>post")
+
+	helperTextBody("Remove empty tag between text node and tag", t,
+		"pre<div></div><div>post</div>",
+		"pre<div>post</div>")
 
 	helperTextBody("Remove tag with spaces", t,
 		"<div>pre</div><div>.\n\t,</div><div>post</div>",
 		"<div>pre</div><div>post</div>")
+}
+
+func TestOpenTag(t *testing.T) {
+	helperTextBody("Remove tag with spaces", t,
+		"<div><div>text</div></div>",
+		"text")
 }
