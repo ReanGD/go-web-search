@@ -161,8 +161,8 @@ func (m *minificationText) parseNode(node *html.Node) (*html.Node, error) {
 	}
 }
 
-// RunMinification2 - start minification node
-func RunMinification2(node *html.Node) error {
+// RunMinificationText - start minification node
+func RunMinificationText(node *html.Node) error {
 	m := minificationText{}
 	_, err := m.parseNode(node)
 	return err

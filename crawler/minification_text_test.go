@@ -23,7 +23,7 @@ func minificationTextCheck(in string, out string) {
 	w := bufio.NewWriter(&buf)
 	node, err := html.Parse(bytes.NewReader([]byte(in)))
 	if err == nil {
-		So(RunMinification2(node), ShouldEqual, nil)
+		So(RunMinificationText(node), ShouldEqual, nil)
 		err := html.Render(w, node)
 		if err == nil {
 			err = w.Flush()
@@ -105,7 +105,7 @@ func TestParseErrors(t *testing.T) {
 		node, err := html.Parse(bytes.NewReader([]byte(in)))
 		So(err, ShouldEqual, nil)
 
-		So(RunMinification2(node).Error(), ShouldEqual, ErrMinificationTextUnexpectedNodeType.Error())
+		So(RunMinificationText(node).Error(), ShouldEqual, ErrMinificationTextUnexpectedNodeType.Error())
 	})
 
 	Convey("Test error node type", t, func() {
@@ -113,7 +113,7 @@ func TestParseErrors(t *testing.T) {
 		node, err := html.Parse(bytes.NewReader([]byte(in)))
 		So(err, ShouldEqual, nil)
 
-		So(RunMinification2(node).Error(), ShouldEqual, ErrMinificationTextUnexpectedTag.Error())
+		So(RunMinificationText(node).Error(), ShouldEqual, ErrMinificationTextUnexpectedTag.Error())
 	})
 }
 

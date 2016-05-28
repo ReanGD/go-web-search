@@ -20,7 +20,7 @@ func minificationCheck(in string, out string) {
 	w := bufio.NewWriter(&buf)
 	node, err := html.Parse(bytes.NewReader([]byte(in)))
 	if err == nil {
-		So(RunMinification1(node), ShouldEqual, nil)
+		So(RunMinificationHTML(node), ShouldEqual, nil)
 		err := html.Render(w, node)
 		if err == nil {
 			err = w.Flush()
@@ -63,7 +63,7 @@ func TestErrorNodeType(t *testing.T) {
 		So(err, ShouldEqual, nil)
 
 		node.FirstChild.Type = html.ErrorNode
-		So(RunMinification1(node).Error(), ShouldEqual, ErrMinificationHTMLUnexpectedNodeType.Error())
+		So(RunMinificationHTML(node).Error(), ShouldEqual, ErrMinificationHTMLUnexpectedNodeType.Error())
 	})
 }
 
