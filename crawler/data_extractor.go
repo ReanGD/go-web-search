@@ -34,11 +34,15 @@ type dataExtractor struct {
 func (extractor *dataExtractor) getAttrVal(node *html.Node, attrName string) string {
 	for _, attr := range node.Attr {
 		if attr.Key == attrName {
-			return strings.ToLower(attr.Val)
+			return attr.Val
 		}
 	}
 
 	return ""
+}
+
+func (extractor *dataExtractor) getAttrValLower(node *html.Node, attrName string) string {
+	return strings.ToLower(extractor.getAttrVal(node, attrName))
 }
 
 func (extractor *dataExtractor) isEnableLinkParse() bool {
@@ -79,26 +83,26 @@ func (extractor *dataExtractor) parseElements(node *html.Node) error {
 	switch node.DataAtom {
 	case atom.A, atom.Area:
 		if extractor.isEnableLinkParse() {
-			rel := extractor.getAttrVal(node, "rel")
+			rel := extractor.getAttrValLower(node, "rel")
 			if rel != "nofollow" {
-				extractor.processLink(extractor.getAttrVal(node, "href"))
+				extractor.processLink(extractor.getAttrValLower(node, "href"))
 			}
 		}
 	case atom.Link:
 		if extractor.isEnableLinkParse() {
-			rel := extractor.getAttrVal(node, "rel")
+			rel := extractor.getAttrValLower(node, "rel")
 			if rel == "next" || rel == "prev" || rel == "previous" {
-				extractor.processLink(extractor.getAttrVal(node, "href"))
+				extractor.processLink(extractor.getAttrValLower(node, "href"))
 			}
 		}
 	case atom.Frame, atom.Iframe:
 		if extractor.isEnableLinkParse() {
-			extractor.processLink(extractor.getAttrVal(node, "src"))
+			extractor.processLink(extractor.getAttrValLower(node, "src"))
 		}
 	case atom.Meta:
-		name := extractor.getAttrVal(node, "name")
+		name := extractor.getAttrValLower(node, "name")
 		if name == "robots" || name == "googlebot" {
-			content := extractor.getAttrVal(node, "content")
+			content := extractor.getAttrValLower(node, "content")
 			if strings.Contains(content, "noindex") {
 				extractor.meta.MetaTagIndex = false
 			}
