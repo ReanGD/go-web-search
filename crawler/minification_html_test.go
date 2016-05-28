@@ -29,7 +29,7 @@ func minificationCheck(in string, out string) {
 			}
 		}
 	}
-	So(err, ShouldEqual, nil)
+	So(err, ShouldBeNil)
 }
 
 func helperHead(name string, t *testing.T, in, out string) {
@@ -60,7 +60,7 @@ func TestErrorNodeType(t *testing.T) {
 	Convey("Test error node type", t, func() {
 		in := "<html><head></head><body></body></html>"
 		node, err := html.Parse(bytes.NewReader([]byte(in)))
-		So(err, ShouldEqual, nil)
+		So(err, ShouldBeNil)
 
 		node.FirstChild.Type = html.ErrorNode
 		So(RunMinificationHTML(node).Error(), ShouldEqual, ErrMinificationHTMLUnexpectedNodeType.Error())

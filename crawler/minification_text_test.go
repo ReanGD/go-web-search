@@ -32,7 +32,7 @@ func minificationTextCheck(in string, out string) {
 			}
 		}
 	}
-	So(err, ShouldEqual, nil)
+	So(err, ShouldBeNil)
 }
 
 func helperTextBody(name string, t *testing.T, in, out string) {
@@ -103,7 +103,7 @@ func TestParseErrors(t *testing.T) {
 	Convey("Test error node type", t, func() {
 		in := "<html><head></head><body><!-- Comment1 --></body></html>"
 		node, err := html.Parse(bytes.NewReader([]byte(in)))
-		So(err, ShouldEqual, nil)
+		So(err, ShouldBeNil)
 
 		So(RunMinificationText(node).Error(), ShouldEqual, ErrMinificationTextUnexpectedNodeType.Error())
 	})
@@ -111,7 +111,7 @@ func TestParseErrors(t *testing.T) {
 	Convey("Test error node type", t, func() {
 		in := "<html><head></head><body><b>123</b></body></html>"
 		node, err := html.Parse(bytes.NewReader([]byte(in)))
-		So(err, ShouldEqual, nil)
+		So(err, ShouldBeNil)
 
 		So(RunMinificationText(node).Error(), ShouldEqual, ErrMinificationTextUnexpectedTag.Error())
 	})
