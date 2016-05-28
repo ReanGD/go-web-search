@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"net/url"
 
+	"golang.org/x/net/html"
 	"golang.org/x/net/html/charset"
 	"golang.org/x/text/encoding"
 	"golang.org/x/text/transform"
@@ -130,11 +131,19 @@ func (r *request) get(u *url.URL) error {
 		return fmt.Errorf("Encoding body, error = %s", err)
 	}
 
-	parser := new(HTMLParser)
-	err = parser.Parse(body, u)
+	node, err := html.Parse(bytes.NewReader(body))
 	if err != nil {
 		r.meta.State = content.StateParseError
 		return fmt.Errorf("Html parse error: %s", err)
+	}
+
+	parser, err := RunDataExtrator(node, u)
+	if err != nil {
+		r.meta.State = content.StateParseError
+		return fmt.Errorf("Html parse error: %s", err)
+	}
+	for url, msg := range parser.WrongURLs {
+		log.Printf("WARNING: Parse URL %s on page %s, message: %s", url, u.String(), msg)
 	}
 	if !parser.MetaTagIndex {
 		r.meta.State = content.StateNoFollow
