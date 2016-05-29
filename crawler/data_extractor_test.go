@@ -70,7 +70,7 @@ func TestURLs(t *testing.T) {
 		expectedURLs["http://testhost1/link2"] = "testhost1"
 		So(meta.URLs, ShouldResemble, expectedURLs)
 
-		So(len(meta.WrongURLs), ShouldEqual, 0)
+		So(meta.WrongURLs, ShouldBeEmpty)
 	})
 
 	Convey("TestIFrameURLs", t, func() {
@@ -85,7 +85,7 @@ func TestURLs(t *testing.T) {
 		expectedURLs["http://testhost1/test/link1"] = "testhost1"
 		So(meta.URLs, ShouldResemble, expectedURLs)
 
-		So(len(meta.WrongURLs), ShouldEqual, 0)
+		So(meta.WrongURLs, ShouldBeEmpty)
 	})
 }
 
@@ -159,7 +159,7 @@ func TestMeta(t *testing.T) {
 <a href="link1"></a>
 </body></html>`)
 		So(meta.MetaTagIndex, ShouldEqual, true)
-		So(len(meta.URLs), ShouldEqual, 0)
+		So(meta.URLs, ShouldBeEmpty)
 	})
 
 	Convey("Index and Nofollow robots", t, func() {
@@ -169,7 +169,7 @@ func TestMeta(t *testing.T) {
 <a href="link1"></a>
 </body></html>`)
 		So(meta.MetaTagIndex, ShouldEqual, true)
-		So(len(meta.URLs), ShouldEqual, 0)
+		So(meta.URLs, ShouldBeEmpty)
 	})
 
 	Convey("None robots", t, func() {
@@ -179,7 +179,7 @@ func TestMeta(t *testing.T) {
 <a href="link1"></a>
 </body></html>`)
 		So(meta.MetaTagIndex, ShouldEqual, false)
-		So(len(meta.URLs), ShouldEqual, 0)
+		So(meta.URLs, ShouldBeEmpty)
 	})
 }
 
