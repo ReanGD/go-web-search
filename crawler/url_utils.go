@@ -52,7 +52,7 @@ func GenerateURLByHostName(hostName string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	response.Body.Close()
+	err = response.Body.Close()
 
-	return response.Request.URL.String(), nil
+	return response.Request.URL.String(), err
 }
