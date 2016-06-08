@@ -2,6 +2,7 @@ package crawler
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 
 	"github.com/ReanGD/go-web-search/content"
@@ -10,6 +11,11 @@ import (
 	"golang.org/x/net/html/charset"
 	"golang.org/x/text/encoding"
 	"golang.org/x/text/transform"
+)
+
+var (
+	// ErrBodyParserEncodingNotFound - not found encoding for content
+	ErrBodyParserEncodingNotFound = errors.New("body_parser.bodyToUTF8: not found encoding for content")
 )
 
 func isHTML(content []byte) bool {
@@ -40,9 +46,13 @@ func isHTML(content []byte) bool {
 }
 
 func bodyToUTF8(body []byte, contentType []string) (*transform.Reader, error) {
-	enc, _, _ := charset.DetermineEncoding(body, contentType[0])
+	contentTypeStr := ""
+	if len(contentType) != 0 {
+		contentTypeStr = contentType[0]
+	}
+	enc, _, _ := charset.DetermineEncoding(body, contentTypeStr)
 	if enc == encoding.Nop {
-		return nil, fmt.Errorf("Not found encoding")
+		return nil, ErrBodyParserEncodingNotFound
 	}
 
 	return transform.NewReader(bytes.NewReader(body), enc.NewDecoder()), nil
