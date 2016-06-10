@@ -1,11 +1,14 @@
 package crawler
 
 import (
+	"bytes"
+	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
 
 	"github.com/PuerkitoBio/purell"
+	"github.com/opennota/urlesc"
 )
 
 const safeNormalizationFlags purell.NormalizationFlags = purell.FlagLowercaseScheme |
@@ -28,8 +31,34 @@ const defaultNormalizationFlags purell.NormalizationFlags = safeNormalizationFla
 	usuallySafeNormalizationFlags |
 	unsafeNormalizationFlags
 
+func removeUtmFromQuery(u *url.URL) {
+	q := u.Query()
+
+	if len(q) > 0 {
+		buf := new(bytes.Buffer)
+		for key, value := range q {
+			if key != "utm_source" &&
+				key != "utm_medium" &&
+				key != "utm_term" &&
+				key != "utm_content" &&
+				key != "utm_campaign" {
+				for _, v := range value {
+					if buf.Len() > 0 {
+						buf.WriteRune('&')
+					}
+					buf.WriteString(fmt.Sprintf("%s=%s", key, urlesc.QueryEscape(v)))
+				}
+			}
+		}
+
+		// Rebuild the raw query string
+		u.RawQuery = buf.String()
+	}
+}
+
 // NormalizeURL - nomalize URL
 func NormalizeURL(u *url.URL) string {
+	removeUtmFromQuery(u)
 	return purell.NormalizeURL(u, defaultNormalizationFlags)
 }
 
