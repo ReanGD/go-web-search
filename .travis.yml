@@ -1,0 +1,16 @@
+language: go
+sudo: false
+go:
+  - tip
+os:
+  - linux
+install:
+  - go get -u -t -v ./...
+script:
+  - go test -v ./...
+notifications:
+  email:
+    recipients:
+      - reangd@yandex.ru
+    on_success: never
+    on_failure: always
