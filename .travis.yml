@@ -7,7 +7,9 @@ os:
 install:
   - go get -u -t -v ./...
 script:
-  - go test -v ./...
+  - go test ./...
+after_success:
+  - bash <(curl --request POST "https://goreportcard.com/checks" --data "repo=github.com/ReanGD/go-web-search")
 notifications:
   email:
     recipients:
