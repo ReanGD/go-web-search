@@ -1,4 +1,4 @@
-[![codecov](https://codecov.io/gh/ReanGD/go-web-search/branch/master/graph/badge.svg)](https://codecov.io/gh/ReanGD/go-web-search)
+[![codecov](https://codecov.io/gh/ReanGD/go-web-search/branch/master/graph/badge.svg)](https://codecov.io/gh/ReanGD/go-web-search) [![Go Report Card](https://goreportcard.com/badge/github.com/ReanGD/go-web-search)](https://goreportcard.com/report/github.com/ReanGD/go-web-search)
 
 
 Для компиляции необходимо вызвать из корня:
