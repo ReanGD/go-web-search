@@ -13,3 +13,5 @@ engines:
 ratings:
   paths:
     - "**.go"
+    - "**.md"
+    - "**.sh"
