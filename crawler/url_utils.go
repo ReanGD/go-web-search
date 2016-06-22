@@ -44,9 +44,9 @@ func removeUtmFromQuery(u *url.URL) {
 				key != "utm_campaign" {
 				for _, v := range value {
 					if buf.Len() > 0 {
-						buf.WriteRune('&')
+						_, _ = buf.WriteRune('&')
 					}
-					buf.WriteString(fmt.Sprintf("%s=%s", key, urlesc.QueryEscape(v)))
+					_, _ = buf.WriteString(fmt.Sprintf("%s=%s", key, urlesc.QueryEscape(v)))
 				}
 			}
 		}

@@ -113,7 +113,7 @@ func TestBodyToUTF8(t *testing.T) {
 <body><div>Привет</div></body>
 </html>`
 		_, err := bodyToUTF8([]byte(content), []string{})
-		So(err, ShouldEqual, ErrBodyParserEncodingNotFound)
+		So(err.Error(), ShouldEqual, ErrEncodingNotFound)
 	})
 
 }

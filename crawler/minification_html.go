@@ -1,18 +1,14 @@
 package crawler
 
 import (
-	"errors"
 	"strings"
 	"unicode"
 	"unicode/utf8"
 
+	"github.com/ReanGD/go-web-search/werrors"
+
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
-)
-
-var (
-	// ErrMinificationHTMLUnexpectedNodeType - found unexpected node type
-	ErrMinificationHTMLUnexpectedNodeType = errors.New("minification_html.minificationHTML.parseNode: unexpected node type")
 )
 
 type minificationHTML struct {
@@ -437,7 +433,7 @@ func (m *minificationHTML) parseNode(node *html.Node) (*html.Node, error) {
 	case html.CommentNode: // remove
 		return m.removeNode(node, false)
 	default:
-		return nil, ErrMinificationHTMLUnexpectedNodeType
+		return nil, werrors.NewCaller(ErrUnexpectedNodeType)
 	}
 }
 

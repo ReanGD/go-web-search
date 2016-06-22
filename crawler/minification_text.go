@@ -2,20 +2,14 @@ package crawler
 
 import (
 	"bytes"
-	"errors"
 	"unicode"
 	"unicode/utf8"
+
+	"github.com/ReanGD/go-web-search/werrors"
 
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
 	"golang.org/x/text/unicode/rangetable"
-)
-
-var (
-	// ErrMinificationTextUnexpectedNodeType - found unexpected node type
-	ErrMinificationTextUnexpectedNodeType = errors.New("minification_text.minificationText.parseNode: unexpected node type")
-	// ErrMinificationTextUnexpectedTag - found unexpected tag
-	ErrMinificationTextUnexpectedTag = errors.New("minification_text.minificationText.parseElements: unexpected tag")
 )
 
 var notSeparatorRT = rangetable.New(
@@ -144,7 +138,7 @@ func (m *minificationText) parseElements(node *html.Node) (*html.Node, error) {
 		}
 		return next, err
 	default:
-		return nil, ErrMinificationTextUnexpectedTag
+		return nil, werrors.NewCaller(ErrUnexpectedTag)
 	}
 }
 
@@ -157,7 +151,7 @@ func (m *minificationText) parseNode(node *html.Node) (*html.Node, error) {
 	case html.TextNode: // -children -attr
 		return m.parseText(node)
 	default: // ErrorNode, CommentNode, DoctypeNode
-		return nil, ErrMinificationTextUnexpectedNodeType
+		return nil, werrors.NewCaller(ErrUnexpectedNodeType)
 	}
 }
 

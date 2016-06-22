@@ -194,6 +194,6 @@ func TestErrorDataExtrator(t *testing.T) {
 		node.FirstChild.Type = html.ErrorNode
 		_, err = RunDataExtrator(node, baseURL)
 		So(err, ShouldNotBeNil)
-		So(err.Error(), ShouldEqual, ErrDataExtractorUnexpectedNodeType.Error())
+		So(err.Error(), ShouldEqual, ErrUnexpectedNodeType)
 	})
 }

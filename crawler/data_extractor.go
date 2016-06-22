@@ -1,17 +1,13 @@
 package crawler
 
 import (
-	"errors"
 	"net/url"
 	"strings"
 
+	"github.com/ReanGD/go-web-search/werrors"
+
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
-)
-
-var (
-	// ErrDataExtractorUnexpectedNodeType - found unexpected node type
-	ErrDataExtractorUnexpectedNodeType = errors.New("data_extractor.dataExtractor.parseNode: unexpected node type")
 )
 
 // HTMLMetadata extracted meta data from HTML
@@ -61,7 +57,7 @@ func (extractor *dataExtractor) processLink(link string) {
 
 	parsed := extractor.baseURL.ResolveReference(relative)
 	urlStr := NormalizeURL(parsed)
-	parsed, err = url.Parse(urlStr)
+	parsed, _ = url.Parse(urlStr)
 
 	if (parsed.Scheme == "http" || parsed.Scheme == "https") && urlStr != extractor.baseURL.String() {
 		extractor.meta.URLs[urlStr] = NormalizeHostName(parsed.Host)
@@ -153,7 +149,7 @@ func (extractor *dataExtractor) parseNode(node *html.Node) error {
 	case html.CommentNode, html.TextNode, html.DoctypeNode: // skip
 		return nil
 	default:
-		return ErrDataExtractorUnexpectedNodeType
+		return werrors.NewCaller(ErrUnexpectedNodeType)
 	}
 }
 

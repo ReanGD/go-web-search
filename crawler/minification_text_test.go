@@ -105,7 +105,7 @@ func TestParseErrors(t *testing.T) {
 		node, err := html.Parse(bytes.NewReader([]byte(in)))
 		So(err, ShouldBeNil)
 
-		So(RunMinificationText(node).Error(), ShouldEqual, ErrMinificationTextUnexpectedNodeType.Error())
+		So(RunMinificationText(node).Error(), ShouldEqual, ErrUnexpectedNodeType)
 	})
 
 	Convey("Test error node type", t, func() {
@@ -113,7 +113,7 @@ func TestParseErrors(t *testing.T) {
 		node, err := html.Parse(bytes.NewReader([]byte(in)))
 		So(err, ShouldBeNil)
 
-		So(RunMinificationText(node).Error(), ShouldEqual, ErrMinificationTextUnexpectedTag.Error())
+		So(RunMinificationText(node).Error(), ShouldEqual, ErrUnexpectedTag)
 	})
 }
 
