@@ -1,28 +1,43 @@
 package werrors
 
 import (
+	"errors"
 	"testing"
 
 	. "github.com/smartystreets/goconvey/convey"
 )
 
-func helperErrorWithCaller(msg string) error {
-	return NewCaller(msg)
+func helperErrorEx(msg string) error {
+	return New(msg)
 }
 
-// TestErrorWithCaller ...
-func TestErrorWithCaller(t *testing.T) {
+// TestErrorEx ...
+func TestErrorEx(t *testing.T) {
 	Convey("Check Caller", t, func() {
 		msg := "message"
 
-		err := helperErrorWithCaller(msg)
+		err := helperErrorEx(msg)
 		So(err.Error(), ShouldEqual, msg)
 
-		werr, ok := err.(*ErrorWithCaller)
+		werr, ok := err.(*ErrorEx)
 		So(ok, ShouldBeTrue)
 		So(werr.Error(), ShouldEqual, msg)
 		So(werr.Caller, ShouldStartWith, `[errors_test.go:`)
-		So(werr.Caller, ShouldEndWith, `werrors.helperErrorWithCaller`)
+		So(werr.Caller, ShouldEndWith, `werrors.helperErrorEx`)
+		So(werr.Details, ShouldEqual, "")
+	})
+
+	Convey("Check Details", t, func() {
+		msg := "message"
+		details := "details"
+
+		err := NewDetails(msg, errors.New(details))
+		So(err.Error(), ShouldEqual, msg)
+
+		werr, ok := err.(*ErrorEx)
+		So(ok, ShouldBeTrue)
+		So(werr.Error(), ShouldEqual, msg)
+		So(werr.Details, ShouldEqual, details)
 	})
 
 	Convey("Check stack error", t, func() {
@@ -32,12 +47,13 @@ func TestErrorWithCaller(t *testing.T) {
 		callerSkip = 1e3
 		defer func() { callerSkip = originalSkip }()
 
-		err := helperErrorWithCaller(msg)
+		err := helperErrorEx(msg)
 		So(err.Error(), ShouldEqual, msg)
 
-		werr, ok := err.(*ErrorWithCaller)
+		werr, ok := err.(*ErrorEx)
 		So(ok, ShouldBeTrue)
 		So(werr.Error(), ShouldEqual, msg)
 		So(werr.Caller, ShouldEqual, ErrFailedGetCaller)
+		So(werr.Details, ShouldEqual, "")
 	})
 }
