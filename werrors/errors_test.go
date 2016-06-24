@@ -25,6 +25,21 @@ func TestErrorEx(t *testing.T) {
 		So(werr.Caller, ShouldStartWith, `[errors_test.go:`)
 		So(werr.Caller, ShouldEndWith, `werrors.helperErrorEx`)
 		So(werr.Details, ShouldEqual, "")
+		So(werr.Level, ShouldEqual, ErrorLevel)
+	})
+
+	Convey("Check Log level", t, func() {
+		msg := "message"
+		lvl := WarningLevel
+
+		err := NewLevel(msg, lvl)
+		So(err.Error(), ShouldEqual, msg)
+
+		werr, ok := err.(*ErrorEx)
+		So(ok, ShouldBeTrue)
+		So(werr.Error(), ShouldEqual, msg)
+		So(werr.Details, ShouldEqual, "")
+		So(werr.Level, ShouldEqual, lvl)
 	})
 
 	Convey("Check Details", t, func() {
@@ -38,6 +53,7 @@ func TestErrorEx(t *testing.T) {
 		So(ok, ShouldBeTrue)
 		So(werr.Error(), ShouldEqual, msg)
 		So(werr.Details, ShouldEqual, details)
+		So(werr.Level, ShouldEqual, ErrorLevel)
 	})
 
 	Convey("Check stack error", t, func() {
@@ -55,5 +71,6 @@ func TestErrorEx(t *testing.T) {
 		So(werr.Error(), ShouldEqual, msg)
 		So(werr.Caller, ShouldEqual, ErrFailedGetCaller)
 		So(werr.Details, ShouldEqual, "")
+		So(werr.Level, ShouldEqual, ErrorLevel)
 	})
 }

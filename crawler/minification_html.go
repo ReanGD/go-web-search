@@ -433,7 +433,7 @@ func (m *minificationHTML) parseNode(node *html.Node) (*html.Node, error) {
 	case html.CommentNode: // remove
 		return m.removeNode(node, false)
 	default:
-		return nil, werrors.NewCaller(ErrUnexpectedNodeType)
+		return nil, werrors.New(ErrUnexpectedNodeType)
 	}
 }
 

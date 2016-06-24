@@ -12,9 +12,8 @@ import (
 	"net/http"
 	"net/url"
 
-	"golang.org/x/net/html"
-
 	"github.com/ReanGD/go-web-search/content"
+	"github.com/uber-go/zap"
 )
 
 type request struct {
@@ -109,23 +108,10 @@ func (r *request) get(u *url.URL) error {
 		return err
 	}
 
-	var node *html.Node
-	node, r.meta.State, err = ProcessBody(body, contentType)
+	var parser *HTMLMetadata
+	parser, r.meta.State, err = ProcessBody(zap.NewJSON(), body, contentType, u)
 	if err != nil {
 		return err
-	}
-
-	parser, err := RunDataExtrator(node, u)
-	if err != nil {
-		r.meta.State = content.StateParseError
-		return fmt.Errorf("Html parse error: %s", err)
-	}
-	for url, msg := range parser.WrongURLs {
-		log.Printf("WARNING: Parse URL %s on page %s, message: %s", url, u.String(), msg)
-	}
-	if !parser.MetaTagIndex {
-		r.meta.State = content.StateNoFollow
-		return nil
 	}
 
 	hash := md5.Sum(body)

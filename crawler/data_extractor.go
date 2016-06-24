@@ -149,7 +149,7 @@ func (extractor *dataExtractor) parseNode(node *html.Node) error {
 	case html.CommentNode, html.TextNode, html.DoctypeNode: // skip
 		return nil
 	default:
-		return werrors.NewCaller(ErrUnexpectedNodeType)
+		return werrors.New(ErrUnexpectedNodeType)
 	}
 }
 

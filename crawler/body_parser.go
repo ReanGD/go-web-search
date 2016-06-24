@@ -2,10 +2,11 @@ package crawler
 
 import (
 	"bytes"
-	"fmt"
+	"net/url"
 
 	"github.com/ReanGD/go-web-search/content"
 	"github.com/ReanGD/go-web-search/werrors"
+	"github.com/uber-go/zap"
 
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/charset"
@@ -47,18 +48,18 @@ func bodyToUTF8(body []byte, contentType []string) (*transform.Reader, error) {
 	}
 	enc, _, _ := charset.DetermineEncoding(body, contentTypeStr)
 	if enc == encoding.Nop {
-		return nil, werrors.NewCaller(ErrEncodingNotFound)
+		return nil, werrors.New(ErrEncodingNotFound)
 	}
 
 	return transform.NewReader(bytes.NewReader(body), enc.NewDecoder()), nil
 }
 
 // ProcessBody - check and minimize request body
-func ProcessBody(body []byte, contentType []string) (*html.Node, content.State, error) {
+func ProcessBody(logger zap.Logger, body []byte, contentType []string, u *url.URL) (*HTMLMetadata, content.State, error) {
 	state := content.StateSuccess
 
 	if !isHTML(body) {
-		return nil, content.StateParseError, fmt.Errorf("Body not html")
+		return nil, content.StateParseError, werrors.New(ErrBodyNotHTML)
 	}
 
 	bodyReader, err := bodyToUTF8(body, contentType)
@@ -68,8 +69,23 @@ func ProcessBody(body []byte, contentType []string) (*html.Node, content.State, 
 
 	node, err := html.Parse(bodyReader)
 	if err != nil {
-		return nil, content.StateParseError, fmt.Errorf("Html parse error: %s", err)
+		return nil, content.StateParseError, werrors.NewDetails(ErrHTMLParse, err)
 	}
 
-	return node, state, nil
+	parser, err := RunDataExtrator(node, u)
+	if err != nil {
+		return parser, content.StateParseError, err
+	}
+	if !parser.MetaTagIndex {
+		return parser, content.StateNoFollow, werrors.NewLevel(WarnPageNotIndexed, werrors.WarningLevel)
+	}
+
+	for url, error := range parser.WrongURLs {
+		logger.Warn("Error parse URL",
+			zap.String("err_url", url),
+			zap.String("error", error),
+		)
+	}
+
+	return parser, state, nil
 }

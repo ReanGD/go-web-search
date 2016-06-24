@@ -138,7 +138,7 @@ func (m *minificationText) parseElements(node *html.Node) (*html.Node, error) {
 		}
 		return next, err
 	default:
-		return nil, werrors.NewCaller(ErrUnexpectedTag)
+		return nil, werrors.New(ErrUnexpectedTag)
 	}
 }
 
@@ -151,7 +151,7 @@ func (m *minificationText) parseNode(node *html.Node) (*html.Node, error) {
 	case html.TextNode: // -children -attr
 		return m.parseText(node)
 	default: // ErrorNode, CommentNode, DoctypeNode
-		return nil, werrors.NewCaller(ErrUnexpectedNodeType)
+		return nil, werrors.New(ErrUnexpectedNodeType)
 	}
 }
 
