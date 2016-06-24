@@ -74,10 +74,10 @@ func ProcessBody(logger zap.Logger, body []byte, contentType []string, u *url.UR
 
 	parser, err := RunDataExtrator(node, u)
 	if err != nil {
-		return parser, content.StateParseError, err
+		return nil, content.StateParseError, err
 	}
 	if !parser.MetaTagIndex {
-		return parser, content.StateNoFollow, werrors.NewLevel(WarnPageNotIndexed, werrors.WarningLevel)
+		return nil, content.StateNoFollow, werrors.NewLevel(WarnPageNotIndexed, werrors.WarningLevel)
 	}
 
 	for url, error := range parser.WrongURLs {
@@ -85,6 +85,16 @@ func ProcessBody(logger zap.Logger, body []byte, contentType []string, u *url.UR
 			zap.String("err_url", url),
 			zap.String("error", error),
 		)
+	}
+
+	err = RunMinificationHTML(node)
+	if err != nil {
+		return nil, content.StateParseError, err
+	}
+
+	err = RunMinificationText(node)
+	if err != nil {
+		return nil, content.StateParseError, err
 	}
 
 	return parser, state, nil
