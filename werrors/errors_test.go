@@ -21,14 +21,14 @@ func TestErrorEx(t *testing.T) {
 
 		werr, ok := err.(*ErrorEx)
 		So(ok, ShouldBeTrue)
-		So(werr.Error(), ShouldEqual, msg)
-		So(werr.Caller, ShouldStartWith, `[errors_test.go:`)
-		So(werr.Caller, ShouldEndWith, `werrors.helperErrorEx`)
-		So(werr.Details, ShouldEqual, "")
 		So(werr.Level, ShouldEqual, ErrorLevel)
+		So(werr.Error(), ShouldEqual, msg)
+		So(len(werr.Fields), ShouldEqual, 1)
+		So(werr.Fields["caller"], ShouldStartWith, `[errors_test.go:`)
+		So(werr.Fields["caller"], ShouldEndWith, `werrors.helperErrorEx`)
 	})
 
-	Convey("Check Log level", t, func() {
+	Convey("Check Newlevel", t, func() {
 		msg := "message"
 		lvl := WarningLevel
 
@@ -37,23 +37,53 @@ func TestErrorEx(t *testing.T) {
 
 		werr, ok := err.(*ErrorEx)
 		So(ok, ShouldBeTrue)
-		So(werr.Error(), ShouldEqual, msg)
-		So(werr.Details, ShouldEqual, "")
 		So(werr.Level, ShouldEqual, lvl)
+		So(werr.Error(), ShouldEqual, msg)
+		So(len(werr.Fields), ShouldEqual, 1)
 	})
 
-	Convey("Check Details", t, func() {
+	Convey("Check NewDetails", t, func() {
 		msg := "message"
-		details := "details"
+		details := "details message"
 
 		err := NewDetails(msg, errors.New(details))
 		So(err.Error(), ShouldEqual, msg)
 
 		werr, ok := err.(*ErrorEx)
 		So(ok, ShouldBeTrue)
-		So(werr.Error(), ShouldEqual, msg)
-		So(werr.Details, ShouldEqual, details)
 		So(werr.Level, ShouldEqual, ErrorLevel)
+		So(werr.Error(), ShouldEqual, msg)
+		So(len(werr.Fields), ShouldEqual, 2)
+		So(werr.Fields["details"], ShouldEqual, details)
+	})
+
+	Convey("Check NewFields", t, func() {
+		msg := "message"
+
+		err := NewFields(msg, "field1", "field1 data", "field2", "field2 data")
+		So(err.Error(), ShouldEqual, msg)
+
+		werr, ok := err.(*ErrorEx)
+		So(ok, ShouldBeTrue)
+		So(werr.Level, ShouldEqual, ErrorLevel)
+		So(werr.Error(), ShouldEqual, msg)
+		So(len(werr.Fields), ShouldEqual, 3)
+		So(werr.Fields["field1"], ShouldEqual, "field1 data")
+		So(werr.Fields["field2"], ShouldEqual, "field2 data")
+	})
+
+	Convey("Check NewFields with an odd number of arguments", t, func() {
+		msg := "message"
+
+		err := NewFields(msg, "field1", "field1 data", "field err")
+		So(err.Error(), ShouldEqual, msg)
+
+		werr, ok := err.(*ErrorEx)
+		So(ok, ShouldBeTrue)
+		So(werr.Level, ShouldEqual, ErrorLevel)
+		So(werr.Error(), ShouldEqual, msg)
+		So(len(werr.Fields), ShouldEqual, 2)
+		So(werr.Fields["field1"], ShouldEqual, "field1 data")
 	})
 
 	Convey("Check stack error", t, func() {
@@ -68,9 +98,8 @@ func TestErrorEx(t *testing.T) {
 
 		werr, ok := err.(*ErrorEx)
 		So(ok, ShouldBeTrue)
-		So(werr.Error(), ShouldEqual, msg)
-		So(werr.Caller, ShouldEqual, ErrFailedGetCaller)
-		So(werr.Details, ShouldEqual, "")
 		So(werr.Level, ShouldEqual, ErrorLevel)
+		So(werr.Error(), ShouldEqual, msg)
+		So(werr.Fields, ShouldResemble, map[string]string{"caller": ErrFailedGetCaller})
 	})
 }

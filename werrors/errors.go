@@ -25,49 +25,54 @@ const (
 
 // ErrorEx - error with extended fields
 type ErrorEx struct {
-	msg     string
-	Caller  string
-	Details string
-	Level   LogLevel
+	msg    string
+	Level  LogLevel
+	Fields map[string]string
 }
 
 func (e ErrorEx) Error() string {
 	return e.msg
 }
 
-var callerSkip = 1
+var callerSkip = 2
 
-// NewFull - ErrorWithCaller with all params
-func NewFull(skip int, msg string, details string, logLevel LogLevel) error {
-	ps, file, line, ok := runtime.Caller(callerSkip + skip)
+func newImpl(logLevel LogLevel, msg string, fields ...string) error {
+	var caller string
+	ps, file, line, ok := runtime.Caller(callerSkip)
 	if !ok {
-		return &ErrorEx{
-			msg:     msg,
-			Caller:  ErrFailedGetCaller,
-			Details: details,
-			Level:   logLevel,
-		}
+		caller = ErrFailedGetCaller
+	} else {
+		caller = fmt.Sprintf("[%s:%d] %s", filepath.Base(file), line, runtime.FuncForPC(ps).Name())
 	}
 
-	return &ErrorEx{
-		msg:     msg,
-		Caller:  fmt.Sprintf("[%s:%d] %s", filepath.Base(file), line, runtime.FuncForPC(ps).Name()),
-		Details: details,
-		Level:   logLevel,
+	result := &ErrorEx{
+		msg:    msg,
+		Level:  logLevel,
+		Fields: make(map[string]string, 1+len(fields)/2)}
+	result.Fields["caller"] = caller
+	for i := 0; i != len(fields)/2; i++ {
+		result.Fields[fields[i*2]] = fields[i*2+1]
 	}
+
+	return result
 }
 
 // New - create error with caller only
 func New(msg string) error {
-	return NewFull(1, msg, "", ErrorLevel)
+	return newImpl(ErrorLevel, msg)
 }
 
 // NewLevel - create error with caller and log level
 func NewLevel(msg string, logLevel LogLevel) error {
-	return NewFull(1, msg, "", logLevel)
+	return newImpl(logLevel, msg)
 }
 
 // NewDetails - create error with caller and details message
 func NewDetails(msg string, details error) error {
-	return NewFull(1, msg, details.Error(), ErrorLevel)
+	return newImpl(ErrorLevel, msg, "details", details.Error())
+}
+
+// NewFields - create error with custom fields
+func NewFields(msg string, fields ...string) error {
+	return newImpl(ErrorLevel, msg, fields...)
 }
