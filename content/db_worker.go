@@ -113,11 +113,10 @@ func (w *DBWorker) saveMeta(tr *DBrw, meta *proxy.InMeta, origin sql.NullInt64) 
 		}
 
 		if !origin.Valid {
-			hash, err := meta.GetHash()
-			if err != nil {
-				return err
+			hash := meta.GetHash()
+			if len(hash) != 0 {
+				origin = tr.FindOrigin(hash)
 			}
-			origin = tr.FindOrigin(hash)
 		}
 		meta.SetOrigin(origin)
 
@@ -136,8 +135,8 @@ func (w *DBWorker) saveMeta(tr *DBrw, meta *proxy.InMeta, origin sql.NullInt64) 
 		if err != nil {
 			return fmt.Errorf("add new 'Meta' record for URL %s, message: %s", urlStr, err)
 		}
-		hash, err := meta.GetHash()
-		if err != nil {
+		hash := meta.GetHash()
+		if len(hash) != 0 {
 			tr.AddHash(hash, urlID)
 		}
 
