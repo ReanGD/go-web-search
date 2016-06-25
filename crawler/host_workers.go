@@ -8,12 +8,13 @@ import (
 	"time"
 
 	"github.com/ReanGD/go-web-search/content"
+	"github.com/ReanGD/go-web-search/proxy"
 )
 
 type hostWorker struct {
 	Request *request
 	Tasks   []content.URL
-	ChDB    chan<- *content.PageData
+	ChDB    chan<- *proxy.PageData
 }
 
 // Run - start worker
@@ -28,10 +29,10 @@ func (w *hostWorker) Start(wgParent *sync.WaitGroup) {
 			continue
 		}
 		result := w.Request.Process(parsed)
-		result.ParentURL = w.Tasks[i].ID
+		result.SetParentURL(w.Tasks[i].ID)
 		w.ChDB <- result
 		fmt.Printf(".")
-		if result.MetaItem.NeedWaitAfterRequest() && i != cnt-1 {
+		if result.GetMeta().NeedWaitAfterRequest() && i != cnt-1 {
 			time.Sleep(1 * time.Second)
 		}
 	}
@@ -91,7 +92,7 @@ func (w *hostWorkers) Init(db *content.DBrw, baseHosts []string, cnt int) error 
 	return nil
 }
 
-func (w *hostWorkers) Start(chDB chan<- *content.PageData) {
+func (w *hostWorkers) Start(chDB chan<- *proxy.PageData) {
 	var wg sync.WaitGroup
 	defer wg.Wait()
 

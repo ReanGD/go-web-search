@@ -3,6 +3,7 @@ package content
 import (
 	"fmt"
 
+	"github.com/ReanGD/go-web-search/proxy"
 	"github.com/jinzhu/gorm"
 )
 
@@ -27,8 +28,8 @@ type DBrw struct {
 	*gorm.DB
 	// map[Host.Name]Host
 	hosts map[string]*Host
-	// map[Content.Hash][]Content.URL
-	hashes map[string][]int64
+	// map[Content.Hash]Content.URL
+	hashes map[string]int64
 }
 
 // GetDBrw - create/open content.db
@@ -45,7 +46,7 @@ func GetDBrw() (*DBrw, error) {
 	db.SetLogger(defaultLogger)
 	db.LogMode(false)
 
-	err = createTables(db, &Host{}, &Content{}, &Meta{}, &Link{}, &URL{})
+	err = createTables(db, &Host{}, &proxy.Content{}, &proxy.Meta{}, &Link{}, &URL{})
 	if err != nil {
 		errClose := db.Close()
 		if errClose != nil {
@@ -64,7 +65,7 @@ func GetDBrw() (*DBrw, error) {
 		return nil, fmt.Errorf("Get hosts list from db, message: %s", err)
 	}
 
-	var hashes []Content
+	var hashes []proxy.Content
 	err = db.Select("url, hash").Find(&hashes).Error
 	if err != nil {
 		errClose := db.Close()
@@ -77,20 +78,14 @@ func GetDBrw() (*DBrw, error) {
 	result := &DBrw{
 		DB:     db,
 		hosts:  make(map[string]*Host, len(hosts)),
-		hashes: make(map[string][]int64, len(hashes))}
+		hashes: make(map[string]int64, len(hashes))}
 
 	for i := 0; i != len(hosts); i++ {
 		result.hosts[hosts[i].Name] = &hosts[i]
 	}
 
 	for _, item := range hashes {
-		hash := item.Hash
-		_, exists := result.hashes[hash]
-		if exists {
-			result.hashes[hash] = append(result.hashes[hash], item.URL)
-		} else {
-			result.hashes[hash] = []int64{item.URL}
-		}
+		result.hashes[item.Hash] = item.URL
 	}
 
 	return result, nil

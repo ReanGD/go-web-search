@@ -6,21 +6,14 @@ import (
 	"log"
 	"sync"
 
+	"github.com/ReanGD/go-web-search/proxy"
 	"github.com/jinzhu/gorm"
 )
-
-// PageData - data for save parsed pages
-type PageData struct {
-	MetaItem *Meta
-	// map[URL]HostName
-	URLs      map[string]string
-	ParentURL int64
-}
 
 // DBWorker - worker for save data to db
 type DBWorker struct {
 	DB   *DBrw
-	ChDB <-chan *PageData
+	ChDB <-chan *proxy.PageData
 }
 
 func (w *DBWorker) getURLIDByStr(tr *DBrw, urlStr string) (sql.NullInt64, error) {
@@ -90,9 +83,9 @@ func (w *DBWorker) insertLinkIfNotExists(tr *DBrw, master int64, slave int64) er
 	return nil
 }
 
-func (w *DBWorker) saveMeta(tr *DBrw, meta *Meta, origin sql.NullInt64) error {
-	hostID := tr.GetHostID(meta.HostName)
-	urlStr := meta.URLForResolve
+func (w *DBWorker) saveMeta(tr *DBrw, meta *proxy.InMeta, origin sql.NullInt64) error {
+	hostID := tr.GetHostID(meta.GetHostName())
+	urlStr := meta.GetURL()
 	urlNullID, err := w.getURLIDByStr(tr, urlStr)
 	if err != nil {
 		return err
@@ -108,47 +101,48 @@ func (w *DBWorker) saveMeta(tr *DBrw, meta *Meta, origin sql.NullInt64) error {
 		}
 	}
 
-	var metaRec Meta
+	var metaRec proxy.Meta
 	err = tr.Where("url = ?", urlID).First(&metaRec).Error
 	if err == gorm.ErrRecordNotFound {
-		meta.URL = urlID
 		if !hostID.Valid {
 			if origin.Valid {
-				meta.State = StateDublicate
+				meta.SetState(proxy.StateDublicate)
 			} else {
-				meta.State = StateExternal
+				meta.SetState(proxy.StateExternal)
 			}
-			meta.Content = nil
 		}
-		if origin.Valid {
-			meta.Origin = origin
-		} else {
-			meta.Origin, err = tr.FindOrigin(meta)
+
+		if !origin.Valid {
+			hash, err := meta.GetHash()
 			if err != nil {
 				return err
 			}
+			origin = tr.FindOrigin(hash)
 		}
-		if meta.Origin.Valid {
-			meta.State = StateDublicate
-			meta.Content = nil
-		}
-		if meta.Content != nil {
-			meta.Content.URL = urlID
-			err = tr.Create(meta.Content).Error
+		meta.SetOrigin(origin)
+
+		if meta.GetState() == proxy.StateSuccess {
+			content := meta.GetContent()
+			if content == nil {
+				return fmt.Errorf("field 'content' is nil")
+			}
+			err = tr.Create(content.GetContent(urlID)).Error
 			if err != nil {
 				return fmt.Errorf("add new 'Content' record for URL %s, message: %s", urlStr, err)
 			}
 		}
-		err = tr.Create(meta).Error
+
+		err = tr.Create(meta.GetMeta(urlID)).Error
 		if err != nil {
 			return fmt.Errorf("add new 'Meta' record for URL %s, message: %s", urlStr, err)
 		}
-		err = tr.AddHash(meta)
+		hash, err := meta.GetHash()
 		if err != nil {
-			return err
+			tr.AddHash(hash, urlID)
 		}
-		if meta.RedirectReferer != nil {
-			err = w.saveMeta(tr, meta.RedirectReferer, sql.NullInt64{Int64: meta.URL, Valid: true})
+
+		if meta.GetReferer() != nil {
+			err = w.saveMeta(tr, meta.GetReferer(), sql.NullInt64{Int64: urlID, Valid: true})
 			if err != nil {
 				return err
 			}
@@ -156,8 +150,8 @@ func (w *DBWorker) saveMeta(tr *DBrw, meta *Meta, origin sql.NullInt64) error {
 	} else if err != nil {
 		return fmt.Errorf("find in 'Meta' table for URL %s, message: %s", urlStr, err)
 	} else {
-		if meta.RedirectReferer != nil {
-			err = w.saveMeta(tr, meta.RedirectReferer, sql.NullInt64{Int64: metaRec.URL, Valid: true})
+		if meta.GetReferer() != nil {
+			err = w.saveMeta(tr, meta.GetReferer(), sql.NullInt64{Int64: urlID, Valid: true})
 			if err != nil {
 				return err
 			}
@@ -167,19 +161,19 @@ func (w *DBWorker) saveMeta(tr *DBrw, meta *Meta, origin sql.NullInt64) error {
 	return nil
 }
 
-func (w *DBWorker) savePageData(tr *DBrw, data *PageData) error {
-	err := w.saveMeta(tr, data.MetaItem, sql.NullInt64{Valid: false})
+func (w *DBWorker) savePageData(tr *DBrw, data *proxy.PageData) error {
+	err := w.saveMeta(tr, data.GetMeta(), sql.NullInt64{Valid: false})
 	if err != nil {
 		return err
 	}
 
 	var id int64
-	for urlStr, hostName := range data.URLs {
+	for urlStr, hostName := range data.GetURLs() {
 		id, err = w.insertURLIfNotExists(tr, urlStr, hostName)
 		if err != nil {
 			return err
 		}
-		err = w.insertLinkIfNotExists(tr, data.ParentURL, id)
+		err = w.insertLinkIfNotExists(tr, data.GetParentURL(), id)
 		if err != nil {
 			return err
 		}

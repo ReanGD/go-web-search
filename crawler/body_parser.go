@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"net/url"
 
-	"github.com/ReanGD/go-web-search/content"
+	"github.com/ReanGD/go-web-search/proxy"
 	"github.com/ReanGD/go-web-search/werrors"
 	"github.com/uber-go/zap"
 
@@ -55,29 +55,29 @@ func bodyToUTF8(body []byte, contentType []string) (*transform.Reader, error) {
 }
 
 // ProcessBody - check and minimize request body
-func ProcessBody(logger zap.Logger, body []byte, contentType []string, u *url.URL) (*HTMLMetadata, content.State, error) {
-	state := content.StateSuccess
+func ProcessBody(logger zap.Logger, body []byte, contentType []string, u *url.URL) (*HTMLMetadata, proxy.State, error) {
+	state := proxy.StateSuccess
 
 	if !isHTML(body) {
-		return nil, content.StateParseError, werrors.New(ErrBodyNotHTML)
+		return nil, proxy.StateParseError, werrors.New(ErrBodyNotHTML)
 	}
 
 	bodyReader, err := bodyToUTF8(body, contentType)
 	if err != nil {
-		return nil, content.StateEncodingError, err
+		return nil, proxy.StateEncodingError, err
 	}
 
 	node, err := html.Parse(bodyReader)
 	if err != nil {
-		return nil, content.StateParseError, werrors.NewDetails(ErrHTMLParse, err)
+		return nil, proxy.StateParseError, werrors.NewDetails(ErrHTMLParse, err)
 	}
 
 	parser, err := RunDataExtrator(node, u)
 	if err != nil {
-		return nil, content.StateParseError, err
+		return nil, proxy.StateParseError, err
 	}
 	if !parser.MetaTagIndex {
-		return nil, content.StateNoFollow, werrors.NewLevel(WarnPageNotIndexed, werrors.WarningLevel)
+		return nil, proxy.StateNoFollow, werrors.NewLevel(WarnPageNotIndexed, werrors.WarningLevel)
 	}
 
 	for url, error := range parser.WrongURLs {
@@ -89,12 +89,12 @@ func ProcessBody(logger zap.Logger, body []byte, contentType []string, u *url.UR
 
 	err = RunMinificationHTML(node)
 	if err != nil {
-		return nil, content.StateParseError, err
+		return nil, proxy.StateParseError, err
 	}
 
 	err = RunMinificationText(node)
 	if err != nil {
-		return nil, content.StateParseError, err
+		return nil, proxy.StateParseError, err
 	}
 
 	return parser, state, nil

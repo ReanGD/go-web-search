@@ -2,8 +2,6 @@ package crawler
 
 import (
 	"compress/gzip"
-	"crypto/md5"
-	"database/sql"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -12,29 +10,24 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/ReanGD/go-web-search/content"
+	"github.com/ReanGD/go-web-search/proxy"
 	"github.com/uber-go/zap"
 )
 
 type request struct {
 	Robot  *robotTxt
 	client *http.Client
-	meta   *content.Meta
+	meta   *proxy.InMeta
 	urls   map[string]string
 }
 
 func (r *request) get(u *url.URL) error {
 	urlStr := u.String()
 	r.urls = make(map[string]string)
-	r.meta = &content.Meta{
-		URLForResolve:   urlStr,
-		RedirectReferer: nil,
-		RedirectCnt:     0,
-		HostName:        NormalizeHostName(u.Host),
-		StatusCode:      sql.NullInt64{Valid: false}}
+	r.meta = proxy.NewMeta(NormalizeHostName(u.Host), urlStr, nil)
 
 	if !r.Robot.Test(u) {
-		r.meta.State = content.StateDisabledByRobotsTxt
+		r.meta.SetState(proxy.StateDisabledByRobotsTxt)
 		log.Printf("INFO: URL %s blocked by robot.txt", urlStr)
 		return nil
 	}
@@ -58,34 +51,34 @@ func (r *request) get(u *url.URL) error {
 
 	response, err := r.client.Do(request)
 	if err != nil {
-		r.meta.State = content.StateConnectError
+		r.meta.SetState(proxy.StateConnectError)
 		return err
 	}
 	defer response.Body.Close()
-	if r.meta.URLForResolve != urlStr {
-		urlStr = urlStr + "->" + r.meta.URLForResolve
+	if r.meta.GetURL() != urlStr {
+		urlStr = urlStr + "->" + r.meta.GetURL()
 	}
 
-	r.meta.StatusCode = sql.NullInt64{Int64: int64(response.StatusCode), Valid: true}
+	r.meta.SetStatusCode(response.StatusCode)
 	if response.StatusCode != 200 {
-		r.meta.State = content.StateErrorStatusCode
+		r.meta.SetState(proxy.StateErrorStatusCode)
 		return fmt.Errorf("StatusCode = %d", response.StatusCode)
 	}
 
 	contentType, ok := response.Header["Content-Type"]
 	if !ok {
-		r.meta.State = content.StateUnsupportedFormat
+		r.meta.SetState(proxy.StateUnsupportedFormat)
 		return fmt.Errorf("Not found Content-Type in headers")
 	}
 
 	mediatype, _, err := mime.ParseMediaType(contentType[0])
 	if err != nil {
-		r.meta.State = content.StateUnsupportedFormat
+		r.meta.SetState(proxy.StateUnsupportedFormat)
 		return fmt.Errorf("Parse Content-Type, error %s", err)
 	}
 
 	if mediatype != "text/html" {
-		r.meta.State = content.StateUnsupportedFormat
+		r.meta.SetState(proxy.StateUnsupportedFormat)
 		log.Printf("INFO: URL %s has unsupported mime format = %s", urlStr, mediatype)
 		return nil
 	}
@@ -95,7 +88,7 @@ func (r *request) get(u *url.URL) error {
 	if ok && contentEncoding[0] == "gzip" {
 		reader, err := gzip.NewReader(response.Body)
 		if err != nil {
-			r.meta.State = content.StateAnswerError
+			r.meta.SetState(proxy.StateAnswerError)
 			return err
 		}
 		body, err = ioutil.ReadAll(reader)
@@ -104,36 +97,31 @@ func (r *request) get(u *url.URL) error {
 		body, err = ioutil.ReadAll(response.Body)
 	}
 	if err != nil {
-		r.meta.State = content.StateAnswerError
+		r.meta.SetState(proxy.StateAnswerError)
 		return err
 	}
 
-	var parser *HTMLMetadata
-	parser, r.meta.State, err = ProcessBody(zap.NewJSON(), body, contentType, u)
+	parser, state, err := ProcessBody(zap.NewJSON(), body, contentType, u)
+	r.meta.SetState(state)
 	if err != nil {
 		return err
 	}
 
-	hash := md5.Sum(body)
 	r.urls = parser.URLs
-	r.meta.State = content.StateSuccess
-	r.meta.Content = &content.Content{
-		Hash:  string(hash[:]),
-		Body:  content.Compressed{Data: body},
-		Title: parser.Title}
+	r.meta.SetContent(proxy.NewContent(body, parser.Title))
 
 	return nil
 }
 
 // Send - load and parse the urlStr
 // urlStr - valid URL
-func (r *request) Process(u *url.URL) *content.PageData {
+func (r *request) Process(u *url.URL) *proxy.PageData {
 	err := r.get(u)
 	if err != nil {
 		log.Printf("ERROR: Get URL %s, message: %s", u.String(), err)
 	}
 
-	return &content.PageData{MetaItem: r.meta, URLs: r.urls}
+	return proxy.NewPageData(r.meta, r.urls)
 }
 
 // Init - init request structure
@@ -147,22 +135,11 @@ func (r *request) Init() {
 			return nil
 		}
 
-		r.meta.State = content.StateDublicate
-		r.meta.StatusCode = sql.NullInt64{Int64: 301, Valid: true}
+		r.meta.SetState(proxy.StateDublicate)
+		r.meta.SetStatusCode(301)
 
 		copyURL := *req.URL
-		r.meta = &content.Meta{
-			URLForResolve:   NormalizeURL(&copyURL),
-			RedirectReferer: r.meta,
-			RedirectCnt:     0,
-			HostName:        NormalizeHostName(req.URL.Host),
-			StatusCode:      sql.NullInt64{Valid: false}}
-
-		currentMeta := r.meta.RedirectReferer
-		for currentMeta != nil {
-			currentMeta.RedirectCnt++
-			currentMeta = currentMeta.RedirectReferer
-		}
+		r.meta = proxy.NewMeta(NormalizeHostName(req.URL.Host), NormalizeURL(&copyURL), r.meta)
 
 		for attr, val := range via[0].Header {
 			if _, ok := req.Header[attr]; !ok {

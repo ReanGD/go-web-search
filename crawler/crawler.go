@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/ReanGD/go-web-search/content"
+	"github.com/ReanGD/go-web-search/proxy"
 )
 
 func showTotalTime(msg string, start time.Time) {
@@ -37,7 +38,7 @@ func Run(baseHosts []string, cnt int) error {
 
 	var wgDB sync.WaitGroup
 	defer wgDB.Wait()
-	chDB := make(chan *content.PageData, cnt)
+	chDB := make(chan *proxy.PageData, cnt)
 	dbWorker := content.DBWorker{DB: db, ChDB: chDB}
 	wgDB.Add(1)
 	go dbWorker.Start(&wgDB)

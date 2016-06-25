@@ -94,46 +94,15 @@ func (db *DBrw) GetNewURLs(hostName string, cnt int) ([]URL, error) {
 }
 
 // FindOrigin - find origin url id in table 'URL'
-func (db *DBrw) FindOrigin(meta *Meta) (sql.NullInt64, error) {
-	null := sql.NullInt64{Valid: false}
-	if meta.Content == nil || meta.Content.Body.IsNull() {
-		return null, nil
-	}
-
-	ids, exists := db.hashes[meta.Content.Hash]
+func (db *DBrw) FindOrigin(hash string) sql.NullInt64 {
+	id, exists := db.hashes[hash]
 	if !exists {
-		return null, nil
+		return sql.NullInt64{Valid: false}
 	}
-
-	for _, id := range ids {
-		var content Content
-		err := db.Where("url = ?", id).Find(&content).Error
-		if err != nil {
-			return null, fmt.Errorf("find in 'Content' with URL id %d, message: %s", uint64(id), err)
-		}
-		if meta.Content.Body.Equals(content.Body) {
-			return sql.NullInt64{Int64: id, Valid: true}, nil
-		}
-	}
-	return null, nil
+	return sql.NullInt64{Int64: id, Valid: true}
 }
 
 // AddHash - add new hash to hash storage
-func (db *DBrw) AddHash(meta *Meta) error {
-	if !meta.IsValidHash() {
-		return nil
-	}
-	if meta.Content == nil || meta.Content.Body.IsNull() {
-		return fmt.Errorf("ContentID is null in item 'Meta' for URL with id %d", uint64(meta.URL))
-	}
-
-	hash := meta.Content.Hash
-	_, exists := db.hashes[hash]
-	if exists {
-		db.hashes[hash] = append(db.hashes[hash], meta.Content.URL)
-	} else {
-		db.hashes[hash] = []int64{meta.Content.URL}
-	}
-
-	return nil
+func (db *DBrw) AddHash(hash string, urlID int64) {
+	db.hashes[hash] = urlID
 }

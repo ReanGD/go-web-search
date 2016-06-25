@@ -12,6 +12,8 @@ import (
 
 	"github.com/ReanGD/go-web-search/content"
 	"github.com/ReanGD/go-web-search/crawler"
+	"github.com/ReanGD/go-web-search/database"
+	"github.com/ReanGD/go-web-search/proxy"
 	_ "github.com/jinzhu/gorm/dialects/sqlite"
 )
 
@@ -102,7 +104,7 @@ func test() error {
 		return err
 	}
 	defer ClearClose(db)
-	var contents []content.Content
+	var contents []proxy.Content
 	// err = db.Limit(10).Find(&contents).Error
 	err = db.Find(&contents).Error
 	// err = db.Where("url = 13049", 7).Find(&contents).Error
@@ -162,7 +164,7 @@ func test() error {
 			}
 			newLen += uint64(len(buf))
 			if CountCompressStatistic {
-				newField := content.Compressed{Data: buf}
+				newField := database.Compressed{Data: buf}
 				bodyCompress, err := newField.Compress()
 				if err != nil {
 					return err
@@ -189,7 +191,7 @@ func test() error {
 }
 
 func run() error {
-	return crawler.Run(baseHosts, 3000)
+	return crawler.Run(baseHosts, 300)
 }
 
 func clearCloseFile(f *os.File) {
@@ -211,9 +213,8 @@ func main() {
 	log.SetOutput(f)
 
 	// runtime.GOMAXPROCS(runtime.NumCPU())
-
-	// err = run()
-	err = test()
+	err = run()
+	// err = test()
 	if err != nil {
 		fmt.Printf("%s", err)
 	}
