@@ -1,9 +1,6 @@
 package proxy
 
-import (
-	"database/sql"
-	"fmt"
-)
+import "database/sql"
 
 // State - current state of page
 type State uint8
@@ -122,12 +119,12 @@ func (in *InMeta) GetState() State {
 }
 
 // GetHash - get content hash
-func (in *InMeta) GetHash() (string, error) {
+func (in *InMeta) GetHash() string {
 	if in.content == nil || in.state != StateSuccess {
-		return "", fmt.Errorf("content is not valid")
+		return ""
 	}
 
-	return in.content.hash, nil
+	return in.content.hash
 }
 
 // GetReferer - get field redirectReferer

@@ -2,6 +2,9 @@ package crawler
 
 import (
 	"bytes"
+	"compress/gzip"
+	"io"
+	"io/ioutil"
 	"net/url"
 
 	"github.com/ReanGD/go-web-search/proxy"
@@ -52,6 +55,35 @@ func bodyToUTF8(body []byte, contentType []string) (*transform.Reader, error) {
 	}
 
 	return transform.NewReader(bytes.NewReader(body), enc.NewDecoder()), nil
+}
+
+func readBody(contentEncoding string, body io.Reader) ([]byte, error) {
+	var err error
+	result := []byte{}
+	if contentEncoding == "gzip" {
+		reader, err := gzip.NewReader(body)
+		if err != nil {
+			return result, werrors.NewDetails(ErrReadGZipResponse, err)
+		}
+		result, err = ioutil.ReadAll(reader)
+		if err == nil {
+			err = reader.Close()
+		} else {
+			_ = reader.Close()
+		}
+		if err != nil {
+			return result, werrors.NewDetails(ErrReadGZipResponse, err)
+		}
+	} else if contentEncoding == "identity" {
+		result, err = ioutil.ReadAll(body)
+		if err != nil {
+			return result, werrors.NewDetails(ErrReadResponse, err)
+		}
+	} else {
+		return result, werrors.NewFields(ErrUnknownContentEncoding, "encoding", contentEncoding)
+	}
+
+	return result, nil
 }
 
 // ProcessBody - check and minimize request body

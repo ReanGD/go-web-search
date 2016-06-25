@@ -1,10 +1,8 @@
 package crawler
 
 import (
-	"compress/gzip"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"mime"
 	"net/http"
@@ -41,7 +39,7 @@ func (r *request) get(u *url.URL) error {
 		Header: map[string][]string{
 			"User-Agent":      {"Mozilla/5.0 (compatible; GoWebSearch/0.1)"},
 			"Accept":          {"text/html;q=0.9,*/*;q=0.1"},
-			"Accept-Encoding": {"gzip"},
+			"Accept-Encoding": {"gzip;q=0.9,identity;q=0.5,*;q=0.1"},
 			"Accept-Language": {"ru-RU,ru;q=0.9,en-US;q=0.2,en;q=0.1"},
 			"Accept-Charset":  {"utf-8;q=0.9,windows-1251;q=0.8,koi8-r;q=0.7,*;q=0.1"},
 		},
@@ -83,19 +81,13 @@ func (r *request) get(u *url.URL) error {
 		return nil
 	}
 
-	var body []byte
-	contentEncoding, ok := response.Header["Content-Encoding"]
-	if ok && contentEncoding[0] == "gzip" {
-		reader, err := gzip.NewReader(response.Body)
-		if err != nil {
-			r.meta.SetState(proxy.StateAnswerError)
-			return err
-		}
-		body, err = ioutil.ReadAll(reader)
-		reader.Close()
-	} else {
-		body, err = ioutil.ReadAll(response.Body)
+	contentEncoding := ""
+	contentEncodingArr, ok := response.Header["Content-Encoding"]
+	if ok && len(contentEncodingArr) != 0 {
+		contentEncoding = contentEncodingArr[0]
 	}
+
+	body, err := readBody(contentEncoding, response.Body)
 	if err != nil {
 		r.meta.SetState(proxy.StateAnswerError)
 		return err

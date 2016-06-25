@@ -1,6 +1,9 @@
 package crawler
 
 import (
+	"bytes"
+	"compress/gzip"
+	"errors"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -20,6 +23,7 @@ func helperIsHTML(name string, t *testing.T, content string, result bool) {
 	})
 }
 
+// TestIsHTML ...
 func TestIsHTML(t *testing.T) {
 	helperIsHTML("Empty content", t,
 		``, false)
@@ -44,6 +48,7 @@ func TestIsHTML(t *testing.T) {
 		strings.Repeat(" ", 2000)+`<html><body><div>text</div></body></html>`, false)
 }
 
+// helperBodyToUTF8 ...
 func helperBodyToUTF8(filename string, contentType []string, out string) {
 	base, err := os.Getwd()
 	So(err, ShouldBeNil)
@@ -64,6 +69,7 @@ func helperBodyToUTF8(filename string, contentType []string, out string) {
 	So(string(body), ShouldEqual, out)
 }
 
+// TestBodyToUTF8 ...
 func TestBodyToUTF8(t *testing.T) {
 	Convey("windows-1251 meta", t, func() {
 		helperBodyToUTF8("windows_1251_meta.html", []string{}, `<html>
@@ -116,4 +122,67 @@ func TestBodyToUTF8(t *testing.T) {
 		So(err.Error(), ShouldEqual, ErrEncodingNotFound)
 	})
 
+}
+
+type errReader struct {
+}
+
+func (r errReader) Read(p []byte) (n int, err error) {
+	return 0, errors.New("error")
+}
+
+// TestReadBody ...
+func TestReadBody(t *testing.T) {
+	Convey("gzip body", t, func() {
+		msg := []byte("raw body")
+
+		var buf bytes.Buffer
+		w := gzip.NewWriter(&buf)
+		_, err := w.Write(msg)
+		So(err, ShouldBeNil)
+		err = w.Close()
+		So(err, ShouldBeNil)
+
+		body := bytes.NewReader(buf.Bytes())
+		result, err := readBody("gzip", body)
+		So(err, ShouldBeNil)
+		So(string(result), ShouldEqual, string(msg))
+	})
+
+	Convey("gzip body open error", t, func() {
+		body := bytes.NewReader([]byte("raw body"))
+		_, err := readBody("gzip", body)
+		So(err.Error(), ShouldEqual, ErrReadGZipResponse)
+	})
+
+	Convey("gzip body open error", t, func() {
+		var buf bytes.Buffer
+		w := gzip.NewWriter(&buf)
+		_, err := w.Write([]byte("raw body"))
+		So(err, ShouldBeNil)
+		err = w.Close()
+		So(err, ShouldBeNil)
+
+		body := bytes.NewReader(buf.Bytes()[:10])
+		_, err = readBody("gzip", body)
+		So(err.Error(), ShouldEqual, ErrReadGZipResponse)
+	})
+
+	Convey("raw body", t, func() {
+		data := []byte("test body")
+		body := bytes.NewReader(data)
+		result, err := readBody("identity", body)
+		So(err, ShouldBeNil)
+		So(string(result), ShouldEqual, string(data))
+	})
+
+	Convey("raw body error", t, func() {
+		_, err := readBody("identity", errReader{})
+		So(err.Error(), ShouldEqual, ErrReadResponse)
+	})
+
+	Convey("unknown body error", t, func() {
+		_, err := readBody("unknown", errReader{})
+		So(err.Error(), ShouldEqual, ErrUnknownContentEncoding)
+	})
 }
