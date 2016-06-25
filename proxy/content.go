@@ -1,7 +1,7 @@
 package proxy
 
 import (
-	"crypto/md5"
+	"crypto/sha512"
 
 	"github.com/ReanGD/go-web-search/database"
 )
@@ -10,7 +10,7 @@ import (
 // Hash - hash of uncompressed content
 type Content struct {
 	URL   int64               `gorm:"type:integer REFERENCES url(id);unique_index;not null"`
-	Hash  string              `gorm:"size:16;not null"`
+	Hash  string              `gorm:"size:64;not null"`
 	Body  database.Compressed `gorm:"not null"`
 	Title string              `gorm:"size:100;not null"`
 }
@@ -24,7 +24,7 @@ type InContent struct {
 
 // NewContent - create Content
 func NewContent(body []byte, title string) *InContent {
-	hash := md5.Sum(body)
+	hash := sha512.Sum512(body)
 	return &InContent{
 		hash:  string(hash[:]),
 		body:  database.Compressed{Data: body},

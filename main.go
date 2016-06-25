@@ -124,10 +124,7 @@ func test() error {
 		body := rec.Body.Data
 		oldLen += uint64(len(body))
 		if CountCompressStatistic {
-			bodyCompress, err := rec.Body.Compress()
-			if err != nil {
-				return err
-			}
+			bodyCompress := rec.Body.Compress()
 			oldLenCompress += uint64(len(bodyCompress))
 		}
 
@@ -165,10 +162,7 @@ func test() error {
 			newLen += uint64(len(buf))
 			if CountCompressStatistic {
 				newField := database.Compressed{Data: buf}
-				bodyCompress, err := newField.Compress()
-				if err != nil {
-					return err
-				}
+				bodyCompress := newField.Compress()
 				newLenCompress += uint64(len(bodyCompress))
 			}
 		}

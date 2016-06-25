@@ -9,31 +9,33 @@ import (
 	"io/ioutil"
 )
 
+const (
+	// ErrScanArgument - Scan argument is not array of bytes
+	ErrScanArgument = "Compressed.Scan: argument is not array of bytes"
+)
+
 // Compressed - field compressed by zlib
 type Compressed struct {
 	Data []byte
 }
 
 // Compress - compress c.Data value
-func (c *Compressed) Compress() ([]byte, error) {
+func (c *Compressed) Compress() []byte {
 	if len(c.Data) == 0 {
-		return nil, nil
+		return nil
 	}
 
 	var zContent bytes.Buffer
 	w, _ := zlib.NewWriterLevelDict(&zContent, 6, nil)
-	_, err := w.Write(c.Data)
-	w.Close()
-	if err != nil {
-		return nil, fmt.Errorf("zlib write error: %s", err)
-	}
+	_, _ = w.Write(c.Data)
+	_ = w.Close()
 
-	return zContent.Bytes(), nil
+	return zContent.Bytes()
 }
 
 // Value - prepare value for save to DB
 func (c Compressed) Value() (driver.Value, error) {
-	return c.Compress()
+	return c.Compress(), nil
 }
 
 // Scan - load data from DB to value
@@ -46,29 +48,19 @@ func (c *Compressed) Scan(value interface{}) error {
 
 	obj, ok := value.([]byte)
 	if !ok {
-		return errors.New("Scan source was not string")
+		return errors.New(ErrScanArgument)
 	}
 
 	r, err := zlib.NewReader(bytes.NewReader(obj))
 	if err != nil {
-		return fmt.Errorf("zlib new reader error: %s", err)
+		return fmt.Errorf("Compressed.Scan: %s", err)
 	}
 	result, err := ioutil.ReadAll(r)
-	r.Close()
+	_ = r.Close()
 	if err != nil {
-		return fmt.Errorf("zlib read all error: %s", err)
+		return fmt.Errorf("Compressed.Scan: %s", err)
 	}
 	c.Data = result
 
 	return nil
-}
-
-// IsNull - check is null
-func (c *Compressed) IsNull() bool {
-	return len(c.Data) == 0
-}
-
-// Equals - check is equals
-func (c *Compressed) Equals(other Compressed) bool {
-	return bytes.Equal([]byte(c.Data), []byte(other.Data))
 }
