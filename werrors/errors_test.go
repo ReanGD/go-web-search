@@ -5,44 +5,88 @@ import (
 	"testing"
 
 	. "github.com/smartystreets/goconvey/convey"
+	"github.com/uber-go/zap"
 )
 
-func helperErrorEx(msg string) error {
-	return New(msg)
+func helperGetCaller() string {
+	return func() string {
+		return func() string {
+			return getCaller()
+		}()
+	}()
 }
 
 // TestErrorEx ...
 func TestErrorEx(t *testing.T) {
 	Convey("Check Caller", t, func() {
-		msg := "message"
-
-		err := helperErrorEx(msg)
-		So(err.Error(), ShouldEqual, msg)
-
-		werr, ok := err.(*ErrorEx)
-		So(ok, ShouldBeTrue)
-		So(werr.Level, ShouldEqual, ErrorLevel)
-		So(werr.Error(), ShouldEqual, msg)
-		So(len(werr.Fields), ShouldEqual, 1)
-		So(werr.Fields["caller"], ShouldStartWith, `[errors_test.go:`)
-		So(werr.Fields["caller"], ShouldEndWith, `werrors.helperErrorEx`)
+		caller := helperGetCaller()
+		So(caller, ShouldStartWith, `[errors_test.go:`)
+		So(caller, ShouldEndWith, `werrors.helperGetCaller`)
 	})
 
-	Convey("Check Newlevel", t, func() {
-		msg := "message"
-		lvl := WarningLevel
+	Convey("Check stack error", t, func() {
+		originalSkip := callerSkip
+		callerSkip = 1e3
+		defer func() { callerSkip = originalSkip }()
 
-		err := NewLevel(msg, lvl)
+		So(helperGetCaller(), ShouldEqual, ErrFailedGetCaller)
+	})
+
+	Convey("Check NewEx", t, func() {
+		callerTest = true
+		defer func() { callerTest = false }()
+
+		msg := "message"
+		lvl := zap.InfoLevel
+
+		err := NewEx(lvl, msg, zap.String("field1", "field1 data"), zap.Int("field2", 5))
 		So(err.Error(), ShouldEqual, msg)
 
 		werr, ok := err.(*ErrorEx)
 		So(ok, ShouldBeTrue)
 		So(werr.Level, ShouldEqual, lvl)
 		So(werr.Error(), ShouldEqual, msg)
-		So(len(werr.Fields), ShouldEqual, 1)
+		So(werr.Fields, ShouldResemble,
+			[]zap.Field{zap.String("caller", "<fake>"), zap.String("field1", "field1 data"), zap.Int("field2", 5)})
+	})
+
+	Convey("Check New", t, func() {
+		callerTest = true
+		defer func() { callerTest = false }()
+
+		msg := "message"
+
+		err := New(msg)
+		So(err.Error(), ShouldEqual, msg)
+
+		werr, ok := err.(*ErrorEx)
+		So(ok, ShouldBeTrue)
+		So(werr.Level, ShouldEqual, zap.ErrorLevel)
+		So(werr.Error(), ShouldEqual, msg)
+		So(werr.Fields, ShouldResemble, []zap.Field{zap.String("caller", "<fake>")})
+	})
+
+	Convey("Check Newlevel", t, func() {
+		callerTest = true
+		defer func() { callerTest = false }()
+
+		msg := "message"
+		lvl := zap.WarnLevel
+
+		err := NewLevel(lvl, msg)
+		So(err.Error(), ShouldEqual, msg)
+
+		werr, ok := err.(*ErrorEx)
+		So(ok, ShouldBeTrue)
+		So(werr.Level, ShouldEqual, lvl)
+		So(werr.Error(), ShouldEqual, msg)
+		So(werr.Fields, ShouldResemble, []zap.Field{zap.String("caller", "<fake>")})
 	})
 
 	Convey("Check NewDetails", t, func() {
+		callerTest = true
+		defer func() { callerTest = false }()
+
 		msg := "message"
 		details := "details message"
 
@@ -51,55 +95,26 @@ func TestErrorEx(t *testing.T) {
 
 		werr, ok := err.(*ErrorEx)
 		So(ok, ShouldBeTrue)
-		So(werr.Level, ShouldEqual, ErrorLevel)
+		So(werr.Level, ShouldEqual, zap.ErrorLevel)
 		So(werr.Error(), ShouldEqual, msg)
-		So(len(werr.Fields), ShouldEqual, 2)
-		So(werr.Fields["details"], ShouldEqual, details)
+		So(werr.Fields, ShouldResemble,
+			[]zap.Field{zap.String("caller", "<fake>"), zap.String("details", details)})
 	})
 
 	Convey("Check NewFields", t, func() {
+		callerTest = true
+		defer func() { callerTest = false }()
+
 		msg := "message"
 
-		err := NewFields(msg, "field1", "field1 data", "field2", "field2 data")
+		err := NewFields(msg, zap.String("field1", "field1 data"), zap.Int("field2", 5))
 		So(err.Error(), ShouldEqual, msg)
 
 		werr, ok := err.(*ErrorEx)
 		So(ok, ShouldBeTrue)
-		So(werr.Level, ShouldEqual, ErrorLevel)
+		So(werr.Level, ShouldEqual, zap.ErrorLevel)
 		So(werr.Error(), ShouldEqual, msg)
-		So(len(werr.Fields), ShouldEqual, 3)
-		So(werr.Fields["field1"], ShouldEqual, "field1 data")
-		So(werr.Fields["field2"], ShouldEqual, "field2 data")
-	})
-
-	Convey("Check NewFields with an odd number of arguments", t, func() {
-		msg := "message"
-
-		err := NewFields(msg, "field1", "field1 data", "field err")
-		So(err.Error(), ShouldEqual, msg)
-
-		werr, ok := err.(*ErrorEx)
-		So(ok, ShouldBeTrue)
-		So(werr.Level, ShouldEqual, ErrorLevel)
-		So(werr.Error(), ShouldEqual, msg)
-		So(len(werr.Fields), ShouldEqual, 2)
-		So(werr.Fields["field1"], ShouldEqual, "field1 data")
-	})
-
-	Convey("Check stack error", t, func() {
-		msg := "message"
-
-		originalSkip := callerSkip
-		callerSkip = 1e3
-		defer func() { callerSkip = originalSkip }()
-
-		err := helperErrorEx(msg)
-		So(err.Error(), ShouldEqual, msg)
-
-		werr, ok := err.(*ErrorEx)
-		So(ok, ShouldBeTrue)
-		So(werr.Level, ShouldEqual, ErrorLevel)
-		So(werr.Error(), ShouldEqual, msg)
-		So(werr.Fields, ShouldResemble, map[string]string{"caller": ErrFailedGetCaller})
+		So(werr.Fields, ShouldResemble,
+			[]zap.Field{zap.String("caller", "<fake>"), zap.String("field1", "field1 data"), zap.Int("field2", 5)})
 	})
 }
