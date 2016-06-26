@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/ReanGD/go-web-search/werrors"
+	"github.com/uber-go/zap"
 
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
@@ -154,7 +155,14 @@ func (extractor *dataExtractor) parseNode(node *html.Node) error {
 }
 
 // RunDataExtrator - extart URLs and other meta data from page
-func RunDataExtrator(node *html.Node, baseURL *url.URL) (*HTMLMetadata, error) {
+func RunDataExtrator(node *html.Node, urlStr string) (*HTMLMetadata, error) {
+	baseURL, err := url.Parse(urlStr)
+	if err != nil {
+		return nil, werrors.NewFields(ErrParseBaseURL,
+			zap.String("details", err.Error()),
+			zap.String("parsed_url", urlStr))
+	}
+
 	extractor := dataExtractor{
 		meta: &HTMLMetadata{
 			URLs:         make(map[string]string),
@@ -167,7 +175,7 @@ func RunDataExtrator(node *html.Node, baseURL *url.URL) (*HTMLMetadata, error) {
 		noIndexLvl:    0,
 	}
 
-	err := extractor.parseNode(node)
+	err = extractor.parseNode(node)
 	if err != nil {
 		return &HTMLMetadata{}, err
 	}

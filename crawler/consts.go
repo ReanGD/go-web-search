@@ -17,6 +17,18 @@ const (
 	ErrReadResponse = "Read response body error"
 	// ErrUnknownContentEncoding - Unknown http header Content-Encoding
 	ErrUnknownContentEncoding = "Unknown http header \"Content-Encoding\""
+	// ErrStatusCode - Wrong status code
+	ErrStatusCode = "Wrong status code"
+	// ErrNotFountContentType - Not found Content-Type in headers
+	ErrNotFountContentType = "Not found Content-Type in headers"
+	// ErrParseContentType - Error parse Content-Type header
+	ErrParseContentType = "Parse Content-Type header"
+	// ErrRenderHTML - Error Render HTML
+	ErrRenderHTML = "Render HTML"
+	// ErrParseBaseURL - Parse base URL
+	ErrParseBaseURL = "Parse base URL"
 	// WarnPageNotIndexed - Page not indexed
 	WarnPageNotIndexed = "Page not indexed (meta tag noindex)"
+	// InfoUnsupportedMimeFormat - Unsupported mime format
+	InfoUnsupportedMimeFormat = "Unsupported mime format"
 )

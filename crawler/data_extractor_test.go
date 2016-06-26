@@ -2,7 +2,6 @@ package crawler
 
 import (
 	"bytes"
-	"net/url"
 	"testing"
 
 	"golang.org/x/net/html"
@@ -11,11 +10,10 @@ import (
 )
 
 func helperRunDataExtrator(htmlStr string) *HTMLMetadata {
-	baseURL, _ := url.Parse("http://testhost1/test/")
 	node, err := html.Parse(bytes.NewReader([]byte(htmlStr)))
 	So(err, ShouldBeNil)
 
-	meta, err := RunDataExtrator(node, baseURL)
+	meta, err := RunDataExtrator(node, "http://testhost1/test/")
 	So(err, ShouldBeNil)
 
 	return meta
@@ -185,15 +183,21 @@ func TestMeta(t *testing.T) {
 
 func TestErrorDataExtrator(t *testing.T) {
 	Convey("Test error node type", t, func() {
-		baseURL, err := url.Parse("http://testhost1/test/")
-		So(err, ShouldBeNil)
-
 		node, err := html.Parse(bytes.NewReader([]byte(`<html><head></head><body></body></html>`)))
 		So(err, ShouldBeNil)
 
 		node.FirstChild.Type = html.ErrorNode
-		_, err = RunDataExtrator(node, baseURL)
+		_, err = RunDataExtrator(node, "http://testhost1/test/")
 		So(err, ShouldNotBeNil)
 		So(err.Error(), ShouldEqual, ErrUnexpectedNodeType)
+	})
+
+	Convey("Test error URL", t, func() {
+		node, err := html.Parse(bytes.NewReader([]byte(`<html><head></head><body></body></html>`)))
+		So(err, ShouldBeNil)
+
+		_, err = RunDataExtrator(node, "%1")
+		So(err, ShouldNotBeNil)
+		So(err.Error(), ShouldEqual, ErrParseBaseURL)
 	})
 }

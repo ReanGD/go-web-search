@@ -2,9 +2,7 @@ package crawler
 
 import (
 	"errors"
-	"fmt"
 	"log"
-	"mime"
 	"net/http"
 	"net/url"
 
@@ -52,57 +50,14 @@ func (r *request) get(u *url.URL) error {
 		r.meta.SetState(proxy.StateConnectError)
 		return err
 	}
-	defer response.Body.Close()
-	if r.meta.GetURL() != urlStr {
-		urlStr = urlStr + "->" + r.meta.GetURL()
+
+	parser := newResponseParser(zap.NewJSON(), r.meta)
+	err = parser.Run(response)
+	if err == nil {
+		r.urls = parser.URLs
 	}
 
-	r.meta.SetStatusCode(response.StatusCode)
-	if response.StatusCode != 200 {
-		r.meta.SetState(proxy.StateErrorStatusCode)
-		return fmt.Errorf("StatusCode = %d", response.StatusCode)
-	}
-
-	contentType, ok := response.Header["Content-Type"]
-	if !ok {
-		r.meta.SetState(proxy.StateUnsupportedFormat)
-		return fmt.Errorf("Not found Content-Type in headers")
-	}
-
-	mediatype, _, err := mime.ParseMediaType(contentType[0])
-	if err != nil {
-		r.meta.SetState(proxy.StateUnsupportedFormat)
-		return fmt.Errorf("Parse Content-Type, error %s", err)
-	}
-
-	if mediatype != "text/html" {
-		r.meta.SetState(proxy.StateUnsupportedFormat)
-		log.Printf("INFO: URL %s has unsupported mime format = %s", urlStr, mediatype)
-		return nil
-	}
-
-	contentEncoding := ""
-	contentEncodingArr, ok := response.Header["Content-Encoding"]
-	if ok && len(contentEncodingArr) != 0 {
-		contentEncoding = contentEncodingArr[0]
-	}
-
-	body, err := readBody(contentEncoding, response.Body)
-	if err != nil {
-		r.meta.SetState(proxy.StateAnswerError)
-		return err
-	}
-
-	parser, state, err := ProcessBody(zap.NewJSON(), body, contentType, u)
-	r.meta.SetState(state)
-	if err != nil {
-		return err
-	}
-
-	r.urls = parser.URLs
-	r.meta.SetContent(proxy.NewContent(body, parser.Title))
-
-	return nil
+	return err
 }
 
 // Send - load and parse the urlStr
