@@ -8,6 +8,7 @@ import (
 
 	"github.com/ReanGD/go-web-search/content"
 	"github.com/ReanGD/go-web-search/proxy"
+	"github.com/uber-go/zap"
 )
 
 func showTotalTime(msg string, start time.Time) {
@@ -15,7 +16,7 @@ func showTotalTime(msg string, start time.Time) {
 }
 
 // Run - start download cnt pages
-func Run(baseHosts []string, cnt int) error {
+func Run(logger zap.Logger, baseHosts []string, cnt int) error {
 	now := time.Now()
 	defer showTotalTime("Total time=", now)
 	if cnt <= 0 || len(baseHosts) == 0 {
@@ -30,7 +31,7 @@ func Run(baseHosts []string, cnt int) error {
 	defer db.Close()
 
 	workers := new(hostWorkers)
-	workers.Init(db, baseHosts, cnt)
+	workers.Init(db, logger, baseHosts, cnt)
 	if err != nil {
 		log.Printf("ERROR: %s", err)
 		return err

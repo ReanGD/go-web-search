@@ -15,9 +15,10 @@ type request struct {
 	client *http.Client
 	meta   *proxy.InMeta
 	urls   map[string]string
+	logger zap.Logger
 }
 
-func (r *request) get(u *url.URL) error {
+func (r *request) get(u *url.URL) (int64, error) {
 	urlStr := u.String()
 	r.urls = make(map[string]string)
 	r.meta = proxy.NewMeta(NormalizeHostName(u.Host), urlStr, nil)
@@ -25,7 +26,7 @@ func (r *request) get(u *url.URL) error {
 	if !r.Robot.Test(u) {
 		r.meta.SetState(proxy.StateDisabledByRobotsTxt)
 		log.Printf("INFO: URL %s blocked by robot.txt", urlStr)
-		return nil
+		return 0, nil
 	}
 
 	request := &http.Request{
@@ -48,32 +49,33 @@ func (r *request) get(u *url.URL) error {
 	response, err := r.client.Do(request)
 	if err != nil {
 		r.meta.SetState(proxy.StateConnectError)
-		return err
+		return 0, err
 	}
 
-	parser := newResponseParser(zap.NewJSON(), r.meta)
+	parser := newResponseParser(r.logger, r.meta)
 	err = parser.Run(response)
 	if err == nil {
 		r.urls = parser.URLs
 	}
 
-	return err
+	return parser.BodyDurationMs, err
 }
 
 // Send - load and parse the urlStr
 // urlStr - valid URL
-func (r *request) Process(u *url.URL) *proxy.PageData {
-	err := r.get(u)
+func (r *request) Process(u *url.URL) (*proxy.PageData, int64) {
+	duration, err := r.get(u)
 	if err != nil {
 		log.Printf("ERROR: Get URL %s, message: %s", u.String(), err)
 	}
 
-	return proxy.NewPageData(r.meta, r.urls)
+	return proxy.NewPageData(r.meta, r.urls), duration
 }
 
 // Init - init request structure
-func (r *request) Init() {
+func (r *request) Init(logger zap.Logger) {
 	r.client = new(http.Client)
+	r.logger = logger
 	r.client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
 		if len(via) >= 10 {
 			return errors.New("stopped after 10 redirects")

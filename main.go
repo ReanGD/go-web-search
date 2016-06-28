@@ -8,6 +8,7 @@ import (
 	"github.com/ReanGD/go-web-search/content"
 	"github.com/ReanGD/go-web-search/crawler"
 	_ "github.com/jinzhu/gorm/dialects/sqlite"
+	"github.com/uber-go/zap"
 )
 
 var baseHosts = []string{
@@ -36,8 +37,8 @@ func test() error {
 	return nil
 }
 
-func run() error {
-	return crawler.Run(baseHosts, 300)
+func run(logger zap.Logger) error {
+	return crawler.Run(logger, baseHosts, 300)
 }
 
 func clearCloseFile(f *os.File) {
@@ -56,10 +57,17 @@ func main() {
 
 	defer clearCloseFile(f)
 
+	file, err := os.OpenFile("app.json", os.O_APPEND|os.O_CREATE|os.O_RDWR, 0644)
+	if err != nil {
+		panic(err)
+	}
+	defer file.Close()
+	logger := zap.NewJSON(zap.AllLevel, zap.Output(zap.AddSync(file)))
+
 	log.SetOutput(f)
 
 	// runtime.GOMAXPROCS(runtime.NumCPU())
-	err = run()
+	err = run(logger)
 	// err = test()
 	if err != nil {
 		fmt.Printf("%s", err)

@@ -9,6 +9,7 @@ import (
 
 	"github.com/ReanGD/go-web-search/content"
 	"github.com/ReanGD/go-web-search/proxy"
+	"github.com/uber-go/zap"
 )
 
 type hostWorker struct {
@@ -28,12 +29,12 @@ func (w *hostWorker) Start(wgParent *sync.WaitGroup) {
 			log.Printf("ERROR: Worker query. Parse URL %s, message: %s", w.Tasks[i].URL, err)
 			continue
 		}
-		result := w.Request.Process(parsed)
+		result, workDuration := w.Request.Process(parsed)
 		result.SetParentURL(w.Tasks[i].ID)
 		w.ChDB <- result
 		fmt.Printf(".")
 		if result.GetMeta().NeedWaitAfterRequest() && i != cnt-1 {
-			time.Sleep(1 * time.Second)
+			time.Sleep(time.Duration(1000-workDuration) * time.Millisecond)
 		}
 	}
 }
@@ -42,7 +43,7 @@ type hostWorkers struct {
 	workers map[string]*hostWorker
 }
 
-func (w *hostWorkers) Init(db *content.DBrw, baseHosts []string, cnt int) error {
+func (w *hostWorkers) Init(db *content.DBrw, logger zap.Logger, baseHosts []string, cnt int) error {
 	var err error
 	w.workers = make(map[string]*hostWorker)
 
@@ -82,7 +83,7 @@ func (w *hostWorkers) Init(db *content.DBrw, baseHosts []string, cnt int) error 
 	}
 
 	for hostName, worker := range w.workers {
-		worker.Request.Init()
+		worker.Request.Init(logger)
 		worker.Tasks, err = db.GetNewURLs(hostName, cntPerHost)
 		if err != nil {
 			return err
