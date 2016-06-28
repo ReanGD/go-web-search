@@ -67,6 +67,14 @@ func TestReadBody(t *testing.T) {
 		So(string(result), ShouldEqual, string(data))
 	})
 
+	Convey("raw body with empty content-encoding", t, func() {
+		data := []byte("test body")
+		body := bytes.NewReader(data)
+		result, err := readBody("identity", body)
+		So(err, ShouldBeNil)
+		So(string(result), ShouldEqual, string(data))
+	})
+
 	Convey("raw body error", t, func() {
 		_, err := readBody("identity", errReader{})
 		So(err.Error(), ShouldEqual, ErrReadResponse)

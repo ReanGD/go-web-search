@@ -33,7 +33,7 @@ func readBody(contentEncoding string, body io.Reader) ([]byte, error) {
 		if err != nil {
 			return result, werrors.NewDetails(ErrReadGZipResponse, err)
 		}
-	} else if contentEncoding == "identity" {
+	} else if contentEncoding == "identity" || contentEncoding == "" {
 		result, err = ioutil.ReadAll(body)
 		if err != nil {
 			return result, werrors.NewDetails(ErrReadResponse, err)
