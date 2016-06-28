@@ -31,7 +31,7 @@ func Run(logger zap.Logger, baseHosts []string, cnt int) error {
 	defer db.Close()
 
 	workers := new(hostWorkers)
-	workers.Init(db, logger, baseHosts, cnt)
+	err = workers.Init(db, logger, baseHosts, cnt)
 	if err != nil {
 		log.Printf("ERROR: %s", err)
 		return err

@@ -32,7 +32,13 @@ func (r *responseParser) processStatusCode(statusCode int) error {
 	r.meta.SetStatusCode(statusCode)
 	if statusCode != 200 {
 		r.meta.SetState(proxy.StateErrorStatusCode)
-		return werrors.NewFields(ErrStatusCode, zap.Int("status_code", statusCode))
+		lvl := zap.ErrorLevel
+		// 401 Unauthorized
+		// 404 Not Found
+		if statusCode == 404 || statusCode == 401 {
+			lvl = zap.WarnLevel
+		}
+		return werrors.NewEx(lvl, ErrStatusCode, zap.Int("status_code", statusCode))
 	}
 
 	return nil
@@ -89,7 +95,7 @@ func (r *responseParser) ProcessBody(body []byte, contentType string) error {
 	}
 	if !parser.MetaTagIndex {
 		r.meta.SetState(proxy.StateNoFollow)
-		return werrors.NewLevel(zap.WarnLevel, WarnPageNotIndexed)
+		return werrors.NewLevel(zap.InfoLevel, WarnPageNotIndexed)
 	}
 
 	for url, error := range parser.WrongURLs {

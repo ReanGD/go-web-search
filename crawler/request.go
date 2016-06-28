@@ -7,6 +7,7 @@ import (
 	"net/url"
 
 	"github.com/ReanGD/go-web-search/proxy"
+	"github.com/ReanGD/go-web-search/werrors"
 	"github.com/uber-go/zap"
 )
 
@@ -52,10 +53,14 @@ func (r *request) get(u *url.URL) (int64, error) {
 		return 0, err
 	}
 
-	parser := newResponseParser(r.logger, r.meta)
+	loggerURL := r.logger.With(zap.String("url", r.meta.GetURL()))
+	parser := newResponseParser(loggerURL, r.meta)
 	err = parser.Run(response)
 	if err == nil {
 		r.urls = parser.URLs
+	} else {
+		werrors.LogError(loggerURL, err)
+		err = nil
 	}
 
 	return parser.BodyDurationMs, err

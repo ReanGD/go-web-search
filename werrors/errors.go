@@ -78,3 +78,13 @@ func NewDetails(msg string, details error) error {
 func NewFields(msg string, fields ...zap.Field) error {
 	return newError(zap.ErrorLevel, msg, fields...)
 }
+
+// LogError - write error to zap log
+func LogError(logger zap.Logger, err error) {
+	werr, ok := err.(*ErrorEx)
+	if !ok {
+		logger.Error(err.Error())
+	} else {
+		logger.Log(werr.Level, werr.Error(), werr.Fields...)
+	}
+}

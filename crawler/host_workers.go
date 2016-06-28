@@ -83,7 +83,7 @@ func (w *hostWorkers) Init(db *content.DBrw, logger zap.Logger, baseHosts []stri
 	}
 
 	for hostName, worker := range w.workers {
-		worker.Request.Init(logger)
+		worker.Request.Init(logger.With(zap.String("host", hostName)))
 		worker.Tasks, err = db.GetNewURLs(hostName, cntPerHost)
 		if err != nil {
 			return err

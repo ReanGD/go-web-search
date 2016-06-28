@@ -13,12 +13,11 @@ import (
 
 var baseHosts = []string{
 	"habrahabr.ru",
-	"megamozg.ru",
 	"geektimes.ru",
 	"linux.org.ru",
 	"gamedev.ru",
 	"xakep.ru",
-	"rsdn.ru",
+	// "rsdn.ru",
 	"3dnews.ru",
 	"ferra.ru",
 	"nixp.ru",
