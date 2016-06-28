@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"mime"
 	"net/http"
+	"time"
 
 	"github.com/ReanGD/go-web-search/proxy"
 	"github.com/ReanGD/go-web-search/werrors"
@@ -12,16 +13,19 @@ import (
 )
 
 type responseParser struct {
-	logger zap.Logger
-	meta   *proxy.InMeta
-	URLs   map[string]string
+	logger         zap.Logger
+	meta           *proxy.InMeta
+	URLs           map[string]string
+	BodyDurationMs int64
 }
 
 // newResponseParser - create responseParser struct
 func newResponseParser(logger zap.Logger, meta *proxy.InMeta) *responseParser {
 	return &responseParser{
-		logger: logger,
-		meta:   meta}
+		logger:         logger,
+		meta:           meta,
+		URLs:           make(map[string]string),
+		BodyDurationMs: 0}
 }
 
 func (r *responseParser) processStatusCode(statusCode int) error {
@@ -108,16 +112,21 @@ func (r *responseParser) ProcessBody(body []byte, contentType string) error {
 	return nil
 }
 
-func (r *responseParser) Run(response *http.Response) error {
-	defer response.Body.Close()
+func (r *responseParser) timeTrack(start time.Time) {
+	r.BodyDurationMs = int64(time.Since(start) / time.Millisecond)
+	r.logger.Debug("Request body processing", zap.Int64("duration", r.BodyDurationMs))
+}
 
+func (r *responseParser) Run(response *http.Response) error {
 	err := r.processStatusCode(response.StatusCode)
 	if err != nil {
+		_ = response.Body.Close()
 		return err
 	}
 
 	contentType, err := r.processContentType(&response.Header)
 	if err != nil {
+		_ = response.Body.Close()
 		return err
 	}
 
@@ -128,9 +137,15 @@ func (r *responseParser) Run(response *http.Response) error {
 	}
 
 	body, err := readBody(contentEncoding, response.Body)
+	closeErr := response.Body.Close()
+	defer r.timeTrack(time.Now())
 	if err != nil {
 		r.meta.SetState(proxy.StateAnswerError)
 		return err
+	}
+	if closeErr != nil {
+		r.meta.SetState(proxy.StateAnswerError)
+		return werrors.NewDetails(ErrCloseResponseBody, closeErr)
 	}
 
 	err = r.ProcessBody(body, contentType)

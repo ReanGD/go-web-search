@@ -27,6 +27,8 @@ const (
 	ErrRenderHTML = "Render HTML"
 	// ErrParseBaseURL - Parse base URL
 	ErrParseBaseURL = "Parse base URL"
+	// ErrCloseResponseBody - Close response body
+	ErrCloseResponseBody = "Close response body"
 	// WarnPageNotIndexed - Page not indexed
 	WarnPageNotIndexed = "Page not indexed (meta tag noindex)"
 	// InfoUnsupportedMimeFormat - Unsupported mime format
