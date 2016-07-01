@@ -124,7 +124,7 @@ func TestErrorEx(t *testing.T) {
 func TestLogError(t *testing.T) {
 	Convey("Check Log standart error", t, func() {
 		buf := &bytes.Buffer{}
-		logger := zap.NewJSON(zap.AllLevel, zap.Output(zap.AddSync(buf)))
+		logger := zap.NewJSON(zap.DebugLevel, zap.Output(zap.AddSync(buf)))
 		logger.StubTime()
 
 		LogError(logger, errors.New("message"))
@@ -136,7 +136,7 @@ func TestLogError(t *testing.T) {
 		defer func() { callerTest = false }()
 
 		buf := &bytes.Buffer{}
-		logger := zap.NewJSON(zap.AllLevel, zap.Output(zap.AddSync(buf)))
+		logger := zap.NewJSON(zap.DebugLevel, zap.Output(zap.AddSync(buf)))
 		logger.StubTime()
 
 		LogError(logger, NewEx(zap.DebugLevel, "message",

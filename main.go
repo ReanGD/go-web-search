@@ -17,7 +17,8 @@ var baseHosts = []string{
 	"linux.org.ru",
 	"gamedev.ru",
 	"xakep.ru",
-	// "rsdn.ru",
+	"rsdn.ru",
+	"ixbt.com",
 	"3dnews.ru",
 	"ferra.ru",
 	"nixp.ru",
@@ -37,7 +38,7 @@ func test() error {
 }
 
 func run(logger zap.Logger) error {
-	return crawler.Run(logger, baseHosts, 1300)
+	return crawler.Run(logger, baseHosts, 4300)
 }
 
 func clearCloseFile(f *os.File) {
@@ -61,7 +62,7 @@ func main() {
 		panic(err)
 	}
 	defer file.Close()
-	logger := zap.NewJSON(zap.AllLevel, zap.Output(zap.AddSync(file)))
+	logger := zap.NewJSON(zap.DebugLevel, zap.Output(zap.AddSync(file)))
 
 	log.SetOutput(f)
 
