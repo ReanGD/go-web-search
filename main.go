@@ -37,7 +37,7 @@ func test() error {
 }
 
 func run(logger zap.Logger) error {
-	return crawler.Run(logger, baseHosts, 300)
+	return crawler.Run(logger, baseHosts, 1300)
 }
 
 func clearCloseFile(f *os.File) {

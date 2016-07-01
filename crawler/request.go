@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"time"
 
 	"github.com/ReanGD/go-web-search/proxy"
 	"github.com/ReanGD/go-web-search/werrors"
@@ -30,6 +31,7 @@ func (r *request) get(u *url.URL) (int64, error) {
 		return 0, nil
 	}
 
+	startTime := time.Now()
 	request := &http.Request{
 		Method:     "GET",
 		URL:        u,
@@ -52,8 +54,11 @@ func (r *request) get(u *url.URL) (int64, error) {
 		r.meta.SetState(proxy.StateConnectError)
 		return 0, err
 	}
-
 	loggerURL := r.logger.With(zap.String("url", r.meta.GetURL()))
+
+	RequestDurationMs := int64(time.Since(startTime) / time.Millisecond)
+	loggerURL.Debug(DbgRequestDuration, zap.Int64("duration", RequestDurationMs))
+
 	parser := newResponseParser(loggerURL, r.meta)
 	err = parser.Run(response)
 	if err == nil {

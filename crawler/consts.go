@@ -33,4 +33,10 @@ const (
 	WarnPageNotIndexed = "Page not indexed (meta tag noindex)"
 	// InfoUnsupportedMimeFormat - Unsupported mime format
 	InfoUnsupportedMimeFormat = "Unsupported mime format"
+	// DbgRequestDuration - Request duration
+	DbgRequestDuration = "Request duration"
+	// DbgBodyProcessingDuration - Body processing duration
+	DbgBodyProcessingDuration = "Body processing duration"
+	// DbgBodySize - Body size after processing
+	DbgBodySize = "Body size"
 )

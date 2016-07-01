@@ -2,7 +2,6 @@ package crawler
 
 import (
 	"bytes"
-	"mime"
 	"net/http"
 	"time"
 
@@ -28,46 +27,21 @@ func newResponseParser(logger zap.Logger, meta *proxy.InMeta) *responseParser {
 		BodyDurationMs: 0}
 }
 
-func (r *responseParser) processStatusCode(statusCode int) error {
+func (r *responseParser) processMeta(statusCode int, header *http.Header) (string, string, error) {
 	r.meta.SetStatusCode(statusCode)
-	if statusCode != 200 {
+	err := checkStatusCode(statusCode)
+	if err != nil {
 		r.meta.SetState(proxy.StateErrorStatusCode)
-		lvl := zap.ErrorLevel
-		// 401 Unauthorized
-		// 404 Not Found
-		if statusCode == 404 || statusCode == 401 {
-			lvl = zap.WarnLevel
-		}
-		return werrors.NewEx(lvl, ErrStatusCode, zap.Int("status_code", statusCode))
+		return "", "", err
 	}
 
-	return nil
-}
-
-func (r *responseParser) processContentType(header *http.Header) (string, error) {
-	contentType := ""
-	contentTypeArr, ok := (*header)["Content-Type"]
-	if !ok || len(contentTypeArr) == 0 {
-		r.meta.SetState(proxy.StateUnsupportedFormat)
-		return "", werrors.New(ErrNotFountContentType)
-	}
-	contentType = contentTypeArr[0]
-
-	mediatype, _, err := mime.ParseMediaType(contentType)
+	contentType, err := checkContentType(header)
 	if err != nil {
 		r.meta.SetState(proxy.StateUnsupportedFormat)
-		return "", werrors.NewFields(ErrParseContentType,
-			zap.String("detail", err.Error()),
-			zap.String("content_type", contentType))
+		return "", "", err
 	}
 
-	if mediatype != "text/html" {
-		r.meta.SetState(proxy.StateUnsupportedFormat)
-		return "", werrors.NewEx(zap.InfoLevel, InfoUnsupportedMimeFormat,
-			zap.String("content_type", contentType))
-	}
-
-	return contentType, nil
+	return contentType, getContentEncoding(header), nil
 }
 
 func (r *responseParser) ProcessBody(body []byte, contentType string) error {
@@ -115,31 +89,20 @@ func (r *responseParser) ProcessBody(body []byte, contentType string) error {
 	r.URLs = parser.URLs
 	r.meta.SetContent(proxy.NewContent(buf.Bytes(), parser.Title))
 
+	r.logger.Debug(DbgBodySize, zap.Int("size", buf.Len()))
 	return nil
 }
 
 func (r *responseParser) timeTrack(start time.Time) {
 	r.BodyDurationMs = int64(time.Since(start) / time.Millisecond)
-	r.logger.Debug("Request body processing", zap.Int64("duration", r.BodyDurationMs))
+	r.logger.Debug(DbgBodyProcessingDuration, zap.Int64("duration", r.BodyDurationMs))
 }
 
 func (r *responseParser) Run(response *http.Response) error {
-	err := r.processStatusCode(response.StatusCode)
+	contentType, contentEncoding, err := r.processMeta(response.StatusCode, &response.Header)
 	if err != nil {
 		_ = response.Body.Close()
 		return err
-	}
-
-	contentType, err := r.processContentType(&response.Header)
-	if err != nil {
-		_ = response.Body.Close()
-		return err
-	}
-
-	contentEncoding := ""
-	contentEncodingArr, ok := response.Header["Content-Encoding"]
-	if ok && len(contentEncodingArr) != 0 {
-		contentEncoding = contentEncodingArr[0]
 	}
 
 	body, err := readBody(contentEncoding, response.Body)
