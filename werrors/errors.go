@@ -37,7 +37,7 @@ func getCaller() string {
 		return ErrFailedGetCaller
 	}
 
-	return fmt.Sprintf("[%s:%d] %s", filepath.Base(file), line, runtime.FuncForPC(ps).Name())
+	return fmt.Sprintf("[%s:%d] %s", filepath.Base(file), line, filepath.Base(runtime.FuncForPC(ps).Name()))
 }
 
 func newError(logLevel zap.Level, msg string, fields ...zap.Field) error {
