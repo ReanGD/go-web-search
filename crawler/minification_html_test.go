@@ -57,6 +57,7 @@ func helperDiv(name string, t *testing.T, in, out string) {
 	})
 }
 
+// TestErrorNodeType ...
 func TestErrorNodeType(t *testing.T) {
 	Convey("Test error node type", t, func() {
 		in := "<html><head></head><body></body></html>"
@@ -69,6 +70,7 @@ func TestErrorNodeType(t *testing.T) {
 	})
 }
 
+// TestDoctype ...
 func TestDoctype(t *testing.T) {
 	Convey("Test doctype", t, func() {
 		in := "<!DOCTYPE html><html><head></head><body></body></html>"
@@ -78,54 +80,14 @@ func TestDoctype(t *testing.T) {
 	})
 }
 
+// TestRemoveComments ...
 func TestRemoveComments(t *testing.T) {
 	helperHead("Remove comment in head", t, "<!-- Comment1 -->", "")
 	helperBody("Remove comment in body", t, "pre<!-- Comment1 -->post", "prepost")
 	helperHead("Remove double comment in head", t, "<!-- Comment1 --><!-- Comment2 -->", "")
 }
 
-func TestFuncRemoveNode(t *testing.T) {
-	helperDiv("One tag inside", t,
-		`<form attr="a"><div>aaa</div></form>`,
-		" ")
-
-	helperDiv("Left text", t,
-		"pre<form></form>",
-		"pre ")
-
-	helperDiv("Left text with space", t,
-		"pre \n \t \r <form></form>",
-		"pre ")
-
-	helperDiv("Right text", t,
-		"<form></form>post",
-		" post")
-
-	helperDiv("Right text with space", t,
-		"<form></form> \n \t \r post",
-		" post")
-
-	helperDiv("Left and right text", t,
-		"pre<form></form>post",
-		"pre post")
-
-	helperDiv("Left and right text with space", t,
-		"pre \n \t \r <form></form> \n \t \r post",
-		"pre post")
-
-	helperDiv("Left tag", t,
-		"<div>pre</div><form></form>",
-		"<div>pre</div> ")
-
-	helperDiv("Right tag", t,
-		"<form></form><div>post</div>",
-		" <div>post</div>")
-
-	helperDiv("Left and right tag", t,
-		"<div>pre</div><form></form><div>post</div>",
-		"<div>pre</div> <div>post</div>")
-}
-
+// TestRemoveTags ...
 func TestRemoveTags(t *testing.T) {
 	tags := []string{
 		"<script>i=0;</script>",
@@ -196,128 +158,7 @@ func TestRemoveTags(t *testing.T) {
 	})
 }
 
-func TestFuncOpenNodeWithoutSeparator(t *testing.T) {
-	helperDiv("Empty", t,
-		"<b></b>",
-		"")
-
-	helperDiv("Text inside", t,
-		"<b>itext</b>",
-		"itext")
-
-	helperDiv("One tag inside", t,
-		`<b><test_tag>itext</test_tag></b>`,
-		`<test_tag>itext</test_tag>`)
-
-	helperDiv("Left text, right tag inside", t,
-		`<b>ipre<test_tag>itext</test_tag></b>`,
-		`ipre<test_tag>itext</test_tag>`)
-
-	helperDiv("Left tag, right text inside", t,
-		`<b><test_tag>itext</test_tag>ipost</b>`,
-		`<test_tag>itext</test_tag>ipost`)
-
-	helperDiv("Left text, right text inside", t,
-		`<b>ipre<test_tag>itext</test_tag>ipost</b>`,
-		`ipre<test_tag>itext</test_tag>ipost`)
-
-	helperDiv("Text {text text} text", t,
-		`pre<b>ipre<test_tag>itext</test_tag>ipost</b>post`,
-		`preipre<test_tag>itext</test_tag>ipostpost`)
-
-	helperDiv("Text {tag tag} text", t,
-		`pre<b><test_tag>itext1</test_tag><test_tag>itext2</test_tag></b>post`,
-		`pre<test_tag>itext1</test_tag><test_tag>itext2</test_tag>post`)
-
-	helperDiv("Tag {text text} tag", t,
-		`<div>pre</div><b>ipre<test_tag>itext</test_tag>ipost</b><div>post</div>`,
-		`<div>pre</div>ipre<test_tag>itext</test_tag>ipost<div>post</div>`)
-
-	helperDiv("Tag {tag tag} tag", t,
-		`<div>pre</div><b><test_tag>itext1</test_tag><test_tag>itext2</test_tag></b><div>post</div>`,
-		`<div>pre</div><test_tag>itext1</test_tag><test_tag>itext2</test_tag><div>post</div>`)
-
-	helperDiv("Tag {text} tag", t,
-		"<div>pre</div><b>itext</b><div>post</div>",
-		"<div>pre</div>itext<div>post</div>")
-
-	helperDiv("Tag {tag} tag", t,
-		`<div>pre</div><b><test_tag>itext</test_tag></b><div>post</div>`,
-		`<div>pre</div><test_tag>itext</test_tag><div>post</div>`)
-
-	helperDiv("One child", t,
-		" <b>text</b> <script>s</script>",
-		" text ")
-}
-
-func TestFuncOpenNodeWithSpaces(t *testing.T) {
-	helperDiv("Text space {text} space text", t,
-		"pre <b>text</b> post",
-		"pre text post")
-
-	helperDiv("space {text} space", t,
-		" <b>text</b> ",
-		" text ")
-
-	helperDiv("{tag} space text", t,
-		`<b><test_tag>text</test_tag></b> post`,
-		`<test_tag>text</test_tag> post`)
-
-	helperDiv("text space {tag}", t,
-		`pre <b><test_tag>text</test_tag></b>`,
-		`pre <test_tag>text</test_tag>`)
-}
-
-func TestFuncOpenNodeWithSeparator(t *testing.T) {
-	helperDiv("Empty", t,
-		"<abbr></abbr>",
-		" ")
-
-	helperDiv("Text inside", t,
-		"<abbr>itext</abbr>",
-		" itext ")
-
-	helperDiv("One tag inside", t,
-		`<abbr><test_tag>itext</test_tag></abbr>`,
-		` <test_tag>itext</test_tag> `)
-
-	helperDiv("Left text, right tag inside", t,
-		`<abbr>ipre<test_tag>itext</test_tag></abbr>`,
-		` ipre<test_tag>itext</test_tag> `)
-
-	helperDiv("Left tag, right text inside", t,
-		`<abbr><test_tag>itext</test_tag>ipost</abbr>`,
-		` <test_tag>itext</test_tag>ipost `)
-
-	helperDiv("Left text, right text inside", t,
-		`<abbr>ipre<test_tag>itext</test_tag>ipost</abbr>`,
-		` ipre<test_tag>itext</test_tag>ipost `)
-
-	helperDiv("Text {text text} text", t,
-		`pre<abbr>ipre<test_tag>itext</test_tag>ipost</abbr>post`,
-		`pre ipre<test_tag>itext</test_tag>ipost post`)
-
-	helperDiv("Text {tag tag} text", t,
-		`pre<abbr><test_tag>itext1</test_tag><test_tag>itext2</test_tag></abbr>post`,
-		`pre <test_tag>itext1</test_tag><test_tag>itext2</test_tag> post`)
-
-	helperDiv("Tag {text text} tag", t,
-		`<div>pre</div><abbr>ipre<test_tag>itext</test_tag>ipost</abbr><div>post</div>`,
-		`<div>pre</div> ipre<test_tag>itext</test_tag>ipost <div>post</div>`)
-
-	helperDiv("Tag {tag tag} tag", t,
-		`<div>pre</div><abbr><test_tag>itext1</test_tag><test_tag>itext2</test_tag></abbr><div>post</div>`,
-		`<div>pre</div> <test_tag>itext1</test_tag><test_tag>itext2</test_tag> <div>post</div>`)
-
-	helperDiv("Tag {text} tag", t,
-		"<div>pre</div><abbr>itext</abbr><div>post</div>",
-		"<div>pre</div> itext <div>post</div>")
-
-	helperDiv("Tag {tag} tag", t,
-		`<div>pre</div><abbr><test_tag>itext</test_tag></abbr><div>post</div>`,
-		`<div>pre</div> <test_tag>itext</test_tag> <div>post</div>`)
-}
-
+// TestConvertTagToDiv ...
 func TestConvertTagToDiv(t *testing.T) {
 	tags := []string{
 		"article",
@@ -350,14 +191,15 @@ func TestConvertTagToDiv(t *testing.T) {
 	}
 }
 
+// TestOpenTags ...
 func TestOpenTags(t *testing.T) {
 	helperDiv("Open tag abbr with title", t,
 		"<abbr title=\"title value\">text</abbr>",
-		" title value text ")
+		"  title value text ")
 
 	helperDiv("Open tag abbr with title and tags inside", t,
 		"<abbr title=\"title value\"><b>text</b>post</abbr>",
-		" title value textpost ")
+		"  title value textpost ")
 
 	helperDiv("Open tag abbr without title", t,
 		"<abbr>text</abbr>",
@@ -365,7 +207,7 @@ func TestOpenTags(t *testing.T) {
 
 	helperDiv("Open tag abbr without text", t,
 		"<abbr title=\"title value\"></abbr>",
-		" title value ")
+		"  title value  ")
 
 	// without add space
 	tags := []string{
@@ -417,23 +259,25 @@ func TestOpenTags(t *testing.T) {
 	}
 }
 
+// TestLists ...
 func TestLists(t *testing.T) {
 	helperBody("Ul", t,
 		`<ul a="a"><li a="a">text1</li><li a="a">text2</li></ul>`,
-		"<div> text1 text2 </div>")
+		"<div> text1  text2 </div>")
 
 	helperBody("Ol", t,
 		`<ol a="a"><li a="a">text1</li><li a="a">text2</li></ol>`,
-		"<div> text1 text2 </div>")
+		"<div> text1  text2 </div>")
 
 	helperBody("Dt", t,
 		`<dl a="a">
 <dt a="a">dt text1</dt><dd a="a">dd text1</dd>
 <dt a="a">dt text2</dt><dd a="a">dd text2</dd>
 </dl>`,
-		"<div> dt text1 dd text1 dt text2 dd text2 </div>")
+		"<div>\n dt text1  dd text1 \n dt text2  dd text2 \n</div>")
 }
 
+// TestTable ...
 func TestTable(t *testing.T) {
 	helperBody("Open tag table.caption", t,
 		`<table a="a"><caption>caption text</caption></table>`,
@@ -445,11 +289,11 @@ func TestTable(t *testing.T) {
 <col width="150" valign="top2">
 <colgroup width="150">
 </table>`,
-		`<div> </div>`)
+		"<div>\n  </div>")
 
 	helperBody("Open tag table.thead table.tbody table.tfoot", t,
 		`<table><thead></thead><tbody></tbody><tfoot></tfoot></table>`,
-		`<div> </div>`)
+		`<div>   </div>`)
 
 	helperBody("Open table data tags", t,
 		`<table>
@@ -462,9 +306,7 @@ func TestTable(t *testing.T) {
  <td>Text td2</td>
 </tr>
 </table>`,
-		`<div> <div>Text th1</div>
- <div>Text th2</div> <div>Text td1</div>
- <div>Text td2</div> </div>`)
+		"<div>\n  \n <div>Text th1</div>\n <div>Text th2</div>\n \n \n <div>Text td1</div>\n <div>Text td2</div>\n \n </div>")
 
 	helperBody("Table full version", t,
 		`<table>
@@ -490,12 +332,10 @@ func TestTable(t *testing.T) {
  </tr>
 </tfoot>
 	</table>`,
-		`<div> <div>Text th1</div>
-  <div>Text th2</div> <div>Text td1</div>
-  <div>Text td2</div> <div>Text td3</div>
-  <div>Text td4</div> </div>`)
+		"<div>\n\t   \n  \n  <div>Text th1</div>\n  <div>Text th2</div>\n  \n \n \n  \n  <div>Text td1</div>\n  <div>Text td2</div>\n  \n \n \n  \n  <div>Text td3</div>\n  <div>Text td4</div>\n  \n \n\t</div>")
 }
 
+// TestRemoveAttr ...
 func TestRemoveAttr(t *testing.T) {
 	Convey("Remove attributes in special tags", t, func() {
 		in := `<html a="1"><head a="1"></head><body a="1"><div a="1">text</div></body></html>`
