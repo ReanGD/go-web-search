@@ -1,5 +1,6 @@
 package crawler
 
+// status: ok
 import (
 	"github.com/ReanGD/go-web-search/werrors"
 
@@ -31,8 +32,8 @@ func (m *minificationHTML) parseChildren(node *html.Node) (*html.Node, error) {
 	return node.NextSibling, nil
 }
 
+// codebeat:disable[LOC,ABC]
 func (m *minificationHTML) parseElements(node *html.Node) (*html.Node, error) {
-	// codebeat:disable[LOC,ABC]
 	switch node.DataAtom {
 	case atom.A:
 		return m.openNode(node, false)
@@ -255,8 +256,9 @@ func (m *minificationHTML) parseElements(node *html.Node) (*html.Node, error) {
 		}
 		return m.toDiv(node)
 	}
-	// codebeat:enable[LOC,ABC]
 }
+
+// codebeat:enable[LOC,ABC]
 
 func (m *minificationHTML) parseNode(node *html.Node) (*html.Node, error) {
 	switch node.Type {
