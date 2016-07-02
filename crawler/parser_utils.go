@@ -25,7 +25,6 @@ func (u *parserUtils) getAttrValLower(node *html.Node, attrName string) string {
 }
 
 func (u *parserUtils) mergeNodes(parent, prev, next *html.Node, addSeparator bool) *html.Node {
-	result := next
 	prevText := prev != nil && prev.Type == html.TextNode
 	nextText := next != nil && next.Type == html.TextNode
 	delim := ""
@@ -36,34 +35,21 @@ func (u *parserUtils) mergeNodes(parent, prev, next *html.Node, addSeparator boo
 	if prevText && nextText {
 		prev.Data = prev.Data + delim + next.Data
 		parent.RemoveChild(next)
-		result = prev.NextSibling
-	} else if prevText {
+		return prev.NextSibling
+	}
+
+	if prevText {
 		prev.Data = prev.Data + delim
 	} else if nextText {
 		next.Data = delim + next.Data
 	} else if addSeparator {
 		newNode := &html.Node{
-			Parent:      parent,
-			FirstChild:  nil,
-			LastChild:   nil,
-			PrevSibling: prev,
-			NextSibling: next,
-			Type:        html.TextNode,
-			Data:        delim,
-			Namespace:   parent.Namespace}
-		if prev != nil {
-			prev.NextSibling = newNode
-		} else {
-			parent.FirstChild = newNode
-		}
-		if next != nil {
-			next.PrevSibling = newNode
-		} else {
-			parent.LastChild = newNode
-		}
+			Type: html.TextNode,
+			Data: delim}
+		parent.InsertBefore(newNode, next)
 	}
 
-	return result
+	return next
 }
 
 func (u *parserUtils) removeNode(node *html.Node, addSeparator bool) (*html.Node, error) {
@@ -78,14 +64,8 @@ func (u *parserUtils) addChildTextNodeToBegining(node *html.Node, text string) {
 		node.FirstChild.Data = text + node.FirstChild.Data
 	} else {
 		newNode := &html.Node{
-			Parent:      nil,
-			FirstChild:  nil,
-			LastChild:   nil,
-			PrevSibling: nil,
-			NextSibling: nil,
-			Type:        html.TextNode,
-			Data:        text,
-			Namespace:   node.Namespace}
+			Type: html.TextNode,
+			Data: text}
 		if node.FirstChild == nil {
 			node.AppendChild(newNode)
 		} else {
@@ -103,25 +83,17 @@ func (u *parserUtils) openNode(node *html.Node, addSeparator bool) (*html.Node, 
 		return u.removeNode(node, addSeparator)
 	}
 
-	for it := first; it != nil; it = it.NextSibling {
-		it.Parent = parent
+	for it := first; it != nil; {
+		cur := it
+		it = it.NextSibling
+
+		cur.Parent = nil
+		cur.PrevSibling = nil
+		cur.NextSibling = nil
+		parent.InsertBefore(cur, next)
 	}
 
-	if parent.FirstChild == node {
-		parent.FirstChild = first
-	}
-	if parent.LastChild == node {
-		parent.LastChild = last
-	}
-
-	if prev != nil {
-		prev.NextSibling = first
-		first.PrevSibling = prev
-	}
-	if next != nil {
-		next.PrevSibling = last
-		last.NextSibling = next
-	}
+	parent.RemoveChild(node)
 
 	result := u.mergeNodes(parent, prev, first, addSeparator)
 	if result != next {
@@ -129,10 +101,6 @@ func (u *parserUtils) openNode(node *html.Node, addSeparator bool) (*html.Node, 
 	} else {
 		result = u.mergeNodes(parent, prev, next, addSeparator)
 	}
-
-	node.Parent = nil
-	node.PrevSibling = nil
-	node.NextSibling = nil
 
 	return result, nil
 }
