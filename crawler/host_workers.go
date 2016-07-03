@@ -49,11 +49,11 @@ func (w *hostWorkers) Init(db *content.DBrw, logger zap.Logger, baseHosts []stri
 
 	for _, host := range db.GetHosts() {
 		robotTxt := new(robotTxt)
-		err = robotTxt.FromHost(host)
+		err = robotTxt.FromHost(host.GetRobotsTxt())
 		if err != nil {
-			return fmt.Errorf("Init robot.txt for host %s from db data, message: %s", host.Name, err)
+			return fmt.Errorf("Init robot.txt for host %s from db data, message: %s", host.GetName(), err)
 		}
-		w.workers[host.Name] = &hostWorker{Request: &request{Robot: robotTxt}}
+		w.workers[host.GetName()] = &hostWorker{Request: &request{Robot: robotTxt}}
 	}
 
 	for _, hostNameRaw := range baseHosts {
@@ -69,11 +69,11 @@ func (w *hostWorkers) Init(db *content.DBrw, logger zap.Logger, baseHosts []stri
 			if err != nil {
 				return err
 			}
-			err = db.AddHost(host, baseURL)
+			_, err = db.AddHost(host, baseURL)
 			if err != nil {
 				return err
 			}
-			w.workers[host.Name] = &hostWorker{Request: &request{Robot: robotTxt}}
+			w.workers[host.GetName()] = &hostWorker{Request: &request{Robot: robotTxt}}
 		}
 	}
 

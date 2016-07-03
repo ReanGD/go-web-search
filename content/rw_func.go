@@ -3,9 +3,6 @@ package content
 import (
 	"database/sql"
 	"fmt"
-
-	"github.com/ReanGD/go-web-search/database"
-	"github.com/jinzhu/gorm"
 )
 
 // Transaction - execute fn in transaction
@@ -34,11 +31,6 @@ func (db *DBrw) Transaction(fn func(*DBrw) error) error {
 	return nil
 }
 
-// GetHosts - get rows from table 'Host'
-func (db *DBrw) GetHosts() map[string]*database.Host {
-	return db.hosts
-}
-
 // GetHostID - get host ID by host name
 func (db *DBrw) GetHostID(hostName string) sql.NullInt64 {
 	host, exists := db.hosts[hostName]
@@ -46,36 +38,6 @@ func (db *DBrw) GetHostID(hostName string) sql.NullInt64 {
 		return sql.NullInt64{Int64: host.ID, Valid: true}
 	}
 	return sql.NullInt64{Valid: false}
-}
-
-// AddHost - add new host
-func (db *DBrw) AddHost(host *database.Host, baseURL string) error {
-	return db.Transaction(func(tr *DBrw) error {
-		err := tr.Create(host).Error
-		if err != nil {
-			return fmt.Errorf("add new 'Host' record for host %s, message: %s", host.Name, err)
-		}
-
-		var dbItem URL
-		err = tr.Where("id = ?", baseURL).First(&dbItem).Error
-		if err == gorm.ErrRecordNotFound {
-			newItem := &URL{
-				URL:    baseURL,
-				HostID: sql.NullInt64{Int64: host.ID, Valid: true},
-				Loaded: false}
-			err = tr.Create(newItem).Error
-			if err != nil {
-				return fmt.Errorf("add new 'URL' record for URL %s, message: %s", baseURL, err)
-			}
-		} else if err != nil {
-			return fmt.Errorf("find in 'URL' table for URL %s, message: %s", baseURL, err)
-		} else {
-			// nothing to update
-		}
-
-		db.hosts[host.Name] = host
-		return nil
-	})
 }
 
 // GetNewURLs - get URLs for downloads for host

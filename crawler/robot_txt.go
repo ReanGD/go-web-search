@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/ReanGD/go-web-search/database"
+	"github.com/ReanGD/go-web-search/proxy"
 	"github.com/temoto/robotstxt-go"
 )
 
@@ -14,8 +14,8 @@ type robotTxt struct {
 }
 
 // FromHost - init by db element content.Host
-func (r *robotTxt) FromHost(host *database.Host) error {
-	robot, err := robotstxt.FromStatusAndBytes(host.RobotsStatusCode, host.RobotsData)
+func (r *robotTxt) FromHost(robotsStatusCode int, robotsData []byte) error {
+	robot, err := robotstxt.FromStatusAndBytes(robotsStatusCode, robotsData)
 	if err != nil {
 		return err
 	}
@@ -26,7 +26,7 @@ func (r *robotTxt) FromHost(host *database.Host) error {
 
 // FromHostName - init by hostName
 // hostName - normalized host name
-func (r *robotTxt) FromHostName(hostName string) (*database.Host, error) {
+func (r *robotTxt) FromHostName(hostName string) (*proxy.Host, error) {
 	robotsURL := NormalizeURL(&url.URL{Scheme: "http", Host: hostName, Path: "robots.txt"})
 	response, err := http.Get(robotsURL)
 	if err != nil {
@@ -39,12 +39,8 @@ func (r *robotTxt) FromHostName(hostName string) (*database.Host, error) {
 		return nil, err
 	}
 
-	host := &database.Host{
-		Name:             hostName,
-		RobotsStatusCode: response.StatusCode,
-		RobotsData:       body}
-
-	return host, r.FromHost(host)
+	host := proxy.NewHost(hostName, response.StatusCode, body)
+	return host, r.FromHost(response.StatusCode, body)
 }
 
 func (r *robotTxt) Test(u *url.URL) bool {
