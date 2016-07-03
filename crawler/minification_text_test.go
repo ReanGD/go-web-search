@@ -44,12 +44,16 @@ func helperTextBody(name string, t *testing.T, in, out string) {
 	})
 }
 
+// TestMinimizeText ...
 func TestMinimizeText(t *testing.T) {
 	strEq("Empty string", t,
 		"", "")
 
 	strEq("Only spaces", t,
 		"    ", "")
+
+	strEq("New line, tab and etc.", t,
+		" \n\r\t ", "")
 
 	strEq("Without spaces", t,
 		"приветworld", "приветworld")
@@ -100,6 +104,7 @@ func TestMinimizeText(t *testing.T) {
 		t, "1239.", "1239")
 }
 
+// TestParseErrors ...
 func TestParseErrors(t *testing.T) {
 	Convey("Test error node type", t, func() {
 		in := "<html><head></head><body><!-- Comment1 --></body></html>"
@@ -120,6 +125,7 @@ func TestParseErrors(t *testing.T) {
 	})
 }
 
+// TestRemoveEmptyTags ...
 func TestRemoveEmptyTags(t *testing.T) {
 	helperTextBody("Remove empty tag between tags", t,
 		"<div>pre</div><div></div><div>post</div>",
@@ -142,6 +148,7 @@ func TestRemoveEmptyTags(t *testing.T) {
 		"<div>pre</div><div>post</div>")
 }
 
+// TestOpenTag ...
 func TestOpenTag(t *testing.T) {
 	helperTextBody("Remove tag with spaces", t,
 		"<div><div>text</div></div>",

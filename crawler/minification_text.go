@@ -25,6 +25,12 @@ var notSeparatorRT = rangetable.New(
 type minificationText struct {
 }
 
+func (m *minificationText) isDigit(prev, cur, next rune) bool {
+	return (cur == '.' || cur == ',' || cur == ':') &&
+		('0' <= prev && prev <= '9') &&
+		('0' <= next && next <= '9')
+}
+
 func (m *minificationText) processText(in string) string {
 	var buffer bytes.Buffer
 	var rRaw, r rune
@@ -35,32 +41,24 @@ func (m *minificationText) processText(in string) string {
 	for len(in) > 0 {
 		rRaw, size = utf8.DecodeRuneInString(in)
 		r = unicode.ToLower(rRaw)
+		isSeparator := !unicode.Is(notSeparatorRT, r)
 
-		if unicode.Is(notSeparatorRT, r) {
-			if prevIsSeparator {
-				prevIsSeparator = false
-				if !isFirst {
-					_ = buffer.WriteByte(' ')
-				}
-			}
-			_, _ = buffer.WriteRune(r)
-			isFirst = false
-		} else {
-			if !prevIsSeparator {
-				prevIsSeparator = true
-				// digits
-				if '0' <= prevRune && prevRune <= '9' && (r == '.' || r == ',' || r == ':') {
-					rRaw, _ = utf8.DecodeRuneInString(in[size:])
-					if '0' <= rRaw && rRaw <= '9' {
-						_, _ = buffer.WriteRune(r)
-						prevIsSeparator = false
-					}
-				}
-			} else {
-				prevIsSeparator = true
-			}
+		// digits
+		if isSeparator && !prevIsSeparator {
+			rRaw, _ = utf8.DecodeRuneInString(in[size:])
+			isSeparator = !m.isDigit(prevRune, r, rRaw)
 		}
 
+		if !isSeparator && prevIsSeparator && !isFirst {
+			_ = buffer.WriteByte(' ')
+		}
+
+		if !isSeparator {
+			_, _ = buffer.WriteRune(r)
+			isFirst = false
+		}
+
+		prevIsSeparator = isSeparator
 		prevRune = r
 		in = in[size:]
 	}
@@ -128,13 +126,14 @@ func (m *minificationText) parseElements(node *html.Node) (*html.Node, error) {
 		return m.parseChildren(node)
 	case atom.Body, atom.Div:
 		next, err := m.parseChildren(node)
-		if err == nil {
-			child := node.FirstChild
-			if child == nil {
-				next = m.removeTag(node)
-			} else if child == node.LastChild && child.DataAtom == atom.Div {
-				m.openTag(child)
-			}
+		if err != nil {
+			return next, err
+		}
+		child := node.FirstChild
+		if child == nil {
+			next = m.removeTag(node)
+		} else if child == node.LastChild && child.DataAtom == atom.Div {
+			m.openTag(child)
 		}
 		return next, err
 	default:
