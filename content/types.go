@@ -1,18 +1,6 @@
 package content
 
-import (
-	"database/sql"
-	"time"
-)
-
-// Host - host information
-type Host struct {
-	ID               int64     `gorm:"primary_key;not null"`
-	Name             string    `gorm:"size:255;unique_index;not null"`
-	Timestamp        time.Time `gorm:"not null"`
-	RobotsStatusCode int       `gorm:"not null"`
-	RobotsData       []byte
-}
+import "database/sql"
 
 // Link - links between pages
 type Link struct {

@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 
+	"github.com/ReanGD/go-web-search/database"
 	"github.com/jinzhu/gorm"
 )
 
@@ -34,7 +35,7 @@ func (db *DBrw) Transaction(fn func(*DBrw) error) error {
 }
 
 // GetHosts - get rows from table 'Host'
-func (db *DBrw) GetHosts() map[string]*Host {
+func (db *DBrw) GetHosts() map[string]*database.Host {
 	return db.hosts
 }
 
@@ -48,7 +49,7 @@ func (db *DBrw) GetHostID(hostName string) sql.NullInt64 {
 }
 
 // AddHost - add new host
-func (db *DBrw) AddHost(host *Host, baseURL string) error {
+func (db *DBrw) AddHost(host *database.Host, baseURL string) error {
 	return db.Transaction(func(tr *DBrw) error {
 		err := tr.Create(host).Error
 		if err != nil {

@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/ReanGD/go-web-search/database"
 	"github.com/ReanGD/go-web-search/proxy"
 	"github.com/ReanGD/go-web-search/werrors"
 	"github.com/uber-go/zap"
@@ -15,7 +16,7 @@ import (
 type request struct {
 	Robot  *robotTxt
 	client *http.Client
-	meta   *proxy.InMeta
+	meta   *proxy.Meta
 	urls   map[string]string
 	logger zap.Logger
 }
@@ -26,7 +27,7 @@ func (r *request) get(u *url.URL) (int64, error) {
 	r.meta = proxy.NewMeta(NormalizeHostName(u.Host), urlStr, nil)
 
 	if !r.Robot.Test(u) {
-		r.meta.SetState(proxy.StateDisabledByRobotsTxt)
+		r.meta.SetState(database.StateDisabledByRobotsTxt)
 		log.Printf("INFO: URL %s blocked by robot.txt", urlStr)
 		return 0, nil
 	}
@@ -51,7 +52,7 @@ func (r *request) get(u *url.URL) (int64, error) {
 
 	response, err := r.client.Do(request)
 	if err != nil {
-		r.meta.SetState(proxy.StateConnectError)
+		r.meta.SetState(database.StateConnectError)
 		return 0, err
 	}
 	loggerURL := r.logger.With(zap.String("url", r.meta.GetURL()))
@@ -94,7 +95,7 @@ func (r *request) Init(logger zap.Logger) {
 			return nil
 		}
 
-		r.meta.SetState(proxy.StateDublicate)
+		r.meta.SetState(database.StateDublicate)
 		r.meta.SetStatusCode(301)
 
 		copyURL := *req.URL

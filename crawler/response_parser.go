@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/ReanGD/go-web-search/database"
 	"github.com/ReanGD/go-web-search/proxy"
 	"github.com/ReanGD/go-web-search/werrors"
 	"github.com/uber-go/zap"
@@ -13,13 +14,13 @@ import (
 
 type responseParser struct {
 	logger         zap.Logger
-	meta           *proxy.InMeta
+	meta           *proxy.Meta
 	URLs           map[string]string
 	BodyDurationMs int64
 }
 
 // newResponseParser - create responseParser struct
-func newResponseParser(logger zap.Logger, meta *proxy.InMeta) *responseParser {
+func newResponseParser(logger zap.Logger, meta *proxy.Meta) *responseParser {
 	return &responseParser{
 		logger:         logger,
 		meta:           meta,
@@ -31,13 +32,13 @@ func (r *responseParser) processMeta(statusCode int, header *http.Header) (strin
 	r.meta.SetStatusCode(statusCode)
 	err := checkStatusCode(statusCode)
 	if err != nil {
-		r.meta.SetState(proxy.StateErrorStatusCode)
+		r.meta.SetState(database.StateErrorStatusCode)
 		return "", "", err
 	}
 
 	contentType, err := checkContentType(header)
 	if err != nil {
-		r.meta.SetState(proxy.StateUnsupportedFormat)
+		r.meta.SetState(database.StateUnsupportedFormat)
 		return "", "", err
 	}
 
@@ -46,29 +47,29 @@ func (r *responseParser) processMeta(statusCode int, header *http.Header) (strin
 
 func (r *responseParser) ProcessBody(body []byte, contentType string) error {
 	if !isHTML(body) {
-		r.meta.SetState(proxy.StateParseError)
+		r.meta.SetState(database.StateParseError)
 		return werrors.New(ErrBodyNotHTML)
 	}
 
 	bodyReader, err := bodyToUTF8(body, contentType)
 	if err != nil {
-		r.meta.SetState(proxy.StateEncodingError)
+		r.meta.SetState(database.StateEncodingError)
 		return err
 	}
 
 	node, err := html.Parse(bodyReader)
 	if err != nil {
-		r.meta.SetState(proxy.StateParseError)
+		r.meta.SetState(database.StateParseError)
 		return werrors.NewDetails(ErrHTMLParse, err)
 	}
 
 	parser, err := RunDataExtrator(node, r.meta.GetURL())
 	if err != nil {
-		r.meta.SetState(proxy.StateParseError)
+		r.meta.SetState(database.StateParseError)
 		return err
 	}
 	if !parser.MetaTagIndex {
-		r.meta.SetState(proxy.StateNoFollow)
+		r.meta.SetState(database.StateNoFollow)
 		return werrors.NewLevel(zap.InfoLevel, WarnPageNotIndexed)
 	}
 
@@ -82,7 +83,7 @@ func (r *responseParser) ProcessBody(body []byte, contentType string) error {
 	var buf bytes.Buffer
 	err = bodyMinification(node, &buf)
 	if err != nil {
-		r.meta.SetState(proxy.StateParseError)
+		r.meta.SetState(database.StateParseError)
 		return err
 	}
 
@@ -109,11 +110,11 @@ func (r *responseParser) Run(response *http.Response) error {
 	closeErr := response.Body.Close()
 	defer r.timeTrack(time.Now())
 	if err != nil {
-		r.meta.SetState(proxy.StateAnswerError)
+		r.meta.SetState(database.StateAnswerError)
 		return err
 	}
 	if closeErr != nil {
-		r.meta.SetState(proxy.StateAnswerError)
+		r.meta.SetState(database.StateAnswerError)
 		return werrors.NewDetails(ErrCloseResponseBody, closeErr)
 	}
 
@@ -122,6 +123,6 @@ func (r *responseParser) Run(response *http.Response) error {
 		return err
 	}
 
-	r.meta.SetState(proxy.StateSuccess)
+	r.meta.SetState(database.StateSuccess)
 	return nil
 }

@@ -3,7 +3,7 @@ package content
 import (
 	"fmt"
 
-	"github.com/ReanGD/go-web-search/proxy"
+	"github.com/ReanGD/go-web-search/database"
 	"github.com/jinzhu/gorm"
 )
 
@@ -27,7 +27,7 @@ func createTables(db *gorm.DB, values ...interface{}) error {
 type DBrw struct {
 	*gorm.DB
 	// map[Host.Name]Host
-	hosts map[string]*Host
+	hosts map[string]*database.Host
 	// map[Content.Hash]Content.URL
 	hashes map[string]int64
 }
@@ -46,7 +46,7 @@ func GetDBrw() (*DBrw, error) {
 	db.SetLogger(defaultLogger)
 	db.LogMode(false)
 
-	err = createTables(db, &Host{}, &proxy.Content{}, &proxy.Meta{}, &Link{}, &URL{})
+	err = createTables(db, &database.Host{}, &database.Content{}, &database.Meta{}, &Link{}, &URL{})
 	if err != nil {
 		errClose := db.Close()
 		if errClose != nil {
@@ -55,7 +55,7 @@ func GetDBrw() (*DBrw, error) {
 		return nil, err
 	}
 
-	var hosts []Host
+	var hosts []database.Host
 	err = db.Find(&hosts).Error
 	if err != nil {
 		errClose := db.Close()
@@ -65,7 +65,7 @@ func GetDBrw() (*DBrw, error) {
 		return nil, fmt.Errorf("Get hosts list from db, message: %s", err)
 	}
 
-	var hashes []proxy.Content
+	var hashes []database.Content
 	err = db.Select("url, hash").Find(&hashes).Error
 	if err != nil {
 		errClose := db.Close()
@@ -77,7 +77,7 @@ func GetDBrw() (*DBrw, error) {
 
 	result := &DBrw{
 		DB:     db,
-		hosts:  make(map[string]*Host, len(hosts)),
+		hosts:  make(map[string]*database.Host, len(hosts)),
 		hashes: make(map[string]int64, len(hashes))}
 
 	for i := 0; i != len(hosts); i++ {

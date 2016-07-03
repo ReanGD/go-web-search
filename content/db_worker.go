@@ -6,6 +6,7 @@ import (
 	"log"
 	"sync"
 
+	"github.com/ReanGD/go-web-search/database"
 	"github.com/ReanGD/go-web-search/proxy"
 	"github.com/jinzhu/gorm"
 )
@@ -83,7 +84,7 @@ func (w *DBWorker) insertLinkIfNotExists(tr *DBrw, master int64, slave int64) er
 	return nil
 }
 
-func (w *DBWorker) saveMeta(tr *DBrw, meta *proxy.InMeta, origin sql.NullInt64) error {
+func (w *DBWorker) saveMeta(tr *DBrw, meta *proxy.Meta, origin sql.NullInt64) error {
 	hostID := tr.GetHostID(meta.GetHostName())
 	urlStr := meta.GetURL()
 	urlNullID, err := w.getURLIDByStr(tr, urlStr)
@@ -101,14 +102,14 @@ func (w *DBWorker) saveMeta(tr *DBrw, meta *proxy.InMeta, origin sql.NullInt64) 
 		}
 	}
 
-	var metaRec proxy.Meta
+	var metaRec database.Meta
 	err = tr.Where("url = ?", urlID).First(&metaRec).Error
 	if err == gorm.ErrRecordNotFound {
 		if !hostID.Valid {
 			if origin.Valid {
-				meta.SetState(proxy.StateDublicate)
+				meta.SetState(database.StateDublicate)
 			} else {
-				meta.SetState(proxy.StateExternal)
+				meta.SetState(database.StateExternal)
 			}
 		}
 
@@ -120,7 +121,7 @@ func (w *DBWorker) saveMeta(tr *DBrw, meta *proxy.InMeta, origin sql.NullInt64) 
 		}
 		meta.SetOrigin(origin)
 
-		if meta.GetState() == proxy.StateSuccess {
+		if meta.GetState() == database.StateSuccess {
 			content := meta.GetContent()
 			if content == nil {
 				return fmt.Errorf("field 'content' is nil")

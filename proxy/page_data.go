@@ -2,14 +2,14 @@ package proxy
 
 // PageData - full info from page
 type PageData struct {
-	meta *InMeta
+	meta *Meta
 	// map[URL]HostName
 	urls      map[string]string
 	parentURL int64
 }
 
 // NewPageData - create PageData
-func NewPageData(meta *InMeta, urls map[string]string) *PageData {
+func NewPageData(meta *Meta, urls map[string]string) *PageData {
 	return &PageData{
 		meta: meta,
 		urls: urls}
@@ -21,7 +21,7 @@ func (in *PageData) SetParentURL(parentURL int64) {
 }
 
 // GetMeta - get field meta
-func (in *PageData) GetMeta() *InMeta {
+func (in *PageData) GetMeta() *Meta {
 	return in.meta
 }
 
