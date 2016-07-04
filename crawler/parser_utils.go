@@ -10,18 +10,22 @@ import (
 type parserUtils struct {
 }
 
-func (u *parserUtils) getAttrValLower(node *html.Node, attrName string) string {
+func (u *parserUtils) getAttrVal(node *html.Node, attrName string) string {
 	if node.Attr == nil {
 		return ""
 	}
 
 	for _, attr := range node.Attr {
 		if attr.Key == attrName {
-			return strings.ToLower(attr.Val)
+			return attr.Val
 		}
 	}
 
 	return ""
+}
+
+func (u *parserUtils) getAttrValLower(node *html.Node, attrName string) string {
+	return strings.ToLower(u.getAttrVal(node, attrName))
 }
 
 func (u *parserUtils) mergeNodes(parent, prev, next *html.Node, addSeparator bool) *html.Node {

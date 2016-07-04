@@ -61,6 +61,9 @@ func TestMinimizeText(t *testing.T) {
 	strEq("One space", t,
 		"привет world", "привет world")
 
+	strEq("One new line", t,
+		"привет\nworld", "привет world")
+
 	strEq("Left spaces", t,
 		"  привет world", "привет world")
 

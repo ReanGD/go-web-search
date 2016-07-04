@@ -8,30 +8,36 @@ import (
 	"golang.org/x/net/html"
 )
 
-func helperGetAttrValLower(name string, t *testing.T, node *html.Node, result string) {
+func helperGetAttrVal(name string, t *testing.T, node *html.Node, result string) {
 	Convey(name, t, func() {
 		var u parserUtils
-		So(u.getAttrValLower(node, "key"), ShouldEqual, result)
+		So(u.getAttrVal(node, "key"), ShouldEqual, result)
 	})
 }
 
-// TestGetAttrValLower ...
-func TestGetAttrValLower(t *testing.T) {
+// TestGetAttrVal ...
+func TestGetAttrVal(t *testing.T) {
 	rightAttr := html.Attribute{Key: "key", Val: "val"}
 	rightAttrUpper := html.Attribute{Key: "key", Val: strings.ToUpper("val")}
 	wrongAttr := html.Attribute{Key: "err_key", Val: "err_val"}
 
-	helperGetAttrValLower("attr is nil", t,
+	helperGetAttrVal("attr is nil", t,
 		&html.Node{}, "")
 
-	helperGetAttrValLower("attr not found", t,
+	helperGetAttrVal("attr not found", t,
 		&html.Node{Attr: []html.Attribute{wrongAttr}}, "")
 
-	helperGetAttrValLower("attr found", t,
+	helperGetAttrVal("attr found", t,
 		&html.Node{Attr: []html.Attribute{wrongAttr, rightAttr}}, "val")
 
-	helperGetAttrValLower("attr found in upper case", t,
-		&html.Node{Attr: []html.Attribute{wrongAttr, rightAttrUpper}}, "val")
+	helperGetAttrVal("attr found in upper case", t,
+		&html.Node{Attr: []html.Attribute{wrongAttr, rightAttrUpper}}, "VAL")
+
+	Convey("getAttrValLower: attr found in upper case", t, func() {
+		var u parserUtils
+		node := &html.Node{Attr: []html.Attribute{wrongAttr, rightAttrUpper}}
+		So(u.getAttrValLower(node, "key"), ShouldEqual, "val")
+	})
 }
 
 func runMergeNodes(parent, prev, next *html.Node, addSeparator bool) *html.Node {

@@ -19,6 +19,7 @@ func helperRunDataExtrator(htmlStr string) *HTMLMetadata {
 	return meta
 }
 
+// TestURLs ...
 func TestURLs(t *testing.T) {
 	Convey("TestURLs", t, func() {
 		meta := helperRunDataExtrator(`<html><head>
@@ -87,6 +88,7 @@ func TestURLs(t *testing.T) {
 	})
 }
 
+// TestTitle ...
 func TestTitle(t *testing.T) {
 	Convey("Title as url", t, func() {
 		meta := helperRunDataExtrator(`<html><head></head><body><div></div></body></html>`)
@@ -121,6 +123,7 @@ func TestTitle(t *testing.T) {
 	})
 }
 
+// TestMeta ...
 func TestMeta(t *testing.T) {
 	Convey("NoIndex robots", t, func() {
 		meta := helperRunDataExtrator(`<html><head>
@@ -181,6 +184,7 @@ func TestMeta(t *testing.T) {
 	})
 }
 
+// TestErrorDataExtrator ...
 func TestErrorDataExtrator(t *testing.T) {
 	Convey("Test error node type", t, func() {
 		node, err := html.Parse(bytes.NewReader([]byte(`<html><head></head><body></body></html>`)))

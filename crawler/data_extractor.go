@@ -1,5 +1,6 @@
 package crawler
 
+// status: ok
 import (
 	"net/url"
 	"strings"
@@ -22,24 +23,11 @@ type HTMLMetadata struct {
 }
 
 type dataExtractor struct {
+	parserUtils
 	meta          *HTMLMetadata
 	baseURL       *url.URL
 	metaTagFollow bool
 	noIndexLvl    int
-}
-
-func (extractor *dataExtractor) getAttrVal(node *html.Node, attrName string) string {
-	for _, attr := range node.Attr {
-		if attr.Key == attrName {
-			return attr.Val
-		}
-	}
-
-	return ""
-}
-
-func (extractor *dataExtractor) getAttrValLower(node *html.Node, attrName string) string {
-	return strings.ToLower(extractor.getAttrVal(node, attrName))
 }
 
 func (extractor *dataExtractor) isEnableLinkParse() bool {
@@ -65,6 +53,64 @@ func (extractor *dataExtractor) processLink(link string) {
 	}
 }
 
+func (extractor *dataExtractor) parseRef(node *html.Node) {
+	if extractor.isEnableLinkParse() {
+		rel := extractor.getAttrValLower(node, "rel")
+		if rel != "nofollow" {
+			extractor.processLink(extractor.getAttrValLower(node, "href"))
+		}
+	}
+}
+
+func (extractor *dataExtractor) parseLink(node *html.Node) {
+	if extractor.isEnableLinkParse() {
+		rel := extractor.getAttrValLower(node, "rel")
+		if rel == "next" || rel == "prev" || rel == "previous" {
+			extractor.processLink(extractor.getAttrValLower(node, "href"))
+		}
+	}
+}
+
+func (extractor *dataExtractor) parseFrame(node *html.Node) {
+	if extractor.isEnableLinkParse() {
+		extractor.processLink(extractor.getAttrValLower(node, "src"))
+	}
+}
+
+func (extractor *dataExtractor) parseMeta(node *html.Node) {
+	name := extractor.getAttrValLower(node, "name")
+	if name == "robots" || name == "googlebot" {
+		content := extractor.getAttrValLower(node, "content")
+		if strings.Contains(content, "noindex") {
+			extractor.meta.MetaTagIndex = false
+		}
+		if strings.Contains(content, "nofollow") {
+			extractor.metaTagFollow = false
+			extractor.meta.URLs = make(map[string]string)
+		}
+		if strings.Contains(content, "none") {
+			extractor.meta.MetaTagIndex = false
+			extractor.metaTagFollow = false
+			extractor.meta.URLs = make(map[string]string)
+		}
+	} else if name == "title" {
+		content := strings.TrimSpace(extractor.getAttrVal(node, "content"))
+		if content != "" && extractor.meta.Title == "" {
+			extractor.meta.Title = content
+		}
+	}
+}
+
+func (extractor *dataExtractor) parseTitle(node *html.Node) {
+	child := node.FirstChild
+	if child != nil && child.Type == html.TextNode {
+		title := strings.TrimSpace(child.Data)
+		if title != "" {
+			extractor.meta.Title = title
+		}
+	}
+}
+
 func (extractor *dataExtractor) parseChildren(node *html.Node) error {
 	for it := node.FirstChild; it != nil; it = it.NextSibling {
 		err := extractor.parseNode(it)
@@ -79,53 +125,15 @@ func (extractor *dataExtractor) parseChildren(node *html.Node) error {
 func (extractor *dataExtractor) parseElements(node *html.Node) error {
 	switch node.DataAtom {
 	case atom.A, atom.Area:
-		if extractor.isEnableLinkParse() {
-			rel := extractor.getAttrValLower(node, "rel")
-			if rel != "nofollow" {
-				extractor.processLink(extractor.getAttrValLower(node, "href"))
-			}
-		}
+		extractor.parseRef(node)
 	case atom.Link:
-		if extractor.isEnableLinkParse() {
-			rel := extractor.getAttrValLower(node, "rel")
-			if rel == "next" || rel == "prev" || rel == "previous" {
-				extractor.processLink(extractor.getAttrValLower(node, "href"))
-			}
-		}
+		extractor.parseLink(node)
 	case atom.Frame, atom.Iframe:
-		if extractor.isEnableLinkParse() {
-			extractor.processLink(extractor.getAttrValLower(node, "src"))
-		}
+		extractor.parseFrame(node)
 	case atom.Meta:
-		name := extractor.getAttrValLower(node, "name")
-		if name == "robots" || name == "googlebot" {
-			content := extractor.getAttrValLower(node, "content")
-			if strings.Contains(content, "noindex") {
-				extractor.meta.MetaTagIndex = false
-			}
-			if strings.Contains(content, "nofollow") {
-				extractor.metaTagFollow = false
-				extractor.meta.URLs = make(map[string]string)
-			}
-			if strings.Contains(content, "none") {
-				extractor.meta.MetaTagIndex = false
-				extractor.metaTagFollow = false
-				extractor.meta.URLs = make(map[string]string)
-			}
-		} else if name == "title" {
-			content := strings.TrimSpace(extractor.getAttrVal(node, "content"))
-			if content != "" && extractor.meta.Title == "" {
-				extractor.meta.Title = content
-			}
-		}
+		extractor.parseMeta(node)
 	case atom.Title:
-		child := node.FirstChild
-		if child != nil && child.Type == html.TextNode {
-			title := strings.TrimSpace(child.Data)
-			if title != "" {
-				extractor.meta.Title = title
-			}
-		}
+		extractor.parseTitle(node)
 	default:
 		if strings.ToLower(node.Data) == "noindex" {
 			extractor.noIndexLvl++
