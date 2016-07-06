@@ -1,5 +1,6 @@
 package werrors
 
+// status: ok
 import (
 	"bytes"
 	"errors"
@@ -109,6 +110,42 @@ func TestErrorEx(t *testing.T) {
 		msg := "message"
 
 		err := NewFields(msg, zap.String("field1", "field1 data"), zap.Int("field2", 5))
+		So(err.Error(), ShouldEqual, msg)
+
+		werr, ok := err.(*ErrorEx)
+		So(ok, ShouldBeTrue)
+		So(werr.Level, ShouldEqual, zap.ErrorLevel)
+		So(werr.Error(), ShouldEqual, msg)
+		So(werr.Fields, ShouldResemble,
+			[]zap.Field{zap.String("caller", "<fake>"), zap.String("field1", "field1 data"), zap.Int("field2", 5)})
+	})
+
+	Convey("Check AddFields for base error", t, func() {
+		callerTest = true
+		defer func() { callerTest = false }()
+
+		msg := "message"
+
+		err := errors.New(msg)
+		err = AddFields(err, zap.String("field1", "field1 data"), zap.Int("field2", 5))
+		So(err.Error(), ShouldEqual, msg)
+
+		werr, ok := err.(*ErrorEx)
+		So(ok, ShouldBeTrue)
+		So(werr.Level, ShouldEqual, zap.ErrorLevel)
+		So(werr.Error(), ShouldEqual, msg)
+		So(werr.Fields, ShouldResemble,
+			[]zap.Field{zap.String("caller", "<fake>"), zap.String("field1", "field1 data"), zap.Int("field2", 5)})
+	})
+
+	Convey("Check AddFields for ErrorEx", t, func() {
+		callerTest = true
+		defer func() { callerTest = false }()
+
+		msg := "message"
+
+		err := NewFields(msg, zap.String("field1", "field1 data"))
+		err = AddFields(err, zap.Int("field2", 5))
 		So(err.Error(), ShouldEqual, msg)
 
 		werr, ok := err.(*ErrorEx)

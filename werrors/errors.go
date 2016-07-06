@@ -79,6 +79,18 @@ func NewFields(msg string, fields ...zap.Field) error {
 	return newError(zap.ErrorLevel, msg, fields...)
 }
 
+// AddFields - add new fields for error
+func AddFields(err error, fields ...zap.Field) error {
+	werr, ok := err.(*ErrorEx)
+	if !ok {
+		return newError(zap.ErrorLevel, err.Error(), fields...)
+	}
+	for _, field := range fields {
+		werr.Fields = append(werr.Fields, field)
+	}
+	return werr
+}
+
 // LogError - write error to zap log
 func LogError(logger zap.Logger, err error) {
 	werr, ok := err.(*ErrorEx)
