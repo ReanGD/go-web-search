@@ -197,10 +197,10 @@ func TestBodyToUTF8(t *testing.T) {
 
 }
 
-type IoWriterErr struct {
+type ioTestWriterErr struct {
 }
 
-func (w IoWriterErr) Write(p []byte) (int, error) {
+func (w ioTestWriterErr) Write(p []byte) (int, error) {
 	return 0, errors.New("write error")
 }
 
@@ -222,7 +222,7 @@ func TestMinification(t *testing.T) {
 		node, err := html.Parse(bytes.NewReader([]byte(data)))
 		So(err, ShouldBeNil)
 
-		var buf IoWriterErr
+		var buf ioTestWriterErr
 		err = bodyMinification(node, buf)
 		So(err, ShouldNotBeNil)
 		So(err.Error(), ShouldEqual, ErrRenderHTML)

@@ -1,5 +1,6 @@
 package crawler
 
+// status: ok
 import (
 	"bufio"
 	"bytes"
