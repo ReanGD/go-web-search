@@ -2,30 +2,17 @@ package crawler
 
 // status: ok
 import (
-	"net/url"
 	"strings"
 
 	"github.com/ReanGD/go-web-search/werrors"
-	"github.com/uber-go/zap"
 
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
 )
 
-// HTMLMetadata extracted meta data from HTML
-type HTMLMetadata struct {
-	// [URL]hostname
-	URLs map[string]string
-	// [URL]error
-	WrongURLs    map[string]string
-	Title        string
-	MetaTagIndex bool
-}
-
 type dataExtractor struct {
 	parserUtils
 	meta          *HTMLMetadata
-	baseURL       *url.URL
 	metaTagFollow bool
 	noIndexLvl    int
 }
@@ -34,30 +21,11 @@ func (extractor *dataExtractor) isEnableLinkParse() bool {
 	return extractor.metaTagFollow && extractor.noIndexLvl == 0
 }
 
-func (extractor *dataExtractor) processLink(link string) {
-	if link == "" {
-		return
-	}
-	relative, err := url.Parse(strings.TrimSpace(link))
-	if err != nil {
-		extractor.meta.WrongURLs[link] = err.Error()
-		return
-	}
-
-	parsed := extractor.baseURL.ResolveReference(relative)
-	urlStr := NormalizeURL(parsed)
-	parsed, _ = url.Parse(urlStr)
-
-	if (parsed.Scheme == "http" || parsed.Scheme == "https") && urlStr != extractor.baseURL.String() {
-		extractor.meta.URLs[urlStr] = NormalizeHostName(parsed.Host)
-	}
-}
-
 func (extractor *dataExtractor) parseRef(node *html.Node) {
 	if extractor.isEnableLinkParse() {
 		rel := extractor.getAttrValLower(node, "rel")
 		if rel != "nofollow" {
-			extractor.processLink(extractor.getAttrValLower(node, "href"))
+			extractor.meta.AddURL(extractor.getAttrValLower(node, "href"))
 		}
 	}
 }
@@ -66,14 +34,14 @@ func (extractor *dataExtractor) parseLink(node *html.Node) {
 	if extractor.isEnableLinkParse() {
 		rel := extractor.getAttrValLower(node, "rel")
 		if rel == "next" || rel == "prev" || rel == "previous" {
-			extractor.processLink(extractor.getAttrValLower(node, "href"))
+			extractor.meta.AddURL(extractor.getAttrValLower(node, "href"))
 		}
 	}
 }
 
 func (extractor *dataExtractor) parseFrame(node *html.Node) {
 	if extractor.isEnableLinkParse() {
-		extractor.processLink(extractor.getAttrValLower(node, "src"))
+		extractor.meta.AddURL(extractor.getAttrValLower(node, "src"))
 	}
 }
 
@@ -95,19 +63,14 @@ func (extractor *dataExtractor) parseMeta(node *html.Node) {
 		}
 	} else if name == "title" {
 		content := strings.TrimSpace(extractor.getAttrVal(node, "content"))
-		if content != "" && extractor.meta.Title == "" {
-			extractor.meta.Title = content
-		}
+		extractor.meta.SetTitle(content, false)
 	}
 }
 
 func (extractor *dataExtractor) parseTitle(node *html.Node) {
 	child := node.FirstChild
 	if child != nil && child.Type == html.TextNode {
-		title := strings.TrimSpace(child.Data)
-		if title != "" {
-			extractor.meta.Title = title
-		}
+		extractor.meta.SetTitle(strings.TrimSpace(child.Data), true)
 	}
 }
 
@@ -164,38 +127,19 @@ func (extractor *dataExtractor) parseNode(node *html.Node) error {
 
 // RunDataExtrator - extart URLs and other meta data from page
 func RunDataExtrator(node *html.Node, urlStr string) (*HTMLMetadata, error) {
-	baseURL, err := url.Parse(urlStr)
+	meta, err := NewHTMLMetadata(urlStr)
 	if err != nil {
-		return nil, werrors.NewFields(ErrParseBaseURL,
-			zap.String("details", err.Error()),
-			zap.String("parsed_url", urlStr))
+		return nil, err
 	}
 
 	extractor := dataExtractor{
-		meta: &HTMLMetadata{
-			URLs:         make(map[string]string),
-			WrongURLs:    make(map[string]string),
-			Title:        "",
-			MetaTagIndex: true,
-		},
-		baseURL:       baseURL,
+		meta:          meta,
 		metaTagFollow: true,
-		noIndexLvl:    0,
-	}
+		noIndexLvl:    0}
 
 	err = extractor.parseNode(node)
 	if err != nil {
-		return &HTMLMetadata{}, err
-	}
-
-	meta := extractor.meta
-	if meta.Title == "" {
-		meta.Title = baseURL.String()
-	}
-
-	runeTitle := []rune(meta.Title)
-	if len(runeTitle) > 100 {
-		meta.Title = string(runeTitle[0:97]) + "..."
+		return meta, err
 	}
 
 	return meta, nil

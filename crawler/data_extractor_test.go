@@ -52,7 +52,7 @@ func TestURLs(t *testing.T) {
 
 		expectedWrongURLs := make(map[string]string)
 		expectedWrongURLs["/wrong%9"] = `parse /wrong%9: invalid URL escape "%9"`
-		So(meta.WrongURLs, ShouldResemble, expectedWrongURLs)
+		So(meta.wrongURLs, ShouldResemble, expectedWrongURLs)
 	})
 
 	Convey("TestFrameURLs", t, func() {
@@ -69,7 +69,7 @@ func TestURLs(t *testing.T) {
 		expectedURLs["http://testhost1/link2"] = "testhost1"
 		So(meta.URLs, ShouldResemble, expectedURLs)
 
-		So(meta.WrongURLs, ShouldBeEmpty)
+		So(meta.wrongURLs, ShouldBeEmpty)
 	})
 
 	Convey("TestIFrameURLs", t, func() {
@@ -84,27 +84,27 @@ func TestURLs(t *testing.T) {
 		expectedURLs["http://testhost1/test/link1"] = "testhost1"
 		So(meta.URLs, ShouldResemble, expectedURLs)
 
-		So(meta.WrongURLs, ShouldBeEmpty)
+		So(meta.wrongURLs, ShouldBeEmpty)
 	})
 }
 
-// TestTitle ...
-func TestTitle(t *testing.T) {
+// TestParseTitle ...
+func TestParseTitle(t *testing.T) {
 	Convey("Title as url", t, func() {
 		meta := helperRunDataExtrator(`<html><head></head><body><div></div></body></html>`)
-		So(meta.Title, ShouldEqual, "http://testhost1/test/")
+		So(meta.GetTitle(), ShouldEqual, "http://testhost1/test/")
 	})
 
 	Convey("Title from tag title", t, func() {
 		meta := helperRunDataExtrator(`<html><head><title>Title text</title></head><body><div></div></body></html>`)
-		So(meta.Title, ShouldEqual, "Title text")
+		So(meta.GetTitle(), ShouldEqual, "Title text")
 	})
 
 	Convey("Title from tag meta", t, func() {
 		meta := helperRunDataExtrator(`<html><head>
 <meta name="title" content="Title text">
 </head><body><div></div></body></html>`)
-		So(meta.Title, ShouldEqual, "Title text")
+		So(meta.GetTitle(), ShouldEqual, "Title text")
 	})
 
 	Convey("Title from tags meta and title", t, func() {
@@ -112,14 +112,14 @@ func TestTitle(t *testing.T) {
 <meta name="title" content="Title text 1">
 <title>Title text 2</title>
 </head><body><div></div></body></html>`)
-		So(meta.Title, ShouldEqual, "Title text 2")
+		So(meta.GetTitle(), ShouldEqual, "Title text 2")
 	})
 
 	Convey("Long title", t, func() {
 		meta := helperRunDataExtrator(`<html><head>
 <title>!0000000000111111111122222222223333333333444444444455555555556666666666777777777788888888889999999999</title>
 </head><body><div></div></body></html>`)
-		So(meta.Title, ShouldEqual, "!000000000011111111112222222222333333333344444444445555555555666666666677777777778888888888999999...")
+		So(meta.GetTitle(), ShouldEqual, "!000000000011111111112222222222333333333344444444445555555555666666666677777777778888888888999999...")
 	})
 }
 

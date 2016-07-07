@@ -27,8 +27,16 @@ const (
 	ErrRenderHTML = "Render HTML"
 	// ErrParseBaseURL - Parse base URL
 	ErrParseBaseURL = "Parse base URL"
+	// ErrGetRequest - Error Get request
+	ErrGetRequest = "Get request"
+	// ErrReadResponseBody - Error read response body
+	ErrReadResponseBody = "Read response body"
 	// ErrCloseResponseBody - Close response body
 	ErrCloseResponseBody = "Close response body"
+	// ErrCreateRobotsTxtFromDb - Error create robots.txt from db data
+	ErrCreateRobotsTxtFromDb = "Create robots.txt from db data"
+	// ErrCreateRobotsTxtFromURL - Error create robots.txt from url
+	ErrCreateRobotsTxtFromURL = "Create robots.txt from url"
 	// WarnPageNotIndexed - Page not indexed
 	WarnPageNotIndexed = "Page not indexed (meta tag noindex)"
 	// InfoUnsupportedMimeFormat - Unsupported mime format

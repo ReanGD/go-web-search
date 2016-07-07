@@ -45,7 +45,7 @@ func (r *responseParser) processMeta(statusCode int, header *http.Header) (strin
 	return contentType, getContentEncoding(header), nil
 }
 
-func (r *responseParser) ProcessBody(body []byte, contentType string) error {
+func (r *responseParser) processBody(body []byte, contentType string) error {
 	if !isHTML(body) {
 		r.meta.SetState(database.StateParseError)
 		return werrors.New(ErrBodyNotHTML)
@@ -72,13 +72,7 @@ func (r *responseParser) ProcessBody(body []byte, contentType string) error {
 		r.meta.SetState(database.StateNoFollow)
 		return werrors.NewLevel(zap.InfoLevel, WarnPageNotIndexed)
 	}
-
-	for url, error := range parser.WrongURLs {
-		r.logger.Warn("Error parse URL",
-			zap.String("err_url", url),
-			zap.String("error", error),
-		)
-	}
+	parser.WrongURLsToLog(r.logger)
 
 	var buf bytes.Buffer
 	err = bodyMinification(node, &buf)
@@ -88,7 +82,7 @@ func (r *responseParser) ProcessBody(body []byte, contentType string) error {
 	}
 
 	r.URLs = parser.URLs
-	r.meta.SetContent(proxy.NewContent(buf.Bytes(), parser.Title))
+	r.meta.SetContent(proxy.NewContent(buf.Bytes(), parser.GetTitle()))
 
 	r.logger.Debug(DbgBodySize, zap.Int("size", buf.Len()))
 	return nil
@@ -118,7 +112,7 @@ func (r *responseParser) Run(response *http.Response) error {
 		return werrors.NewDetails(ErrCloseResponseBody, closeErr)
 	}
 
-	err = r.ProcessBody(body, contentType)
+	err = r.processBody(body, contentType)
 	if err != nil {
 		return err
 	}
