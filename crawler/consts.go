@@ -27,6 +27,8 @@ const (
 	ErrRenderHTML = "Render HTML"
 	// ErrParseBaseURL - Parse base URL
 	ErrParseBaseURL = "Parse base URL"
+	// ErrResolveBaseURL - Resolve base URL by host name
+	ErrResolveBaseURL = "Resolve base URL by hostname: StatusCode != 200"
 	// ErrGetRequest - Error Get request
 	ErrGetRequest = "Get request"
 	// ErrReadResponseBody - Error read response body

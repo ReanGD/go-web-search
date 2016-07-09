@@ -45,47 +45,41 @@ func (r *responseParser) processMeta(statusCode int, header *http.Header) (strin
 	return contentType, getContentEncoding(header), nil
 }
 
-func (r *responseParser) processBody(body []byte, contentType string) error {
+func (r *responseParser) processBody(body []byte, contentType string) (database.State, error) {
 	if !isHTML(body) {
-		r.meta.SetState(database.StateParseError)
-		return werrors.New(ErrBodyNotHTML)
+		return database.StateParseError, werrors.New(ErrBodyNotHTML)
 	}
 
 	bodyReader, err := bodyToUTF8(body, contentType)
 	if err != nil {
-		r.meta.SetState(database.StateEncodingError)
-		return err
+		return database.StateEncodingError, err
 	}
 
 	node, err := html.Parse(bodyReader)
 	if err != nil {
-		r.meta.SetState(database.StateParseError)
-		return werrors.NewDetails(ErrHTMLParse, err)
+		return database.StateParseError, werrors.NewDetails(ErrHTMLParse, err)
 	}
 
 	parser, err := RunDataExtrator(node, r.meta.GetURL())
 	if err != nil {
-		r.meta.SetState(database.StateParseError)
-		return err
+		return database.StateParseError, err
 	}
 	if !parser.MetaTagIndex {
-		r.meta.SetState(database.StateNoFollow)
-		return werrors.NewLevel(zap.InfoLevel, WarnPageNotIndexed)
+		return database.StateNoFollow, werrors.NewLevel(zap.InfoLevel, WarnPageNotIndexed)
 	}
 	parser.WrongURLsToLog(r.logger)
 
 	var buf bytes.Buffer
 	err = bodyMinification(node, &buf)
 	if err != nil {
-		r.meta.SetState(database.StateParseError)
-		return err
+		return database.StateParseError, err
 	}
 
 	r.URLs = parser.URLs
 	r.meta.SetContent(proxy.NewContent(buf.Bytes(), parser.GetTitle()))
 
 	r.logger.Debug(DbgBodySize, zap.Int("size", buf.Len()))
-	return nil
+	return database.StateSuccess, nil
 }
 
 func (r *responseParser) timeTrack(start time.Time) {
@@ -112,8 +106,9 @@ func (r *responseParser) Run(response *http.Response) error {
 		return werrors.NewDetails(ErrCloseResponseBody, closeErr)
 	}
 
-	err = r.processBody(body, contentType)
+	state, err := r.processBody(body, contentType)
 	if err != nil {
+		r.meta.SetState(state)
 		return err
 	}
 

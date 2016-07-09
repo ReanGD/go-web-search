@@ -14,19 +14,23 @@ import (
 )
 
 type request struct {
-	Robot  *robotTxt
-	client *http.Client
-	meta   *proxy.Meta
-	urls   map[string]string
-	logger zap.Logger
+	hostMng *hostsManager
+	client  *http.Client
+	meta    *proxy.Meta
+	urls    map[string]string
+	logger  zap.Logger
 }
 
 func (r *request) get(u *url.URL) (int64, error) {
 	urlStr := u.String()
 	r.urls = make(map[string]string)
-	r.meta = proxy.NewMeta(NormalizeHostName(u.Host), urlStr, nil)
+	hostID, robotOk := r.hostMng.CheckURL(u)
+	r.meta = proxy.NewMeta(hostID, urlStr, nil)
 
-	if !r.Robot.Test(u) {
+	if !hostID.Valid {
+		r.meta.SetState(database.StateExternal)
+	}
+	if !robotOk {
 		r.meta.SetState(database.StateDisabledByRobotsTxt)
 		log.Printf("INFO: URL %s blocked by robot.txt", urlStr)
 		return 0, nil
@@ -55,6 +59,18 @@ func (r *request) get(u *url.URL) (int64, error) {
 		r.meta.SetState(database.StateConnectError)
 		return 0, err
 	}
+
+	if r.meta.GetState() != database.StateSuccess {
+		// here or early - logging!!!
+		return 0, nil
+	}
+
+	// hostID, robotOk := r.hostMng.CheckURL(u)
+	// 		if !robotOk {
+	// 		r.meta.SetState(database.StateDisabledByRobotsTxt)
+	// 		return fmt.Errorf("INFO: URL %s blocked by robot.txt", NormalizeURL(&copyURL))
+	// 	}
+
 	loggerURL := r.logger.With(zap.String("url", r.meta.GetURL()))
 
 	RequestDurationMs := int64(time.Since(startTime) / time.Millisecond)
@@ -98,8 +114,12 @@ func (r *request) Init(logger zap.Logger) {
 		r.meta.SetState(database.StateDublicate)
 		r.meta.SetStatusCode(301)
 
+		hostID, _ := r.hostMng.CheckURL(req.URL)
 		copyURL := *req.URL
-		r.meta = proxy.NewMeta(NormalizeHostName(req.URL.Host), NormalizeURL(&copyURL), r.meta)
+		r.meta = proxy.NewMeta(hostID, NormalizeURL(&copyURL), r.meta)
+		if !hostID.Valid {
+			r.meta.SetState(database.StateExternal)
+		}
 
 		for attr, val := range via[0].Header {
 			if _, ok := req.Header[attr]; !ok {

@@ -14,7 +14,7 @@ type DbHost interface {
 	// GetHosts - return map[id]Host
 	GetHosts() map[int64]*Host
 	// AddHost - baseURL: init url for host
-	AddHost(host *Host, baseURL string) error
+	AddHost(host *Host, baseURL string) (int64, error)
 }
 
 // NewHost - create Host

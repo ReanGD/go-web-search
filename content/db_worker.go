@@ -85,7 +85,7 @@ func (w *DBWorker) insertLinkIfNotExists(tr *DBrw, master int64, slave int64) er
 }
 
 func (w *DBWorker) saveMeta(tr *DBrw, meta *proxy.Meta, origin sql.NullInt64) error {
-	hostID := tr.GetHostID(meta.GetHostName())
+	hostID := meta.GetHostID()
 	urlStr := meta.GetURL()
 	urlNullID, err := w.getURLIDByStr(tr, urlStr)
 	if err != nil {
@@ -105,14 +105,6 @@ func (w *DBWorker) saveMeta(tr *DBrw, meta *proxy.Meta, origin sql.NullInt64) er
 	var metaRec database.Meta
 	err = tr.Where("url = ?", urlID).First(&metaRec).Error
 	if err == gorm.ErrRecordNotFound {
-		if !hostID.Valid {
-			if origin.Valid {
-				meta.SetState(database.StateDublicate)
-			} else {
-				meta.SetState(database.StateExternal)
-			}
-		}
-
 		if !origin.Valid {
 			hash := meta.GetHash()
 			if len(hash) != 0 {

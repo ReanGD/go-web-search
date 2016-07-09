@@ -3,7 +3,6 @@ package crawler
 import (
 	"bytes"
 	"fmt"
-	"net/http"
 	"net/url"
 	"strings"
 
@@ -73,15 +72,4 @@ func NormalizeHostName(hostName string) string {
 	}
 
 	return result
-}
-
-// GenerateURLByHostName - generate URL by hostName
-func GenerateURLByHostName(hostName string) (string, error) {
-	response, err := http.Get(NormalizeURL(&url.URL{Scheme: "http", Host: hostName}))
-	if err != nil {
-		return "", err
-	}
-	err = response.Body.Close()
-
-	return response.Request.URL.String(), err
 }

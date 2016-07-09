@@ -12,14 +12,14 @@ type Meta struct {
 	redirectReferer *Meta
 	redirectCnt     int
 	origin          sql.NullInt64
-	hostName        string
+	hostID          sql.NullInt64
 	urlStr          string
 	state           database.State
 	statusCode      sql.NullInt64
 }
 
 // NewMeta - create Meta
-func NewMeta(hostName string, urlStr string, referer *Meta) *Meta {
+func NewMeta(hostID sql.NullInt64, urlStr string, referer *Meta) *Meta {
 	it := referer
 	for it != nil {
 		it.redirectCnt++
@@ -31,7 +31,7 @@ func NewMeta(hostName string, urlStr string, referer *Meta) *Meta {
 		redirectReferer: referer,
 		redirectCnt:     0,
 		origin:          sql.NullInt64{Valid: false},
-		hostName:        hostName,
+		hostID:          hostID,
 		urlStr:          urlStr,
 		state:           database.StateSuccess,
 		statusCode:      sql.NullInt64{Valid: false}}
@@ -69,9 +69,9 @@ func (in *Meta) GetURL() string {
 	return in.urlStr
 }
 
-// GetHostName - get field hostName
-func (in *Meta) GetHostName() string {
-	return in.hostName
+// GetHostID - get field hostID
+func (in *Meta) GetHostID() sql.NullInt64 {
+	return in.hostID
 }
 
 // GetContent - get field content

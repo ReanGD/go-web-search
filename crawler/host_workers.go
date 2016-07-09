@@ -40,54 +40,30 @@ func (w *hostWorker) Start(wgParent *sync.WaitGroup) {
 }
 
 type hostWorkers struct {
-	workers map[string]*hostWorker
+	workers []*hostWorker
 }
 
 func (w *hostWorkers) Init(db *content.DBrw, logger zap.Logger, baseHosts []string, cnt int) error {
-	var err error
-	w.workers = make(map[string]*hostWorker)
-
-	for _, host := range db.GetHosts() {
-		robotTxt := new(robotTxt)
-		err = robotTxt.FromHost(host.GetRobotsTxt())
-		if err != nil {
-			return fmt.Errorf("Init robot.txt for host %s from db data, message: %s", host.GetName(), err)
-		}
-		w.workers[host.GetName()] = &hostWorker{Request: &request{Robot: robotTxt}}
+	hostMng := &hostsManager{}
+	err := hostMng.Init(db, baseHosts)
+	if err != nil {
+		return err
 	}
 
-	for _, hostNameRaw := range baseHosts {
-		hostName := NormalizeHostName(hostNameRaw)
-		_, exists := w.workers[hostName]
-		if !exists {
-			robotTxt := new(robotTxt)
-			host, err := robotTxt.FromHostName(hostName)
-			if err != nil {
-				return fmt.Errorf("Load robot.txt for host %s, message: %s", hostName, err)
-			}
-			baseURL, err := GenerateURLByHostName(hostName)
-			if err != nil {
-				return err
-			}
-			_, err = db.AddHost(host, baseURL)
-			if err != nil {
-				return err
-			}
-			w.workers[host.GetName()] = &hostWorker{Request: &request{Robot: robotTxt}}
-		}
-	}
-
+	hosts := hostMng.GetHosts()
+	w.workers = make([]*hostWorker, len(hosts))
 	cntPerHost := cnt / len(w.workers)
 	if cntPerHost < 1 {
 		cntPerHost = 1
 	}
-
-	for hostName, worker := range w.workers {
+	for i, hostName := range hostMng.GetHosts() {
+		worker := &hostWorker{Request: &request{hostMng: hostMng}}
 		worker.Request.Init(logger.With(zap.String("host", hostName)))
 		worker.Tasks, err = db.GetNewURLs(hostName, cntPerHost)
 		if err != nil {
 			return err
 		}
+		w.workers[i] = worker
 	}
 
 	return nil
