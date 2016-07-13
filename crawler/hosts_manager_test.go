@@ -7,8 +7,10 @@ import (
 	"testing"
 
 	"github.com/ReanGD/go-web-search/proxy"
+	"github.com/ReanGD/go-web-search/werrors"
 	. "github.com/smartystreets/goconvey/convey"
 	"github.com/temoto/robotstxt-go"
+	"github.com/uber-go/zap"
 )
 
 type fakeDbHost struct {
@@ -142,7 +144,9 @@ func TestInitByHostName(t *testing.T) {
 
 		err = h.initByHostName(db, parsedURL.Host)
 		So(err, ShouldNotBeNil)
-		So(err.Error(), ShouldEqual, ErrGetRequest)
+		werr := err.(*werrors.ErrorEx)
+		So(werr.Fields, ShouldEqual, []zap.Field{})
+		So(err.Error(), ShouldEqual, ErrCreateRobotsTxtFromURL)
 	})
 
 	Convey("Failed create robots txt", t, func() {
