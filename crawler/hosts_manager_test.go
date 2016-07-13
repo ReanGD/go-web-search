@@ -1,16 +1,15 @@
 package crawler
 
 import (
+	"database/sql"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"testing"
 
 	"github.com/ReanGD/go-web-search/proxy"
-	"github.com/ReanGD/go-web-search/werrors"
 	. "github.com/smartystreets/goconvey/convey"
 	"github.com/temoto/robotstxt-go"
-	"github.com/uber-go/zap"
 )
 
 type fakeDbHost struct {
@@ -33,6 +32,90 @@ func (f *fakeDbHost) AddHost(host *proxy.Host, baseURL string) (int64, error) {
 	f.baseURL = baseURL
 
 	return 1, nil
+}
+
+// TestResolveHost ...
+func TestResolveHost(t *testing.T) {
+	Convey("Check resolve hosts", t, func() {
+		h := &hostsManager{hosts: map[string]int64{"hostname1": 1, "hostname2": 2}}
+		So(h.ResolveHost("www.hostName1"), ShouldResemble, sql.NullInt64{Int64: 1, Valid: true})
+		So(h.ResolveHost("HoStNaMe2"), ShouldResemble, sql.NullInt64{Int64: 2, Valid: true})
+		So(h.ResolveHost("hostName3"), ShouldResemble, sql.NullInt64{Valid: false})
+	})
+}
+
+// TestCheckURL ...
+func TestCheckURL(t *testing.T) {
+	Convey("Check resolve hosts", t, func() {
+		robotstxtBody := `
+User-agent: Yandex
+Disallow: /search2/
+
+User-agent: *
+Disallow: /search3/
+
+User-agent: Googlebot
+Disallow: /search1/`
+		robotGoogle, err := robotstxt.FromStatusAndBytes(200, []byte(robotstxtBody))
+		So(err, ShouldBeNil)
+
+		robotstxtBody = `User-agent: Yandex
+Disallow: /search/`
+		robotYandex, err := robotstxt.FromStatusAndBytes(200, []byte(robotstxtBody))
+		So(err, ShouldBeNil)
+
+		robotstxtBody = `User-agent: *
+Disallow: /search/`
+		robotAll, err := robotstxt.FromStatusAndBytes(200, []byte(robotstxtBody))
+		So(err, ShouldBeNil)
+
+		hosts := map[string]int64{
+			"google": 1,
+			"yandex": 2,
+			"all":    3}
+		robotsTxt := map[int64]*robotstxt.Group{
+			1: robotGoogle.FindGroup("Googlebot"),
+			2: robotYandex.FindGroup("Googlebot"),
+			3: robotAll.FindGroup("Googlebot")}
+
+		h := &hostsManager{hosts: hosts, robotsTxt: robotsTxt}
+
+		u := &url.URL{Host: "google", Path: "/search1/"}
+		_, access := h.CheckURL(u)
+		So(access, ShouldBeFalse)
+
+		u = &url.URL{Host: "google", Path: "/search2/"}
+		_, access = h.CheckURL(u)
+		So(access, ShouldBeTrue)
+
+		u = &url.URL{Host: "google", Path: "/search3/"}
+		_, access = h.CheckURL(u)
+		So(access, ShouldBeTrue)
+
+		u = &url.URL{Host: "yandex", Path: "/search/"}
+		_, access = h.CheckURL(u)
+		So(access, ShouldBeTrue)
+
+		u = &url.URL{Host: "all", Path: "/search/"}
+		_, access = h.CheckURL(u)
+		So(access, ShouldBeFalse)
+
+		u = &url.URL{Host: "all", Path: "/allowed/"}
+		_, access = h.CheckURL(u)
+		So(access, ShouldBeTrue)
+
+		u = &url.URL{Host: "unknown", Path: "/allowed/"}
+		_, access = h.CheckURL(u)
+		So(access, ShouldBeFalse)
+	})
+}
+
+// TestGetHosts ...
+func TestGetHosts(t *testing.T) {
+	Convey("Success resolve", t, func() {
+		h := &hostsManager{hosts: map[string]int64{"hostName": 1}}
+		So(h.GetHosts(), ShouldResemble, []string{"hostName"})
+	})
 }
 
 // TestResolveURL ...
@@ -131,7 +214,7 @@ func TestInitByHostName(t *testing.T) {
 	Convey("Failed read robot txt", t, func() {
 		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if r.URL.Path != "/" {
-				http.Error(w, "error", 10)
+				http.Error(w, "error", 1)
 			}
 		}))
 		defer ts.Close()
@@ -144,9 +227,7 @@ func TestInitByHostName(t *testing.T) {
 
 		err = h.initByHostName(db, parsedURL.Host)
 		So(err, ShouldNotBeNil)
-		werr := err.(*werrors.ErrorEx)
-		So(werr.Fields, ShouldEqual, []zap.Field{})
-		So(err.Error(), ShouldEqual, ErrCreateRobotsTxtFromURL)
+		So(err.Error(), ShouldEqual, ErrGetRequest)
 	})
 
 	Convey("Failed create robots txt", t, func() {

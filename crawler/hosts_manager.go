@@ -1,5 +1,6 @@
 package crawler
 
+// status: ok
 import (
 	"database/sql"
 	"io/ioutil"
@@ -73,7 +74,6 @@ func (m *hostsManager) resolveURL(hostName string) (string, error) {
 			return "", werrors.NewFields(ErrResolveBaseURL,
 				zap.Int("status_code", response.StatusCode),
 				zap.String("url", hostURL))
-
 		}
 	}
 	if err != nil {
