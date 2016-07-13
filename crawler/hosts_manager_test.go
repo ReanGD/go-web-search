@@ -214,7 +214,7 @@ func TestInitByHostName(t *testing.T) {
 	Convey("Failed read robot txt", t, func() {
 		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if r.URL.Path != "/" {
-				http.Error(w, "error", 1)
+				http.Error(w, "error status", 10)
 			}
 		}))
 		defer ts.Close()
