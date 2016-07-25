@@ -51,19 +51,19 @@ func (w *hostWorkers) Init(db *content.DBrw, logger zap.Logger, baseHosts []stri
 	}
 
 	hosts := hostMng.GetHosts()
-	w.workers = make([]*hostWorker, len(hosts))
-	cntPerHost := cnt / len(w.workers)
+	w.workers = make([]*hostWorker, 0)
+	cntPerHost := cnt / len(hosts)
 	if cntPerHost < 1 {
 		cntPerHost = 1
 	}
-	for i, hostName := range hostMng.GetHosts() {
+	for hostName, hostID := range hosts {
 		worker := &hostWorker{Request: &request{hostMng: hostMng}}
 		worker.Request.Init(logger.With(zap.String("host", hostName)))
-		worker.Tasks, err = db.GetNewURLs(hostName, cntPerHost)
+		worker.Tasks, err = db.GetNewURLs(hostID, cntPerHost)
 		if err != nil {
 			return err
 		}
-		w.workers[i] = worker
+		w.workers = append(w.workers, worker)
 	}
 
 	return nil

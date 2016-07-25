@@ -12,7 +12,7 @@ type Host struct {
 // DbHost - database interface for work with host
 type DbHost interface {
 	// GetHosts - return map[id]Host
-	GetHosts() map[int64]*Host
+	GetHosts() (map[int64]*Host, error)
 	// AddHost - baseURL: init url for host
 	AddHost(host *Host, baseURL string) (int64, error)
 }

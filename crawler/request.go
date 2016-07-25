@@ -1,6 +1,7 @@
 package crawler
 
 import (
+	"database/sql"
 	"errors"
 	"log"
 	"net/http"
@@ -17,13 +18,13 @@ type request struct {
 	hostMng *hostsManager
 	client  *http.Client
 	meta    *proxy.Meta
-	urls    map[string]string
+	urls    map[string]sql.NullInt64
 	logger  zap.Logger
 }
 
 func (r *request) get(u *url.URL) (int64, error) {
 	urlStr := u.String()
-	r.urls = make(map[string]string)
+	r.urls = make(map[string]sql.NullInt64)
 	hostID, robotOk := r.hostMng.CheckURL(u)
 	r.meta = proxy.NewMeta(hostID, urlStr, nil)
 
@@ -76,7 +77,7 @@ func (r *request) get(u *url.URL) (int64, error) {
 	RequestDurationMs := int64(time.Since(startTime) / time.Millisecond)
 	loggerURL.Debug(DbgRequestDuration, zap.Int64("duration", RequestDurationMs))
 
-	parser := newResponseParser(loggerURL, r.meta)
+	parser := newResponseParser(loggerURL, r.hostMng, r.meta)
 	err = parser.Run(response)
 	if err == nil {
 		r.urls = parser.URLs

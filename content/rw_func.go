@@ -31,26 +31,12 @@ func (db *DBrw) Transaction(fn func(*DBrw) error) error {
 	return nil
 }
 
-// GetHostID - get host ID by host name
-func (db *DBrw) GetHostID(hostName string) sql.NullInt64 {
-	host, exists := db.hosts[hostName]
-	if exists {
-		return sql.NullInt64{Int64: host.ID, Valid: true}
-	}
-	return sql.NullInt64{Valid: false}
-}
-
 // GetNewURLs - get URLs for downloads for host
-func (db *DBrw) GetNewURLs(hostName string, cnt int) ([]URL, error) {
+func (db *DBrw) GetNewURLs(hostID int64, cnt int) ([]URL, error) {
 	var urls []URL
-	host, exists := db.hosts[hostName]
-	if !exists {
-		return urls, fmt.Errorf("host name %s not found in db", hostName)
-	}
-
-	err := db.Where("host_id = ? and loaded = ?", host.ID, false).Limit(cnt).Find(&urls).Error
+	err := db.Where("host_id = ? and loaded = ?", hostID, false).Limit(cnt).Find(&urls).Error
 	if err != nil {
-		return urls, fmt.Errorf("find not loaded pages in 'URL' table for host %s, message: %s", hostName, err)
+		return urls, fmt.Errorf("find not loaded pages in 'URL' table for host %d, message: %s", hostID, err)
 	}
 
 	return urls, nil

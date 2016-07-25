@@ -38,19 +38,16 @@ func (m *hostsManager) CheckURL(u *url.URL) (sql.NullInt64, bool) {
 }
 
 // GetHosts - get list of hosts
-func (m *hostsManager) GetHosts() []string {
-	i := 0
-	result := make([]string, len(m.hosts))
-	for host := range m.hosts {
-		result[i] = host
-		i++
-	}
-
-	return result
+func (m *hostsManager) GetHosts() map[string]int64 {
+	return m.hosts
 }
 
 func (m *hostsManager) initByDb(db proxy.DbHost) error {
-	for id, host := range db.GetHosts() {
+	hosts, err := db.GetHosts()
+	if err != nil {
+		return err
+	}
+	for id, host := range hosts {
 		hostName := host.GetName()
 		robot, err := robotstxt.FromStatusAndBytes(host.GetRobotsTxt())
 		if err != nil {
@@ -125,10 +122,12 @@ func (m *hostsManager) initByHostName(db proxy.DbHost, hostName string) error {
 	host := proxy.NewHost(hostName, statusCode, body)
 	hostID, err := db.AddHost(host, baseURL)
 
-	m.hosts[hostName] = hostID
-	m.robotsTxt[hostID] = robot.FindGroup("Googlebot")
+	if err == nil {
+		m.hosts[hostName] = hostID
+		m.robotsTxt[hostID] = robot.FindGroup("Googlebot")
+	}
 
-	return nil
+	return err
 }
 
 // Init - init host manager

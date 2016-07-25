@@ -4,18 +4,26 @@ import (
 	"database/sql"
 	"fmt"
 
+	"github.com/ReanGD/go-web-search/database"
 	"github.com/ReanGD/go-web-search/proxy"
 	"github.com/jinzhu/gorm"
 )
 
 // GetHosts - get rows from table 'Host'
-func (db *DBrw) GetHosts() map[int64]*proxy.Host {
-	result := make(map[int64]*proxy.Host, len(db.hosts))
-	for _, host := range db.hosts {
+func (db *DBrw) GetHosts() (map[int64]*proxy.Host, error) {
+	result := make(map[int64]*proxy.Host)
+
+	var hosts []database.Host
+	err := db.Find(&hosts).Error
+	if err != nil {
+		return result, fmt.Errorf("Get hosts list from db, message: %s", err)
+	}
+
+	for _, host := range hosts {
 		result[host.ID] = proxy.NewHost(host.Name, host.RobotsStatusCode, host.RobotsData)
 	}
 
-	return result
+	return result, nil
 }
 
 // AddHost - add new host
@@ -47,7 +55,6 @@ func (db *DBrw) AddHost(host *proxy.Host, baseURL string) (int64, error) {
 			// nothing to update
 		}
 
-		db.hosts[host.GetName()] = tblHost
 		return nil
 	})
 

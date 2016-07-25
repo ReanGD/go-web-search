@@ -2,6 +2,7 @@ package crawler
 
 import (
 	"database/sql"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -16,15 +17,19 @@ type fakeDbHost struct {
 	host         *proxy.Host
 	baseURL      string
 	robotTxtData string
+	getHostErr   string
 }
 
-func (f *fakeDbHost) GetHosts() map[int64]*proxy.Host {
+func (f *fakeDbHost) GetHosts() (map[int64]*proxy.Host, error) {
 	result := make(map[int64]*proxy.Host)
+	if f.getHostErr != "" {
+		return result, errors.New(f.getHostErr)
+	}
 	if f.robotTxtData != "" {
 		result[1] = proxy.NewHost("hostName", 200, []byte(f.robotTxtData))
 	}
 
-	return result
+	return result, nil
 }
 
 func (f *fakeDbHost) AddHost(host *proxy.Host, baseURL string) (int64, error) {
@@ -113,8 +118,9 @@ Disallow: /search/`
 // TestGetHosts ...
 func TestGetHosts(t *testing.T) {
 	Convey("Success resolve", t, func() {
-		h := &hostsManager{hosts: map[string]int64{"hostName": 1}}
-		So(h.GetHosts(), ShouldResemble, []string{"hostName"})
+		hosts := map[string]int64{"hostName": 1}
+		h := &hostsManager{hosts: hosts}
+		So(h.GetHosts(), ShouldResemble, hosts)
 	})
 }
 
@@ -270,6 +276,15 @@ func TestInitByDb(t *testing.T) {
 		So(err, ShouldBeNil)
 		So(h.hosts, ShouldResemble, hostsExpected)
 		So(h.robotsTxt, ShouldResemble, robotsTxtExpected)
+	})
+
+	Convey("Failed by db.GetHosts", t, func() {
+		h := &hostsManager{}
+		db := &fakeDbHost{getHostErr: "get host error"}
+
+		err := h.initByDb(db)
+		So(err, ShouldNotBeNil)
+		So(err.Error(), ShouldEqual, db.getHostErr)
 	})
 }
 

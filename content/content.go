@@ -26,8 +26,6 @@ func createTables(db *gorm.DB, values ...interface{}) error {
 // DBrw - content database (enable read/write operations)
 type DBrw struct {
 	*gorm.DB
-	// map[Host.Name]Host
-	hosts map[string]*database.Host
 	// map[Content.Hash]Content.URL
 	hashes map[string]int64
 }
@@ -55,16 +53,6 @@ func GetDBrw() (*DBrw, error) {
 		return nil, err
 	}
 
-	var hosts []database.Host
-	err = db.Find(&hosts).Error
-	if err != nil {
-		errClose := db.Close()
-		if errClose != nil {
-			fmt.Printf("%s", errClose)
-		}
-		return nil, fmt.Errorf("Get hosts list from db, message: %s", err)
-	}
-
 	var hashes []database.Content
 	err = db.Select("url, hash").Find(&hashes).Error
 	if err != nil {
@@ -77,12 +65,7 @@ func GetDBrw() (*DBrw, error) {
 
 	result := &DBrw{
 		DB:     db,
-		hosts:  make(map[string]*database.Host, len(hosts)),
 		hashes: make(map[string]int64, len(hashes))}
-
-	for i := 0; i != len(hosts); i++ {
-		result.hosts[hosts[i].Name] = &hosts[i]
-	}
 
 	for _, item := range hashes {
 		result.hashes[item.Hash] = item.URL

@@ -50,11 +50,11 @@ func (w *DBWorker) markURLLoaded(tr *DBrw, id sql.NullInt64, urlStr string, host
 	return id.Int64, nil
 }
 
-func (w *DBWorker) insertURLIfNotExists(tr *DBrw, urlStr string, hostName string) (int64, error) {
+func (w *DBWorker) insertURLIfNotExists(tr *DBrw, urlStr string, hostID sql.NullInt64) (int64, error) {
 	var rec URL
 	err := tr.Where("url = ?", urlStr).First(&rec).Error
 	if err == gorm.ErrRecordNotFound {
-		rec = URL{URL: urlStr, HostID: tr.GetHostID(hostName), Loaded: false}
+		rec = URL{URL: urlStr, HostID: hostID, Loaded: false}
 		err = tr.Create(&rec).Error
 		if err != nil {
 			return rec.ID, fmt.Errorf("add new 'URL' record for URL %s, message: %s", urlStr, err)
@@ -160,8 +160,8 @@ func (w *DBWorker) savePageData(tr *DBrw, data *proxy.PageData) error {
 	}
 
 	var id int64
-	for urlStr, hostName := range data.GetURLs() {
-		id, err = w.insertURLIfNotExists(tr, urlStr, hostName)
+	for urlStr, hostID := range data.GetURLs() {
+		id, err = w.insertURLIfNotExists(tr, urlStr, hostID)
 		if err != nil {
 			return err
 		}

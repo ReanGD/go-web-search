@@ -2,6 +2,7 @@ package crawler
 
 import (
 	"bytes"
+	"database/sql"
 	"testing"
 
 	. "github.com/smartystreets/goconvey/convey"
@@ -9,7 +10,8 @@ import (
 )
 
 func helpNewHTMLMetadata() *HTMLMetadata {
-	h, err := NewHTMLMetadata("http://testhost1/test/")
+	hostMng := &hostsManager{hosts: map[string]int64{"testhost1": 1}}
+	h, err := NewHTMLMetadata(hostMng, "http://testhost1/test/")
 	So(err, ShouldBeNil)
 
 	return h
@@ -65,12 +67,15 @@ func TestAddURL(t *testing.T) {
 		h.AddURL("  link5  ")
 		h.AddURL("/wrong%9")
 
-		expectedURLs := make(map[string]string)
-		expectedURLs["http://testhost1/link1"] = "testhost1"
-		expectedURLs["http://testhost1/test/link2"] = "testhost1"
-		expectedURLs["http://testhost1/test/link3/link3"] = "testhost1"
-		expectedURLs["http://testhost2/link4"] = "testhost2"
-		expectedURLs["http://testhost1/test/link5"] = "testhost1"
+		hostIDValid := sql.NullInt64{Int64: 1, Valid: true}
+		hostIDInvalid := sql.NullInt64{Valid: false}
+
+		expectedURLs := make(map[string]sql.NullInt64)
+		expectedURLs["http://testhost1/link1"] = hostIDValid
+		expectedURLs["http://testhost1/test/link2"] = hostIDValid
+		expectedURLs["http://testhost1/test/link3/link3"] = hostIDValid
+		expectedURLs["http://testhost2/link4"] = hostIDInvalid
+		expectedURLs["http://testhost1/test/link5"] = hostIDValid
 		So(h.URLs, ShouldResemble, expectedURLs)
 
 		expectedWrongURLs := make(map[string]string)
@@ -97,8 +102,27 @@ func TestAddURL(t *testing.T) {
 // TestInitError ...
 func TestInitError(t *testing.T) {
 	Convey("Error parse base URL", t, func() {
-		_, err := NewHTMLMetadata("/wrong%2")
+		hostMng := &hostsManager{}
+		_, err := NewHTMLMetadata(hostMng, "/wrong%2")
 		So(err, ShouldNotBeNil)
 		So(err.Error(), ShouldEqual, ErrParseBaseURL)
+	})
+}
+
+// TestClearURLs ...
+func TestClearURLs(t *testing.T) {
+	Convey("Clear not empty URLs", t, func() {
+		urls := map[string]sql.NullInt64{"hostName": sql.NullInt64{Valid: false}}
+		h := &HTMLMetadata{URLs: urls}
+		So(len(h.URLs), ShouldEqual, 1)
+		h.ClearURLs()
+		So(len(h.URLs), ShouldEqual, 0)
+	})
+
+	Convey("Clear empty URLs", t, func() {
+		h := &HTMLMetadata{URLs: make(map[string]sql.NullInt64)}
+		So(len(h.URLs), ShouldEqual, 0)
+		h.ClearURLs()
+		So(len(h.URLs), ShouldEqual, 0)
 	})
 }

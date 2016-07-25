@@ -2,6 +2,7 @@ package crawler
 
 // status: ok
 import (
+	"database/sql"
 	"net/url"
 	"strings"
 
@@ -11,17 +12,18 @@ import (
 
 // HTMLMetadata extracted meta data from HTML
 type HTMLMetadata struct {
-	// [URL]hostname
-	URLs         map[string]string
+	// [URL]hostID
+	URLs         map[string]sql.NullInt64
 	MetaTagIndex bool
 	title        string
 	// [URL]error
 	wrongURLs map[string]string
 	baseURL   *url.URL
+	hostMng   *hostsManager
 }
 
 // NewHTMLMetadata - create new HTMLMetadata struct
-func NewHTMLMetadata(urlStr string) (*HTMLMetadata, error) {
+func NewHTMLMetadata(hostMng *hostsManager, urlStr string) (*HTMLMetadata, error) {
 	baseURL, err := url.Parse(urlStr)
 	if err != nil {
 		return nil, werrors.NewFields(ErrParseBaseURL,
@@ -30,11 +32,12 @@ func NewHTMLMetadata(urlStr string) (*HTMLMetadata, error) {
 	}
 
 	return &HTMLMetadata{
-		URLs:         make(map[string]string),
+		URLs:         make(map[string]sql.NullInt64),
 		wrongURLs:    make(map[string]string),
 		title:        "",
 		MetaTagIndex: true,
 		baseURL:      baseURL,
+		hostMng:      hostMng,
 	}, nil
 }
 
@@ -75,7 +78,14 @@ func (h *HTMLMetadata) AddURL(link string) {
 	parsed, _ = url.Parse(urlStr)
 
 	if (parsed.Scheme == "http" || parsed.Scheme == "https") && urlStr != h.baseURL.String() {
-		h.URLs[urlStr] = NormalizeHostName(parsed.Host)
+		h.URLs[urlStr] = h.hostMng.ResolveHost(parsed.Host)
+	}
+}
+
+// ClearURLs - remove all URLs
+func (h *HTMLMetadata) ClearURLs() {
+	if len(h.URLs) != 0 {
+		h.URLs = make(map[string]sql.NullInt64)
 	}
 }
 

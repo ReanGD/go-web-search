@@ -54,12 +54,12 @@ func (extractor *dataExtractor) parseMeta(node *html.Node) {
 		}
 		if strings.Contains(content, "nofollow") {
 			extractor.metaTagFollow = false
-			extractor.meta.URLs = make(map[string]string)
+			extractor.meta.ClearURLs()
 		}
 		if strings.Contains(content, "none") {
 			extractor.meta.MetaTagIndex = false
 			extractor.metaTagFollow = false
-			extractor.meta.URLs = make(map[string]string)
+			extractor.meta.ClearURLs()
 		}
 	} else if name == "title" {
 		content := strings.TrimSpace(extractor.getAttrVal(node, "content"))
@@ -126,8 +126,8 @@ func (extractor *dataExtractor) parseNode(node *html.Node) error {
 }
 
 // RunDataExtrator - extart URLs and other meta data from page
-func RunDataExtrator(node *html.Node, urlStr string) (*HTMLMetadata, error) {
-	meta, err := NewHTMLMetadata(urlStr)
+func RunDataExtrator(hostMng *hostsManager, node *html.Node, urlStr string) (*HTMLMetadata, error) {
+	meta, err := NewHTMLMetadata(hostMng, urlStr)
 	if err != nil {
 		return nil, err
 	}

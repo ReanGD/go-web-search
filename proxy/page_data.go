@@ -1,15 +1,17 @@
 package proxy
 
+import "database/sql"
+
 // PageData - full info from page
 type PageData struct {
 	meta *Meta
 	// map[URL]HostName
-	urls      map[string]string
+	urls      map[string]sql.NullInt64
 	parentURL int64
 }
 
 // NewPageData - create PageData
-func NewPageData(meta *Meta, urls map[string]string) *PageData {
+func NewPageData(meta *Meta, urls map[string]sql.NullInt64) *PageData {
 	return &PageData{
 		meta: meta,
 		urls: urls}
@@ -26,7 +28,7 @@ func (in *PageData) GetMeta() *Meta {
 }
 
 // GetURLs - get field urls
-func (in *PageData) GetURLs() map[string]string {
+func (in *PageData) GetURLs() map[string]sql.NullInt64 {
 	return in.urls
 }
 

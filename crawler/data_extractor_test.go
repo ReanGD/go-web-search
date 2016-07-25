@@ -2,6 +2,7 @@ package crawler
 
 import (
 	"bytes"
+	"database/sql"
 	"testing"
 
 	"golang.org/x/net/html"
@@ -13,7 +14,8 @@ func helperRunDataExtrator(htmlStr string) *HTMLMetadata {
 	node, err := html.Parse(bytes.NewReader([]byte(htmlStr)))
 	So(err, ShouldBeNil)
 
-	meta, err := RunDataExtrator(node, "http://testhost1/test/")
+	hostMng := &hostsManager{hosts: map[string]int64{"testhost1": 1}}
+	meta, err := RunDataExtrator(hostMng, node, "http://testhost1/test/")
 	So(err, ShouldBeNil)
 
 	return meta
@@ -40,14 +42,17 @@ func TestURLs(t *testing.T) {
 </div>
 </body></html>`)
 
-		expectedURLs := make(map[string]string)
-		expectedURLs["http://testhost1/link1"] = "testhost1"
-		expectedURLs["http://testhost1/test/link2"] = "testhost1"
-		expectedURLs["http://testhost1/test/link3/link3"] = "testhost1"
-		expectedURLs["http://testhost1/link4"] = "testhost1"
-		expectedURLs["http://testhost1/test/link5"] = "testhost1"
-		expectedURLs["http://testhost2/link6"] = "testhost2"
-		expectedURLs["http://testhost1/test/link7"] = "testhost1"
+		hostIDValid := sql.NullInt64{Int64: 1, Valid: true}
+		hostIDInvalid := sql.NullInt64{Valid: false}
+
+		expectedURLs := make(map[string]sql.NullInt64)
+		expectedURLs["http://testhost1/link1"] = hostIDValid
+		expectedURLs["http://testhost1/test/link2"] = hostIDValid
+		expectedURLs["http://testhost1/test/link3/link3"] = hostIDValid
+		expectedURLs["http://testhost1/link4"] = hostIDValid
+		expectedURLs["http://testhost1/test/link5"] = hostIDValid
+		expectedURLs["http://testhost2/link6"] = hostIDInvalid
+		expectedURLs["http://testhost1/test/link7"] = hostIDValid
 		So(meta.URLs, ShouldResemble, expectedURLs)
 
 		expectedWrongURLs := make(map[string]string)
@@ -64,9 +69,11 @@ func TestURLs(t *testing.T) {
   </frameset>
 </html>`)
 
-		expectedURLs := make(map[string]string)
-		expectedURLs["http://testhost1/test/link1"] = "testhost1"
-		expectedURLs["http://testhost1/link2"] = "testhost1"
+		hostIDValid := sql.NullInt64{Int64: 1, Valid: true}
+
+		expectedURLs := make(map[string]sql.NullInt64)
+		expectedURLs["http://testhost1/test/link1"] = hostIDValid
+		expectedURLs["http://testhost1/link2"] = hostIDValid
 		So(meta.URLs, ShouldResemble, expectedURLs)
 
 		So(meta.wrongURLs, ShouldBeEmpty)
@@ -80,8 +87,10 @@ func TestURLs(t *testing.T) {
 </body>
 </html>`)
 
-		expectedURLs := make(map[string]string)
-		expectedURLs["http://testhost1/test/link1"] = "testhost1"
+		hostIDValid := sql.NullInt64{Int64: 1, Valid: true}
+
+		expectedURLs := make(map[string]sql.NullInt64)
+		expectedURLs["http://testhost1/test/link1"] = hostIDValid
 		So(meta.URLs, ShouldResemble, expectedURLs)
 
 		So(meta.wrongURLs, ShouldBeEmpty)
@@ -191,7 +200,8 @@ func TestErrorDataExtrator(t *testing.T) {
 		So(err, ShouldBeNil)
 
 		node.FirstChild.Type = html.ErrorNode
-		_, err = RunDataExtrator(node, "http://testhost1/test/")
+		hostMng := &hostsManager{}
+		_, err = RunDataExtrator(hostMng, node, "http://testhost1/test/")
 		So(err, ShouldNotBeNil)
 		So(err.Error(), ShouldEqual, ErrUnexpectedNodeType)
 	})
@@ -200,7 +210,8 @@ func TestErrorDataExtrator(t *testing.T) {
 		node, err := html.Parse(bytes.NewReader([]byte(`<html><head></head><body></body></html>`)))
 		So(err, ShouldBeNil)
 
-		_, err = RunDataExtrator(node, "%1")
+		hostMng := &hostsManager{}
+		_, err = RunDataExtrator(hostMng, node, "%1")
 		So(err, ShouldNotBeNil)
 		So(err.Error(), ShouldEqual, ErrParseBaseURL)
 	})

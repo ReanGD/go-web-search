@@ -2,6 +2,7 @@ package crawler
 
 import (
 	"bytes"
+	"database/sql"
 	"net/http"
 	"time"
 
@@ -14,17 +15,19 @@ import (
 
 type responseParser struct {
 	logger         zap.Logger
+	hostMng        *hostsManager
 	meta           *proxy.Meta
-	URLs           map[string]string
+	URLs           map[string]sql.NullInt64
 	BodyDurationMs int64
 }
 
 // newResponseParser - create responseParser struct
-func newResponseParser(logger zap.Logger, meta *proxy.Meta) *responseParser {
+func newResponseParser(logger zap.Logger, hostMng *hostsManager, meta *proxy.Meta) *responseParser {
 	return &responseParser{
 		logger:         logger,
+		hostMng:        hostMng,
 		meta:           meta,
-		URLs:           make(map[string]string),
+		URLs:           make(map[string]sql.NullInt64),
 		BodyDurationMs: 0}
 }
 
@@ -60,7 +63,7 @@ func (r *responseParser) processBody(body []byte, contentType string) (database.
 		return database.StateParseError, werrors.NewDetails(ErrHTMLParse, err)
 	}
 
-	parser, err := RunDataExtrator(node, r.meta.GetURL())
+	parser, err := RunDataExtrator(r.hostMng, node, r.meta.GetURL())
 	if err != nil {
 		return database.StateParseError, err
 	}
