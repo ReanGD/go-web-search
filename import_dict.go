@@ -30,6 +30,7 @@ type dictParser struct {
 	number  int32
 	finish  bool
 	scanner *bufio.Scanner
+	words   []string
 }
 
 func (p *dictParser) nextLine() (bool, []byte, error) {
@@ -91,8 +92,8 @@ func (p *dictParser) nextWords() ([]string, error) {
 		return nil, errors.New("unknown token")
 	}
 
-	if p.number != 0 && p.number+1 != t.number {
-		return nil, errors.New("unknown number")
+	if p.number >= t.number {
+		return nil, fmt.Errorf("unknown number %d", t.number)
 	}
 	p.number = t.number
 
@@ -132,10 +133,11 @@ func (p *dictParser) parse() error {
 		}
 
 		for _, word := range words {
-			fmt.Println(word)
+			p.words = append(p.words, word)
+			// fmt.Println(word)
 		}
 
-		fmt.Println("!")
+		// fmt.Println("!")
 	}
 
 	fmt.Println("success end")
