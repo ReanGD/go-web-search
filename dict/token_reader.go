@@ -23,7 +23,7 @@ type token struct {
 }
 
 type tokenReader interface {
-	nextTokens() (*token, error)
+	nextToken() (*token, error)
 }
 
 type tokenRead struct {
@@ -34,7 +34,7 @@ func splitFunc(c rune) bool {
 	return c == ' ' || c == ',' || c == '\t'
 }
 
-func (t *tokenRead) nextTokens() (*token, error) {
+func (t *tokenRead) nextToken() (*token, error) {
 	if !t.scanner.Scan() {
 		return &token{ttype: tokenEnd}, nil
 	}
